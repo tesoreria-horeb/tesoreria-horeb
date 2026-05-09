@@ -582,7 +582,7 @@ try{sd();}catch(e){console.warn('localStorage no disponible.');}
 // ===================== SESSION =====================
 let CU=null,EID=null;
 
-function fd(u,p){document.getElementById('lu').value=u;document.getElementById('lp').value=p;}
+function fd(u,p){document.getElementById('lu').value=u;document.getElementById('lp').value=p;doLogin();}
 
 // Usuarios fijos — siempre disponibles sin depender del localStorage
 const USUARIOS_FIJOS=[
@@ -594,9 +594,15 @@ const USUARIOS_FIJOS=[
 
 function doLogin(){
   const u=document.getElementById('lu').value.trim(),p=document.getElementById('lp').value.trim();
-  // Buscar primero en usuarios fijos, luego en DB por si se agregaron más
-  let usr=USUARIOS_FIJOS.find(x=>x.user===u&&x.pass===p);
-  if(!usr&&DB&&DB.usuarios)usr=DB.usuarios.find(x=>x.user===u&&x.pass===p);
+  // Usuarios hardcoded - siempre funcionan sin depender de nada externo
+  const USERS=[
+    {user:'pastor',    pass:'pastor123', nom:'Pastor Principal',      rol:'pastor',            niv:1, fil:'all'},
+    {user:'tesorero',  pass:'tesoro123', nom:'Tesorero Principal',    rol:'tesorero_principal',niv:2, fil:'all'},
+    {user:'tscentral', pass:'sede123',   nom:'Tesorero Sede Central', rol:'tesorero_sede',     niv:3, fil:'sede'},
+    {user:'tsfilial1', pass:'filial123', nom:'Tesorero Los Jardines', rol:'tesorero_filial',   niv:4, fil:'F001'},
+  ];
+  let usr=USERS.find(x=>x.user===u&&x.pass===p);
+  if(!usr){try{if(DB&&DB.usuarios)usr=DB.usuarios.find(x=>x.user===u&&x.pass===p);}catch(e){}}
   document.getElementById('lerr').style.display=usr?'none':'block';
   if(!usr)return;
   CU=usr;
