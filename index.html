@@ -520,8 +520,9 @@ tbody td{padding:9px 11px;color:rgba(247,243,233,.8);vertical-align:middle}
       <!-- RPT FIDELIDAD -->
       <div class="mod" id="mod-rpt-fidelidad">
         <div class="tb">
-          <select class="fs" id="rfid-anio"></select>
-          <select class="fs" id="rfid-fil"><option value="all">Todas las sedes</option></select>
+          <select class="fs" id="rfid-anio" onchange="updFidMiems()"></select>
+          <select class="fs" id="rfid-fil" onchange="updFidMiems()"><option value="all">Todas las sedes</option></select>
+          <select class="fs" id="rfid-miem"><option value="all">— Todos los miembros —</option></select>
           <button class="btn btn-p" onclick="genFid()">⭐ Generar</button>
           <button class="btn btn-pr" onclick="prtRpt('rfid-prev')">🖨️ Imprimir</button>
         </div>
@@ -1369,25 +1370,31 @@ function genDiez(){
 
 // RPT FIDELIDAD
 function updFidMiems(){
-  var fil=document.getElementById('rfid-fil').value;
+  var filEl=document.getElementById('rfid-fil');
   var sel=document.getElementById('rfid-miem');
+  if(!filEl||!sel)return;
+  var fil=filEl.value;
   var cur=sel.value;
   sel.innerHTML='<option value="all">— Todos los miembros —</option>';
   var ms=gAccMiem();
-  if(fil!=='all')ms=ms.filter(function(m){return m.fil===fil;});
+  if(fil&&fil!=='all')ms=ms.filter(function(m){return m.fil===fil;});
   ms.forEach(function(m){
     var o=document.createElement('option');
     o.value=m.id;
     o.textContent=m.cod+' — '+m.nom+' '+m.ape;
     sel.appendChild(o);
   });
-  if(cur)sel.value=cur;
+  try{if(cur)sel.value=cur;}catch(e){}
 }
 
 function genFid(){
-  var anio=parseInt(document.getElementById('rfid-anio').value);
-  var fil=document.getElementById('rfid-fil').value;
-  var miemId=document.getElementById('rfid-miem').value;
+  var anioEl=document.getElementById('rfid-anio');
+  var filEl=document.getElementById('rfid-fil');
+  var miemEl=document.getElementById('rfid-miem');
+  if(!anioEl||!filEl){toast('Error al cargar filtros','err');return;}
+  var anio=parseInt(anioEl.value)||new Date().getFullYear();
+  var fil=filEl.value||'all';
+  var miemId=miemEl?miemEl.value:'all';
   var ms=gAccMiem();
   if(fil!=='all')ms=ms.filter(function(m){return m.fil===fil;});
   if(miemId!=='all')ms=ms.filter(function(m){return m.id===miemId;});
