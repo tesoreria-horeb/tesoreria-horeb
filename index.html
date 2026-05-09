@@ -252,6 +252,7 @@ tbody td{padding:9px 11px;color:rgba(247,243,233,.8);vertical-align:middle}
       <div class="nav-item" onclick="sm('votos')"><span class="ic">🙏</span>Votos</div>
       <div class="nav-sec">Configuración</div>
       <div class="nav-item" onclick="sm('categorias')"><span class="ic">🏷️</span>Categorías</div>
+      <div class="nav-item nav-admin" onclick="sm('usuarios')"><span class="ic">👤</span>Usuarios</div>
       <div class="nav-sec">Informes</div>
       <div class="nav-item" onclick="sm('rpt-caja')"><span class="ic">📋</span>Libro Caja</div>
       <div class="nav-item" onclick="sm('rpt-consolidado')"><span class="ic">📈</span>Consolidado</div>
@@ -364,6 +365,26 @@ tbody td{padding:9px 11px;color:rgba(247,243,233,.8);vertical-align:middle}
         <div class="card" style="margin-top:14px">
           <div class="card-title">Usuarios del Sistema</div>
           <div class="tw"><table><thead><tr><th>Usuario</th><th>Nombre</th><th>Rol</th><th>Acceso</th></tr></thead><tbody id="usr-body"></tbody></table></div>
+        </div>
+      </div>
+
+      <!-- USUARIOS -->
+      <div class="mod" id="mod-usuarios">
+        <div class="tb">
+          <input class="sb" id="usr-s" placeholder="Buscar usuario..." oninput="renderUsrs()">
+          <select class="fs" id="usr-sf" onchange="renderUsrs()">
+            <option value="">Todos los roles</option>
+            <option value="pastor">Pastor Principal</option>
+            <option value="tesorero_principal">Tesorero Principal</option>
+            <option value="tesorero_sede">Tesorero Sede</option>
+            <option value="tesorero_filial">Tesorero Filial</option>
+          </select>
+          <button class="btn btn-p" onclick="openUsrModal(null)">+ Nuevo Usuario</button>
+        </div>
+        <div class="card">
+          <div class="card-title">Gestion de Usuarios del Sistema</div>
+          <div class="alert alert-info">Solo el Pastor Principal y Tesorero Principal pueden gestionar usuarios.</div>
+          <div class="tw"><table><thead><tr><th>Usuario</th><th>Nombre</th><th>Rol</th><th>Sede/Filial</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="usr-list"></tbody></table></div>
         </div>
       </div>
 
@@ -501,6 +522,19 @@ tbody td{padding:9px 11px;color:rgba(247,243,233,.8);vertical-align:middle}
   </div>
 </div>
 
+<!-- MODAL USUARIO -->
+<div class="ov" id="ov-usr">
+  <div class="modal">
+    <div class="modal-hd"><div class="modal-tit" id="usr-tit">Nuevo Usuario</div><button class="modal-x" onclick="cm('ov-usr')">X</button></div>
+    <div class="fr"><div class="fld"><label>Nombre Completo</label><input type="text" id="u-nom" placeholder="Nombre completo"></div><div class="fld"><label>Usuario (login)</label><input type="text" id="u-usr" placeholder="Ej: tsjuan" autocomplete="off"></div></div>
+    <div class="fr"><div class="fld"><label>Contrasena</label><input type="password" id="u-pass" placeholder="Contrasena" autocomplete="new-password"></div><div class="fld"><label>Confirmar Contrasena</label><input type="password" id="u-pass2" placeholder="Repetir contrasena"></div></div>
+    <div class="fr"><div class="fld"><label>Rol</label><select id="u-rol" onchange="updUsrFil()"><option value="pastor">Pastor Principal</option><option value="tesorero_principal">Tesorero Principal</option><option value="tesorero_sede">Tesorero Sede Central</option><option value="tesorero_filial">Tesorero Filial</option></select></div><div class="fld"><label>Sede / Filial</label><select id="u-fil"></select></div></div>
+    <div class="fr fr1"><div class="fld"><label>Estado</label><select id="u-act"><option value="1">Activo</option><option value="0">Inactivo</option></select></div></div>
+    <div id="usr-err" style="color:#E74C3C;font-size:12px;margin-top:6px;display:none"></div>
+    <div class="modal-ft"><button class="btn btn-s" onclick="cm('ov-usr')">Cancelar</button><button class="btn btn-p" onclick="savUsr()">Guardar</button></div>
+  </div>
+</div>
+
 <!-- MODAL CATEGORIA -->
 <div class="ov" id="ov-cat">
   <div class="modal" style="max-width:340px">
@@ -571,6 +605,14 @@ function initDB(){
   return data;
 }
 
+// Usuarios fijos — siempre disponibles sin depender del localStorage
+const USUARIOS_FIJOS=[
+  {user:'pastor',    pass:'pastor123', nom:'Pastor Principal',        rol:'pastor',            niv:1, fil:'all'},
+  {user:'tesorero',  pass:'tesoro123', nom:'Tesorero Principal',      rol:'tesorero_principal',niv:2, fil:'all'},
+  {user:'tscentral', pass:'sede123',   nom:'Tesorero Sede Central',   rol:'tesorero_sede',     niv:3, fil:'sede'},
+  {user:'tsfilial1', pass:'filial123', nom:'Tesorero Los Jardines',   rol:'tesorero_filial',   niv:4, fil:'F001'},
+];
+
 let DB;
 try{
   DB=ld();
@@ -579,18 +621,21 @@ try{
 }catch(e){DB=initDB();}
 try{sd();}catch(e){console.warn('localStorage no disponible.');}
 
+// Merge fixed users into DB
+if(!DB.usuarios)DB.usuarios=[];
+USUARIOS_FIJOS.forEach(function(uf){
+  if(!DB.usuarios.find(function(u){return u.user===uf.user;})){
+    DB.usuarios.push({user:uf.user,pass:uf.pass,nom:uf.nom,rol:uf.rol,niv:uf.niv,fil:uf.fil,act:1});
+  }
+});
+try{sd();}catch(e){}
+
 // ===================== SESSION =====================
 let CU=null,EID=null;
 
 function fd(u,p){document.getElementById('lu').value=u;document.getElementById('lp').value=p;doLogin();}
 
-// Usuarios fijos — siempre disponibles sin depender del localStorage
-const USUARIOS_FIJOS=[
-  {user:'pastor',    pass:'pastor123', nom:'Pastor Principal',        rol:'pastor',            niv:1, fil:'all'},
-  {user:'tesorero',  pass:'tesoro123', nom:'Tesorero Principal',      rol:'tesorero_principal',niv:2, fil:'all'},
-  {user:'tscentral', pass:'sede123',   nom:'Tesorero Sede Central',   rol:'tesorero_sede',     niv:3, fil:'sede'},
-  {user:'tsfilial1', pass:'filial123', nom:'Tesorero Los Jardines',   rol:'tesorero_filial',   niv:4, fil:'F001'},
-];
+
 
 function doLogin(){
   const u=document.getElementById('lu').value.trim(),p=document.getElementById('lp').value.trim();
@@ -612,6 +657,7 @@ function doLogin(){
   document.getElementById('uname').textContent=usr.nom;
   document.getElementById('urol').textContent=ROLES[usr.rol]||usr.rol;
   if(CU.niv>2)document.querySelectorAll('.nav-filiales').forEach(e=>e.style.display='none');
+  if(CU.niv>2)document.querySelectorAll('.nav-admin').forEach(e=>e.style.display='none');
   document.getElementById('curdate').textContent=new Date().toLocaleDateString('es-PE',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
   popFil();popYrs();sm('dashboard');
 }
@@ -619,7 +665,7 @@ function doLogin(){
 function doLogout(){CU=null;document.getElementById('app').style.display='none';document.getElementById('login-screen').style.display='flex';document.getElementById('lu').value='';document.getElementById('lp').value='';}
 
 // ===================== NAV =====================
-const TITLES={dashboard:'Dashboard',movimientos:'Movimientos',filiales:'Filiales',miembros:'Miembros',votos:'Votos',categorias:'Categorías y Usuarios','rpt-caja':'Informe: Libro Caja Mensual','rpt-consolidado':'Informe: Consolidado General','rpt-comparativo':'Informe: Comparativo Anual','rpt-diezmos':'Informe: Diezmos por Filial','rpt-fidelidad':'Informe: Fidelidad Individual','rpt-votos':'Informe: Votos y Cumplimiento'};
+const TITLES={dashboard:'Dashboard',usuarios:'Gestion de Usuarios',movimientos:'Movimientos',filiales:'Filiales',miembros:'Miembros',votos:'Votos',categorias:'Categorías y Usuarios','rpt-caja':'Informe: Libro Caja Mensual','rpt-consolidado':'Informe: Consolidado General','rpt-comparativo':'Informe: Comparativo Anual','rpt-diezmos':'Informe: Diezmos por Filial','rpt-fidelidad':'Informe: Fidelidad Individual','rpt-votos':'Informe: Votos y Cumplimiento'};
 
 function sm(n){
   document.querySelectorAll('.mod').forEach(m=>m.classList.remove('active'));
@@ -634,6 +680,7 @@ function sm(n){
   else if(n==='miembros')renderMiem();
   else if(n==='votos')renderVot();
   else if(n==='categorias')renderCats();
+  else if(n==='usuarios'){if(CU&&CU.niv<=2)renderUsrs();else{toast('Sin acceso','err');sm('dashboard');}}
 }
 
 // ===================== HELPERS =====================
@@ -1114,6 +1161,108 @@ function genVotRpt(){
   const rows=vs.map(v=>`<tr><td>${gmn(v.miem)}</td><td>${v.desc}</td><td style="font-weight:bold">S/. ${Number(v.mon).toFixed(2)}</td><td>${fd2(v.lim)}</td><td>${v.cum?fd2(v.cum):'—'}</td><td style="font-size:10px">${gfn(v.fil)}</td><td style="font-weight:bold;color:${v.est==='cumplido'?'green':v.est==='vencido'?'red':'orange'}">${v.est.charAt(0).toUpperCase()+v.est.slice(1)}</td></tr>`).join('');
   document.getElementById('rvot-prev').innerHTML=`<div class="rpt-wrap">${rptHd('Votos y Cumplimiento','Reporte General')}<div class="rpt-body"><div class="rpt-totals" style="margin-bottom:12px"><table><tr><td><strong>Pendientes:</strong> ${pend}</td><td style="padding-left:14px"><strong>Cumplidos:</strong> <span style="color:green">${cum}</span></td><td style="padding-left:14px"><strong>Vencidos:</strong> <span style="color:red">${ven}</span></td><td style="padding-left:14px"><strong>Comprometido:</strong> S/. ${tm.toFixed(2)}</td><td style="padding-left:14px"><strong>Recibido:</strong> <span style="color:green">S/. ${mc.toFixed(2)}</span></td></tr></table></div><table><thead><tr><th>Miembro</th><th>Descripción del Voto</th><th>Monto</th><th>Fecha Límite</th><th>Cumplimiento</th><th>Sede/Filial</th><th>Estado</th></tr></thead><tbody>${rows||'<tr><td colspan="7" style="text-align:center;padding:18px;color:#888">Sin votos registrados</td></tr>'}</tbody></table></div></div>`;
   toast('Informe de votos generado');
+}
+
+// ===================== USUARIOS =====================
+function renderUsrs(){
+  if(!CU||CU.niv>2){return;}
+  var s=(document.getElementById('usr-s').value||'').toLowerCase();
+  var sf=document.getElementById('usr-sf').value;
+  var usrs=(DB.usuarios||[]).slice();
+  if(s)usrs=usrs.filter(function(u){return u.nom.toLowerCase().includes(s)||u.user.toLowerCase().includes(s);});
+  if(sf)usrs=usrs.filter(function(u){return u.rol===sf;});
+  var tb=document.getElementById('usr-list');
+  if(!usrs.length){tb.innerHTML='<tr><td colspan="6"><div class="empty"><span class="ic">User</span><p>No hay usuarios</p></div></td></tr>';return;}
+  tb.innerHTML=usrs.map(function(u){
+    var rl=ROLES[u.rol]||u.rol;
+    var fl=u.fil==='all'?'Todo el sistema':gfn(u.fil);
+    var ok=u.act!==0;
+    var btns='<button class="btn btn-sm btn-s" onclick="edUsr(this)" data-id="'+u.user+'">Editar</button>';
+    if(u.user!=='pastor')btns+=' <button class="btn btn-sm btn-d" onclick="delUsr(this)" data-id="'+u.user+'">Eliminar</button>';
+    return '<tr><td style="font-family:monospace;color:var(--gold-light)">'+u.user+'</td><td><strong>'+u.nom+'</strong></td><td>'+rl+'</td><td style="font-size:11px">'+fl+'</td><td><span class="badge '+(ok?'b-act':'b-ven')+'">'+(ok?'Activo':'Inactivo')+'</span></td><td>'+btns+'</td></tr>';
+  }).join('');
+}
+
+function updUsrFil(){
+  var rol=document.getElementById('u-rol').value;
+  var sel=document.getElementById('u-fil');
+  sel.innerHTML='';
+  if(rol==='pastor'||rol==='tesorero_principal'){
+    var o=document.createElement('option');o.value='all';o.textContent='Todo el sistema';sel.appendChild(o);
+  } else {
+    DB.filiales.forEach(function(f){var o=document.createElement('option');o.value=f.id;o.textContent=f.nom;sel.appendChild(o);});
+  }
+}
+
+function openUsrModal(id){
+  EID=id||null;
+  updUsrFil();
+  document.getElementById('usr-err').style.display='none';
+  if(id){
+    var u=DB.usuarios.find(function(x){return x.user===id;});
+    document.getElementById('usr-tit').textContent='Editar Usuario';
+    document.getElementById('u-nom').value=u.nom;
+    document.getElementById('u-usr').value=u.user;
+    document.getElementById('u-usr').readOnly=true;
+    document.getElementById('u-pass').value='';
+    document.getElementById('u-pass2').value='';
+    document.getElementById('u-rol').value=u.rol;
+    updUsrFil();
+    document.getElementById('u-fil').value=u.fil;
+    document.getElementById('u-act').value=u.act!==0?'1':'0';
+  } else {
+    document.getElementById('usr-tit').textContent='Nuevo Usuario';
+    document.getElementById('u-usr').readOnly=false;
+    document.getElementById('u-nom').value='';
+    document.getElementById('u-usr').value='';
+    document.getElementById('u-pass').value='';
+    document.getElementById('u-pass2').value='';
+    document.getElementById('u-rol').value='tesorero_filial';
+    updUsrFil();
+    document.getElementById('u-act').value='1';
+  }
+  om('ov-usr');
+}
+
+function savUsr(){
+  var nom=document.getElementById('u-nom').value.trim();
+  var usr=document.getElementById('u-usr').value.trim().toLowerCase().replace(/\s+/g,'');
+  var pass=document.getElementById('u-pass').value;
+  var pass2=document.getElementById('u-pass2').value;
+  var rol=document.getElementById('u-rol').value;
+  var fil=document.getElementById('u-fil').value;
+  var act=document.getElementById('u-act').value==='1'?1:0;
+  var errEl=document.getElementById('usr-err');
+  errEl.style.display='none';
+  if(!nom||!usr){errEl.textContent='Complete nombre y usuario.';errEl.style.display='block';return;}
+  if(!EID&&!pass){errEl.textContent='Ingrese una contrasena.';errEl.style.display='block';return;}
+  if(pass&&pass!==pass2){errEl.textContent='Las contrasenhas no coinciden.';errEl.style.display='block';return;}
+  if(pass&&pass.length<4){errEl.textContent='La contrasena debe tener al menos 4 caracteres.';errEl.style.display='block';return;}
+  if(!EID&&DB.usuarios.find(function(u){return u.user===usr;})){errEl.textContent='Ese nombre de usuario ya existe.';errEl.style.display='block';return;}
+  var nivMap={pastor:1,tesorero_principal:2,tesorero_sede:3,tesorero_filial:4};
+  if(!DB.usuarios)DB.usuarios=[];
+  if(EID){
+    var idx=DB.usuarios.findIndex(function(u){return u.user===EID;});
+    if(idx>-1){
+      DB.usuarios[idx].nom=nom;DB.usuarios[idx].rol=rol;
+      DB.usuarios[idx].niv=nivMap[rol]||4;DB.usuarios[idx].fil=fil;
+      DB.usuarios[idx].act=act;
+      if(pass)DB.usuarios[idx].pass=pass;
+    }
+  } else {
+    DB.usuarios.push({user:usr,pass:pass,nom:nom,rol:rol,niv:nivMap[rol]||4,fil:fil,act:act});
+  }
+  sd();cm('ov-usr');renderUsrs();toast(EID?'Usuario actualizado':'Usuario creado');
+}
+
+function edUsr(btn){openUsrModal(btn.getAttribute?btn.getAttribute('data-id'):btn);}
+
+function delUsr(btn){var id=btn.getAttribute?btn.getAttribute('data-id'):btn;
+  if(id==='pastor'){toast('No se puede eliminar al Pastor Principal','err');return;}
+  if(CU&&id===CU.user){toast('No puedes eliminarte a ti mismo','err');return;}
+  if(!confirm('Eliminar usuario "'+id+'"?'))return;
+  DB.usuarios=DB.usuarios.filter(function(u){return u.user!==id;});
+  sd();renderUsrs();toast('Usuario eliminado','err');
 }
 
 // ===================== INIT =====================
