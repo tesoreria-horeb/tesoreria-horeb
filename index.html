@@ -819,9 +819,11 @@ function doLogin(){
   document.getElementById('uav').textContent=usr.nom[0];
   document.getElementById('uname').textContent=usr.nom;
   document.getElementById('urol').textContent=ROLES[usr.rol]||usr.rol;
-  // Hide filiales nav for non-admins
+  // Reset all nav items to visible first
+  document.querySelectorAll('.nav-filiales').forEach(e=>e.style.display='');
+  document.querySelectorAll('.nav-admin').forEach(e=>e.style.display='');
+  // Then hide based on level
   if(CU.niv>2)document.querySelectorAll('.nav-filiales').forEach(e=>e.style.display='none');
-  // Hide admin-only items for filial treasurers (nivel 4)
   if(CU.niv>=4)document.querySelectorAll('.nav-admin').forEach(e=>e.style.display='none');
   document.getElementById('curdate').textContent=new Date().toLocaleDateString('es-PE',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
   popFil();popYrs();
@@ -2200,6 +2202,8 @@ document.addEventListener('DOMContentLoaded',()=>{
         document.getElementById('uav').textContent=usr.nom[0];
         document.getElementById('uname').textContent=usr.nom;
         document.getElementById('urol').textContent=ROLES[usr.rol]||usr.rol;
+        document.querySelectorAll('.nav-filiales').forEach(function(e){e.style.display='';});
+        document.querySelectorAll('.nav-admin').forEach(function(e){e.style.display='';});
         if(CU.niv>2)document.querySelectorAll('.nav-filiales').forEach(function(e){e.style.display='none';});
         if(CU.niv>=4)document.querySelectorAll('.nav-admin').forEach(function(e){e.style.display='none';});
         document.getElementById('curdate').textContent=new Date().toLocaleDateString('es-PE',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
