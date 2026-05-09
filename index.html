@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sistema de Tesorería — Iglesia La Roca de Horeb</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Lato:wght@300;400;700&display=swap');
+:root{--gold:#C9A84C;--gold-light:#E8C97A;--gold-dark:#8B6914;--navy:#0D1B2A;--navy-mid:#1A2E44;--navy-light:#243B55;--cream:#F7F3E9;--red:#C0392B;--green:#1A7A4A;--blue:#2E86AB;--gray:#6B7280;--sidebar-w:240px;--r:8px}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Lato',sans-serif;background:var(--navy);color:var(--cream);min-height:100vh;overflow-x:hidden}
+
+/* LOGIN */
+#login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;background:linear-gradient(135deg,var(--navy) 0%,var(--navy-mid) 60%,#1B3A5C 100%)}
+.login-card{background:rgba(26,46,68,.97);border:1px solid rgba(201,168,76,.3);border-radius:16px;padding:44px 38px;width:410px;max-width:95vw;box-shadow:0 24px 64px rgba(0,0,0,.5)}
+.login-logo{text-align:center;margin-bottom:30px}
+.login-logo .cross{font-size:46px;color:var(--gold);display:block;margin-bottom:10px;text-shadow:0 0 20px rgba(201,168,76,.4)}
+.login-logo h1{font-family:'Cinzel',serif;font-size:17px;color:var(--gold);letter-spacing:.5px;line-height:1.5}
+.login-logo p{font-size:11px;color:rgba(247,243,233,.4);letter-spacing:2px;text-transform:uppercase;margin-top:4px}
+.fg{margin-bottom:16px}
+.fg label{display:block;font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--gold-light);margin-bottom:6px;font-weight:700}
+.fg input,.fg select{width:100%;padding:11px 14px;background:rgba(13,27,42,.8);border:1px solid rgba(201,168,76,.2);border-radius:var(--r);color:var(--cream);font-size:13px;font-family:'Lato',sans-serif;outline:none;transition:border-color .2s}
+.fg input:focus,.fg select:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,168,76,.1)}
+.fg select option{background:var(--navy-mid)}
+.btn-login{width:100%;padding:13px;background:linear-gradient(135deg,var(--gold-dark),var(--gold));border:none;border-radius:var(--r);color:var(--navy);font-family:'Cinzel',serif;font-size:14px;font-weight:700;letter-spacing:1px;cursor:pointer;transition:all .2s;margin-top:6px}
+.btn-login:hover{transform:translateY(-1px);box-shadow:0 8px 20px rgba(201,168,76,.3)}
+.login-err{background:rgba(192,57,43,.2);border:1px solid rgba(192,57,43,.4);border-radius:var(--r);padding:9px 12px;font-size:13px;color:#E74C3C;margin-top:10px;display:none}
+.demo-hint{margin-top:18px;padding-top:16px;border-top:1px solid rgba(201,168,76,.15)}
+.demo-hint p{font-size:11px;color:rgba(247,243,233,.4);text-align:center;margin-bottom:8px}
+.demo-tags{display:flex;flex-wrap:wrap;gap:5px;justify-content:center}
+.demo-tag{font-size:10px;padding:3px 8px;border-radius:20px;background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.2);color:var(--gold-light);cursor:pointer}
+.demo-tag:hover{background:rgba(201,168,76,.2)}
+
+/* APP */
+#app{display:none;min-height:100vh}
+
+/* SIDEBAR */
+.sidebar{width:var(--sidebar-w);background:linear-gradient(180deg,var(--navy) 0%,var(--navy-mid) 100%);border-right:1px solid rgba(201,168,76,.15);display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;z-index:100;overflow-y:auto}
+.sb-logo{padding:22px 18px 18px;border-bottom:1px solid rgba(201,168,76,.15);text-align:center}
+.sb-logo .cross{font-size:26px;color:var(--gold)}
+.sb-logo h2{font-family:'Cinzel',serif;font-size:11px;color:var(--gold);letter-spacing:.5px;line-height:1.5;margin-top:6px}
+.sb-logo p{font-size:10px;color:rgba(247,243,233,.35);margin-top:2px}
+.sb-user{padding:12px 18px;border-bottom:1px solid rgba(201,168,76,.1);display:flex;align-items:center;gap:10px}
+.user-av{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--gold-dark),var(--gold));display:flex;align-items:center;justify-content:center;font-family:'Cinzel',serif;font-size:13px;font-weight:700;color:var(--navy);flex-shrink:0}
+.user-name{font-size:11px;font-weight:700;color:var(--cream);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.user-rol{font-size:10px;color:var(--gold-light)}
+.sb-nav{flex:1;padding:10px 0}
+.nav-sec{padding:8px 18px 3px;font-size:9px;text-transform:uppercase;letter-spacing:2px;color:rgba(201,168,76,.4);font-weight:700}
+.nav-item{display:flex;align-items:center;gap:9px;padding:9px 18px;cursor:pointer;transition:all .15s;font-size:12px;color:rgba(247,243,233,.6);border-left:3px solid transparent}
+.nav-item:hover{background:rgba(201,168,76,.08);color:var(--cream)}
+.nav-item.active{background:rgba(201,168,76,.12);color:var(--gold-light);border-left-color:var(--gold)}
+.nav-item .ic{font-size:15px;width:18px;text-align:center}
+.sb-foot{padding:14px 18px;border-top:1px solid rgba(201,168,76,.15)}
+.btn-out{width:100%;padding:7px 10px;background:transparent;border:1px solid rgba(192,57,43,.4);border-radius:var(--r);color:#E74C3C;font-size:12px;cursor:pointer;transition:all .15s;font-family:'Lato',sans-serif}
+.btn-out:hover{background:rgba(192,57,43,.1)}
+
+/* MAIN */
+.main{margin-left:var(--sidebar-w);min-height:100vh;background:#0F1E30}
+.topbar{padding:14px 26px;background:rgba(13,27,42,.85);border-bottom:1px solid rgba(201,168,76,.1);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;backdrop-filter:blur(8px)}
+.topbar-title{font-family:'Cinzel',serif;font-size:17px;color:var(--cream)}
+.topbar-sub{font-size:11px;color:rgba(247,243,233,.35);margin-top:2px}
+.pg{padding:24px}
+
+/* MODULES */
+.mod{display:none}.mod.active{display:block}
+
+/* CARDS */
+.card{background:rgba(26,46,68,.6);border:1px solid rgba(201,168,76,.15);border-radius:var(--r);padding:18px}
+.card-title{font-family:'Cinzel',serif;font-size:12px;color:var(--gold-light);margin-bottom:14px;padding-bottom:9px;border-bottom:1px solid rgba(201,168,76,.12);display:flex;align-items:center;justify-content:space-between}
+
+/* STATS */
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:14px;margin-bottom:20px}
+.stat-card{background:rgba(26,46,68,.7);border:1px solid rgba(201,168,76,.15);border-radius:var(--r);padding:18px;position:relative;overflow:hidden}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.stat-card.sc-ing::before{background:var(--green)}
+.stat-card.sc-eg::before{background:var(--red)}
+.stat-card.sc-bal::before{background:var(--gold)}
+.stat-card.sc-mem::before{background:var(--blue)}
+.stat-lbl{font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:rgba(247,243,233,.4);font-weight:700}
+.stat-val{font-family:'Cinzel',serif;font-size:24px;color:var(--cream);margin:5px 0}
+.stat-val.ing{color:#2ECC71}.stat-val.eg{color:#E74C3C}.stat-val.bal{color:var(--gold-light)}
+.stat-sub{font-size:11px;color:rgba(247,243,233,.35)}
+
+/* CHARTS */
+.charts-grid{display:grid;grid-template-columns:2fr 1fr;gap:14px;margin-bottom:20px}
+.chart-box{position:relative;height:210px}
+
+/* BUTTONS */
+.btn{padding:8px 14px;border-radius:var(--r);font-family:'Lato',sans-serif;font-size:12px;cursor:pointer;border:none;transition:all .15s;display:inline-flex;align-items:center;gap:5px;font-weight:700}
+.btn-p{background:linear-gradient(135deg,var(--gold-dark),var(--gold));color:var(--navy)}
+.btn-p:hover{box-shadow:0 4px 12px rgba(201,168,76,.3);transform:translateY(-1px)}
+.btn-s{background:rgba(201,168,76,.12);border:1px solid rgba(201,168,76,.3);color:var(--gold-light)}
+.btn-s:hover{background:rgba(201,168,76,.2)}
+.btn-d{background:rgba(192,57,43,.15);border:1px solid rgba(192,57,43,.3);color:#E74C3C}
+.btn-d:hover{background:rgba(192,57,43,.25)}
+.btn-g{background:rgba(26,122,74,.2);border:1px solid rgba(26,122,74,.4);color:#2ECC71}
+.btn-pr{background:rgba(46,134,171,.15);border:1px solid rgba(46,134,171,.3);color:#5DADE2}
+.btn-sm{padding:4px 9px;font-size:11px}
+
+/* TABLE */
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12px}
+thead tr{border-bottom:2px solid rgba(201,168,76,.2)}
+thead th{padding:9px 11px;text-align:left;font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--gold-light);font-weight:700;white-space:nowrap}
+tbody tr{border-bottom:1px solid rgba(201,168,76,.06);transition:background .1s}
+tbody tr:hover{background:rgba(201,168,76,.04)}
+tbody td{padding:9px 11px;color:rgba(247,243,233,.8);vertical-align:middle}
+.badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+.b-ing{background:rgba(46,204,113,.15);color:#2ECC71;border:1px solid rgba(46,204,113,.3)}
+.b-eg{background:rgba(231,76,60,.15);color:#E74C3C;border:1px solid rgba(231,76,60,.3)}
+.b-pend{background:rgba(243,156,18,.15);color:#F39C12;border:1px solid rgba(243,156,18,.3)}
+.b-cum{background:rgba(46,204,113,.15);color:#2ECC71;border:1px solid rgba(46,204,113,.3)}
+.b-ven{background:rgba(231,76,60,.15);color:#E74C3C;border:1px solid rgba(231,76,60,.3)}
+.b-fiel{background:rgba(201,168,76,.15);color:var(--gold-light);border:1px solid rgba(201,168,76,.3)}
+.b-act{background:rgba(46,204,113,.1);color:#2ECC71;border:1px solid rgba(46,204,113,.2)}
+.amt-i{color:#2ECC71;font-weight:700}.amt-e{color:#E74C3C;font-weight:700}
+
+/* MODAL */
+.ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:200;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.ov.open{display:flex}
+.modal{background:var(--navy-mid);border:1px solid rgba(201,168,76,.25);border-radius:12px;padding:26px;width:540px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.6)}
+.modal-lg{width:760px}
+.modal-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;padding-bottom:12px;border-bottom:1px solid rgba(201,168,76,.15)}
+.modal-tit{font-family:'Cinzel',serif;font-size:14px;color:var(--gold-light)}
+.modal-x{background:none;border:none;color:rgba(247,243,233,.4);font-size:20px;cursor:pointer;line-height:1}
+.modal-x:hover{color:var(--cream)}
+.modal-ft{display:flex;gap:9px;justify-content:flex-end;margin-top:18px;padding-top:14px;border-top:1px solid rgba(201,168,76,.1)}
+
+/* FORM */
+.fr{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.fr.fr3{grid-template-columns:1fr 1fr 1fr}
+.fr.fr1{grid-template-columns:1fr}
+.fld{display:flex;flex-direction:column;gap:4px}
+.fld label{font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--gold-light);font-weight:700}
+.fld input,.fld select,.fld textarea{padding:8px 11px;background:rgba(13,27,42,.7);border:1px solid rgba(201,168,76,.2);border-radius:var(--r);color:var(--cream);font-size:12px;font-family:'Lato',sans-serif;outline:none;transition:border-color .2s}
+.fld input:focus,.fld select:focus,.fld textarea:focus{border-color:var(--gold);box-shadow:0 0 0 2px rgba(201,168,76,.1)}
+.fld select option{background:var(--navy-mid)}
+.fld textarea{resize:vertical;min-height:70px}
+
+/* TOOLBAR */
+.tb{display:flex;align-items:center;gap:9px;margin-bottom:14px;flex-wrap:wrap}
+.sb{flex:1;min-width:150px;padding:8px 13px;background:rgba(13,27,42,.7);border:1px solid rgba(201,168,76,.2);border-radius:var(--r);color:var(--cream);font-size:12px;font-family:'Lato',sans-serif;outline:none}
+.sb:focus{border-color:var(--gold)}
+.sb::placeholder{color:rgba(247,243,233,.3)}
+.fs{padding:8px 11px;background:rgba(13,27,42,.7);border:1px solid rgba(201,168,76,.2);border-radius:var(--r);color:var(--cream);font-size:12px;font-family:'Lato',sans-serif;outline:none;cursor:pointer}
+.fs:focus{border-color:var(--gold)}
+.fs option{background:var(--navy-mid)}
+
+/* PAGINATION */
+.pag{display:flex;align-items:center;gap:5px;justify-content:center;margin-top:14px}
+.pg-btn{padding:4px 9px;border-radius:4px;border:1px solid rgba(201,168,76,.2);background:rgba(13,27,42,.5);color:rgba(247,243,233,.6);cursor:pointer;font-size:11px;transition:all .15s}
+.pg-btn:hover,.pg-btn.active{background:rgba(201,168,76,.15);color:var(--gold-light);border-color:rgba(201,168,76,.4)}
+
+/* FIDELITY */
+.fid-bar{height:5px;background:rgba(255,255,255,.1);border-radius:3px;overflow:hidden;margin-top:3px}
+.fid-fill{height:100%;border-radius:3px;transition:width .3s}
+
+/* TABS */
+.tabs{display:flex;gap:3px;margin-bottom:18px;border-bottom:1px solid rgba(201,168,76,.15)}
+.tab-btn{padding:8px 14px;background:none;border:none;border-bottom:2px solid transparent;color:rgba(247,243,233,.5);font-family:'Lato',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all .15s;margin-bottom:-1px}
+.tab-btn:hover{color:var(--cream)}
+.tab-btn.active{color:var(--gold-light);border-bottom-color:var(--gold)}
+.tab-cnt{display:none}.tab-cnt.active{display:block}
+
+/* CATEGORIES */
+.cat-grid{display:flex;flex-wrap:wrap;gap:7px}
+.cat-chip{display:inline-flex;align-items:center;gap:5px;padding:4px 11px;border-radius:20px;font-size:11px;border:1px solid;cursor:default}
+.cat-i{background:rgba(46,204,113,.1);border-color:rgba(46,204,113,.3);color:#2ECC71}
+.cat-e{background:rgba(231,76,60,.1);border-color:rgba(231,76,60,.3);color:#E74C3C}
+.cat-rm{font-size:13px;opacity:.6;cursor:pointer}
+.cat-rm:hover{opacity:1}
+
+/* ALERTS */
+.alert{padding:9px 13px;border-radius:var(--r);font-size:12px;margin-bottom:12px;display:flex;align-items:center;gap:7px}
+.alert-info{background:rgba(52,152,219,.1);border:1px solid rgba(52,152,219,.3);color:#5DADE2}
+
+/* EMPTY */
+.empty{text-align:center;padding:36px;color:rgba(247,243,233,.3)}
+.empty .ic{font-size:44px;display:block;margin-bottom:10px}
+
+/* REPORT */
+.rpt-wrap{background:white;color:#1a1a1a;border-radius:var(--r);overflow:hidden}
+.rpt-hd{background:#0D1B2A;color:white;padding:18px 22px;display:flex;align-items:center;gap:14px}
+.rpt-logo-circle{width:58px;height:58px;background:rgba(201,168,76,.2);border:2px solid #C9A84C;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0}
+.rpt-church{color:#C9A84C;font-size:12px;font-weight:bold}
+.rpt-title{font-size:17px;font-weight:bold;color:white;margin:3px 0}
+.rpt-sub{font-size:11px;color:rgba(255,255,255,.55)}
+.rpt-body{padding:18px 22px}
+.rpt-wrap table{color:#1a1a1a;font-size:11px}
+.rpt-wrap thead th{background:#0D1B2A;color:#C9A84C;padding:6px 9px;text-align:left;font-size:9px;text-transform:uppercase}
+.rpt-wrap tbody td{color:#333;border-bottom:1px solid #eee;padding:6px 9px}
+.rpt-wrap tbody tr:nth-child(even){background:#f9f9f9}
+.rpt-totals{margin-top:10px;padding:11px;background:#f8f5ef;border:1px solid #C9A84C;border-radius:5px;font-size:12px}
+.rpt-sign{margin-top:38px;display:flex;gap:38px;justify-content:flex-end}
+.rpt-sign-ln{border-top:1px solid #333;width:170px;text-align:center;padding-top:3px;font-size:10px;color:#555}
+
+/* TOAST */
+#toast{position:fixed;bottom:22px;right:22px;background:rgba(26,46,68,.97);border:1px solid rgba(201,168,76,.3);border-radius:var(--r);padding:11px 16px;font-size:13px;color:var(--cream);box-shadow:0 8px 24px rgba(0,0,0,.4);z-index:9999;transform:translateY(100px);opacity:0;transition:all .3s;max-width:300px}
+#toast.show{transform:translateY(0);opacity:1}
+
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(201,168,76,.2);border-radius:3px}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">
+      <span class="cross">✝</span>
+      <h1>Iglesia La Roca de Horeb<br>Ministerio de Perus</h1>
+      <p>Sistema de Tesorería</p>
+    </div>
+    <div class="fg"><label>Usuario</label><input id="lu" placeholder="Usuario" autocomplete="off"></div>
+    <div class="fg"><label>Contraseña</label><input type="password" id="lp" placeholder="Contraseña"></div>
+    <button class="btn-login" onclick="doLogin()">Ingresar al Sistema</button>
+    <div class="login-err" id="lerr">Usuario o contraseña incorrectos</div>
+    <div class="demo-hint">
+      <p>Accesos de demostración:</p>
+      <div class="demo-tags">
+        <span class="demo-tag" onclick="fd('pastor','pastor123')">Pastor Principal</span>
+        <span class="demo-tag" onclick="fd('tesorero','tesoro123')">Tesorero Principal</span>
+        <span class="demo-tag" onclick="fd('tscentral','sede123')">Tesorero Sede</span>
+        <span class="demo-tag" onclick="fd('tsfilial1','filial123')">Tesorero Filial</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <nav class="sidebar" id="sidebar">
+    <div class="sb-logo">
+      <div class="cross">✝</div>
+      <h2>La Roca de Horeb<br>Ministerio de Perus</h2>
+      <p>Sistema de Tesorería</p>
+    </div>
+    <div class="sb-user">
+      <div class="user-av" id="uav">P</div>
+      <div><div class="user-name" id="uname">Usuario</div><div class="user-rol" id="urol">Rol</div></div>
+    </div>
+    <nav class="sb-nav">
+      <div class="nav-sec">Principal</div>
+      <div class="nav-item active" onclick="sm('dashboard')"><span class="ic">📊</span>Dashboard</div>
+      <div class="nav-sec">Gestión</div>
+      <div class="nav-item" onclick="sm('movimientos')"><span class="ic">💰</span>Movimientos</div>
+      <div class="nav-item nav-filiales" onclick="sm('filiales')"><span class="ic">🏛️</span>Filiales</div>
+      <div class="nav-item" onclick="sm('miembros')"><span class="ic">👥</span>Miembros</div>
+      <div class="nav-item" onclick="sm('votos')"><span class="ic">🙏</span>Votos</div>
+      <div class="nav-sec">Configuración</div>
+      <div class="nav-item" onclick="sm('categorias')"><span class="ic">🏷️</span>Categorías</div>
+      <div class="nav-sec">Informes</div>
+      <div class="nav-item" onclick="sm('rpt-caja')"><span class="ic">📋</span>Libro Caja</div>
+      <div class="nav-item" onclick="sm('rpt-consolidado')"><span class="ic">📈</span>Consolidado</div>
+      <div class="nav-item" onclick="sm('rpt-comparativo')"><span class="ic">📉</span>Comparativo Anual</div>
+      <div class="nav-item" onclick="sm('rpt-diezmos')"><span class="ic">💵</span>Diezmos x Filial</div>
+      <div class="nav-item" onclick="sm('rpt-fidelidad')"><span class="ic">⭐</span>Fidelidad</div>
+      <div class="nav-item" onclick="sm('rpt-votos')"><span class="ic">📜</span>Votos y Cumplimiento</div>
+    </nav>
+    <div class="sb-foot"><button class="btn-out" onclick="doLogout()">🚪 Cerrar Sesión</button></div>
+  </nav>
+
+  <main class="main">
+    <div class="topbar">
+      <div><div class="topbar-title" id="pt">Dashboard</div><div class="topbar-sub" id="ps">Resumen general</div></div>
+      <div style="font-size:11px;color:rgba(247,243,233,.35)" id="curdate"></div>
+    </div>
+    <div class="pg">
+
+      <!-- DASHBOARD -->
+      <div class="mod active" id="mod-dashboard">
+        <div class="stat-grid" id="dash-stats"></div>
+        <div class="charts-grid">
+          <div class="card">
+            <div class="card-title">Ingresos vs Egresos — Últimos 6 meses
+              <select class="fs" id="ch-year" onchange="renderDash()" style="font-size:10px;padding:3px 7px"></select>
+            </div>
+            <div class="chart-box"><canvas id="ch-bar"></canvas></div>
+          </div>
+          <div class="card">
+            <div class="card-title">Distribución por Categoría</div>
+            <div class="chart-box"><canvas id="ch-dona"></canvas></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Últimos Movimientos</div>
+          <div class="tw"><table><thead><tr><th>Fecha</th><th>Descripción</th><th>Categoría</th><th>Tipo</th><th>Monto</th><th>Sede/Filial</th></tr></thead><tbody id="dash-rec"></tbody></table></div>
+        </div>
+      </div>
+
+      <!-- MOVIMIENTOS -->
+      <div class="mod" id="mod-movimientos">
+        <div class="tb">
+          <input class="sb" id="mov-s" placeholder="🔍 Buscar..." oninput="renderMov()">
+          <select class="fs" id="mov-ft" onchange="renderMov()"><option value="">Todos los tipos</option><option value="ingreso">Ingresos</option><option value="egreso">Egresos</option></select>
+          <select class="fs" id="mov-fm" onchange="renderMov()"><option value="">Todos los meses</option></select>
+          <select class="fs" id="mov-fc" onchange="renderMov()"><option value="">Todas las categorías</option></select>
+          <select class="fs" id="mov-ff" onchange="renderMov()"><option value="">Todas las sedes</option></select>
+          <button class="btn btn-p" onclick="openMovModal()">+ Nuevo</button>
+        </div>
+        <div class="card">
+          <div class="card-title">Registro de Movimientos <span id="mov-tot" style="font-size:11px;color:rgba(247,243,233,.45);font-family:'Lato',sans-serif;font-weight:400"></span></div>
+          <div class="tw"><table><thead><tr><th>#</th><th>Fecha</th><th>Descripción</th><th>Categoría</th><th>Método</th><th>Tipo</th><th>Monto</th><th>Comprobante</th><th>Sede/Filial</th><th>Acciones</th></tr></thead><tbody id="mov-body"></tbody></table></div>
+          <div class="pag" id="mov-pag"></div>
+        </div>
+      </div>
+
+      <!-- FILIALES -->
+      <div class="mod" id="mod-filiales">
+        <div class="tb">
+          <input class="sb" id="fil-s" placeholder="🔍 Buscar filial..." oninput="renderFil()">
+          <button class="btn btn-p" onclick="openFilModal()">+ Nueva Filial</button>
+        </div>
+        <div class="card">
+          <div class="card-title">Filiales y Sedes</div>
+          <div class="tw"><table><thead><tr><th>Código</th><th>Nombre</th><th>Pastor</th><th>Tesorero</th><th>Dirección</th><th>Miembros</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="fil-body"></tbody></table></div>
+        </div>
+      </div>
+
+      <!-- MIEMBROS -->
+      <div class="mod" id="mod-miembros">
+        <div class="tb">
+          <input class="sb" id="miem-s" placeholder="🔍 Buscar miembro..." oninput="renderMiem()">
+          <select class="fs" id="miem-ff" onchange="renderMiem()"><option value="">Todas las sedes</option></select>
+          <select class="fs" id="miem-fd" onchange="renderMiem()"><option value="">Toda fidelidad</option><option value="fiel">Fiel ≥90%</option><option value="regular">Regular 60-89%</option><option value="irregular">Irregular &lt;60%</option></select>
+          <button class="btn btn-p" onclick="openMiemModal()">+ Nuevo Miembro</button>
+        </div>
+        <div class="card">
+          <div class="card-title">Registro de Miembros</div>
+          <div class="tw"><table><thead><tr><th>Código RI</th><th>Nombre</th><th>Sede/Filial</th><th>Teléfono</th><th>Diezmos año</th><th>Fidelidad</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="miem-body"></tbody></table></div>
+          <div class="pag" id="miem-pag"></div>
+        </div>
+      </div>
+
+      <!-- VOTOS -->
+      <div class="mod" id="mod-votos">
+        <div class="tb">
+          <input class="sb" id="vot-s" placeholder="🔍 Buscar voto..." oninput="renderVot()">
+          <select class="fs" id="vot-fe" onchange="renderVot()"><option value="">Todos los estados</option><option value="pendiente">Pendiente</option><option value="cumplido">Cumplido</option><option value="vencido">Vencido</option></select>
+          <select class="fs" id="vot-ff" onchange="renderVot()"><option value="">Todas las sedes</option></select>
+          <button class="btn btn-p" onclick="openVotModal()">+ Nuevo Voto</button>
+        </div>
+        <div class="card">
+          <div class="card-title">Registro de Votos</div>
+          <div class="tw"><table><thead><tr><th>#</th><th>Miembro</th><th>Descripción</th><th>Monto</th><th>Fecha Límite</th><th>Sede/Filial</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="vot-body"></tbody></table></div>
+        </div>
+      </div>
+
+      <!-- CATEGORIAS -->
+      <div class="mod" id="mod-categorias">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+          <div class="card">
+            <div class="card-title">Categorías de Ingresos <button class="btn btn-sm btn-g" onclick="openCatModal('ingreso')">+ Agregar</button></div>
+            <div class="cat-grid" id="cat-ing"></div>
+          </div>
+          <div class="card">
+            <div class="card-title">Categorías de Egresos <button class="btn btn-sm btn-d" onclick="openCatModal('egreso')">+ Agregar</button></div>
+            <div class="cat-grid" id="cat-eg"></div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:14px">
+          <div class="card-title">Usuarios del Sistema</div>
+          <div class="tw"><table><thead><tr><th>Usuario</th><th>Nombre</th><th>Rol</th><th>Acceso</th></tr></thead><tbody id="usr-body"></tbody></table></div>
+        </div>
+      </div>
+
+      <!-- RPT LIBRO CAJA -->
+      <div class="mod" id="mod-rpt-caja">
+        <div class="tb">
+          <select class="fs" id="rc-mes"><option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option><option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option><option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option><option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option></select>
+          <select class="fs" id="rc-anio"></select>
+          <select class="fs" id="rc-fil"><option value="all">Todas las sedes</option></select>
+          <button class="btn btn-p" onclick="genCaja()">📋 Generar</button>
+          <button class="btn btn-pr" onclick="prtRpt('rc-prev')">🖨️ Imprimir/PDF</button>
+        </div>
+        <div id="rc-prev"></div>
+      </div>
+
+      <!-- RPT CONSOLIDADO -->
+      <div class="mod" id="mod-rpt-consolidado">
+        <div class="tb">
+          <select class="fs" id="rcon-per"><option value="mensual">Mensual</option><option value="trimestral">Trimestral</option><option value="anual">Anual</option></select>
+          <select class="fs" id="rcon-anio"></select>
+          <select class="fs" id="rcon-fil"><option value="all">Todas las sedes</option></select>
+          <button class="btn btn-p" onclick="genCons()">📈 Generar</button>
+          <button class="btn btn-pr" onclick="prtRpt('rcon-prev')">🖨️ Imprimir</button>
+        </div>
+        <div id="rcon-prev"></div>
+      </div>
+
+      <!-- RPT COMPARATIVO -->
+      <div class="mod" id="mod-rpt-comparativo">
+        <div class="tb">
+          <label style="font-size:11px;color:var(--gold-light)">Año 1:</label><select class="fs" id="rcomp-a1"></select>
+          <label style="font-size:11px;color:var(--gold-light)">Año 2:</label><select class="fs" id="rcomp-a2"></select>
+          <button class="btn btn-p" onclick="genComp()">📉 Generar</button>
+          <button class="btn btn-pr" onclick="prtRpt('rcomp-prev')">🖨️ Imprimir</button>
+        </div>
+        <div id="rcomp-prev"></div>
+        <div id="rcomp-charts" style="margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:14px"></div>
+      </div>
+
+      <!-- RPT DIEZMOS -->
+      <div class="mod" id="mod-rpt-diezmos">
+        <div class="tb">
+          <select class="fs" id="rdz-anio"></select>
+          <button class="btn btn-p" onclick="genDiez()">💵 Generar</button>
+          <button class="btn btn-pr" onclick="prtRpt('rdz-prev')">🖨️ Imprimir</button>
+        </div>
+        <div id="rdz-prev"></div>
+      </div>
+
+      <!-- RPT FIDELIDAD -->
+      <div class="mod" id="mod-rpt-fidelidad">
+        <div class="tb">
+          <select class="fs" id="rfid-anio"></select>
+          <select class="fs" id="rfid-fil"><option value="all">Todas las sedes</option></select>
+          <button class="btn btn-p" onclick="genFid()">⭐ Generar</button>
+          <button class="btn btn-pr" onclick="prtRpt('rfid-prev')">🖨️ Imprimir</button>
+        </div>
+        <div id="rfid-prev"></div>
+      </div>
+
+      <!-- RPT VOTOS -->
+      <div class="mod" id="mod-rpt-votos">
+        <div class="tb">
+          <select class="fs" id="rvot-est"><option value="all">Todos</option><option value="pendiente">Pendiente</option><option value="cumplido">Cumplido</option><option value="vencido">Vencido</option></select>
+          <select class="fs" id="rvot-fil"><option value="all">Todas las sedes</option></select>
+          <button class="btn btn-p" onclick="genVotRpt()">📜 Generar</button>
+          <button class="btn btn-pr" onclick="prtRpt('rvot-prev')">🖨️ Imprimir</button>
+        </div>
+        <div id="rvot-prev"></div>
+      </div>
+
+    </div><!-- end pg -->
+  </main>
+</div><!-- end app -->
+
+<!-- MODAL MOVIMIENTO -->
+<div class="ov" id="ov-mov">
+  <div class="modal">
+    <div class="modal-hd"><div class="modal-tit" id="mov-tit">Nuevo Movimiento</div><button class="modal-x" onclick="cm('ov-mov')">✕</button></div>
+    <div class="fr"><div class="fld"><label>Tipo</label><select id="m-tipo" onchange="updCats()"><option value="ingreso">Ingreso</option><option value="egreso">Egreso</option></select></div><div class="fld"><label>Fecha</label><input type="date" id="m-fecha"></div></div>
+    <div class="fr"><div class="fld"><label>Categoría</label><select id="m-cat"></select></div><div class="fld"><label>Monto (S/.)</label><input type="number" id="m-monto" placeholder="0.00" step="0.01" min="0"></div></div>
+    <div class="fr fr1"><div class="fld"><label>Descripción</label><input type="text" id="m-desc" placeholder="Descripción del movimiento"></div></div>
+    <div class="fr"><div class="fld"><label>Método de Pago</label><select id="m-met"><option value="efectivo">Efectivo</option><option value="transferencia">Transferencia</option><option value="yape">Yape</option><option value="plin">Plin</option><option value="deposito">Depósito bancario</option><option value="cheque">Cheque</option></select></div><div class="fld"><label>N° Comprobante</label><input type="text" id="m-comp" placeholder="Opcional"></div></div>
+    <div class="fr"><div class="fld"><label>Sede / Filial</label><select id="m-fil"></select></div><div class="fld"><label>Miembro (si aplica)</label><select id="m-miem"><option value="">— Sin miembro —</option></select></div></div>
+    <div class="fr fr1"><div class="fld"><label>Observaciones</label><textarea id="m-obs" placeholder="Notas adicionales..."></textarea></div></div>
+    <div class="modal-ft"><button class="btn btn-s" onclick="cm('ov-mov')">Cancelar</button><button class="btn btn-p" onclick="savMov()">💾 Guardar</button></div>
+  </div>
+</div>
+
+<!-- MODAL FILIAL -->
+<div class="ov" id="ov-fil">
+  <div class="modal">
+    <div class="modal-hd"><div class="modal-tit" id="fil-tit">Nueva Filial</div><button class="modal-x" onclick="cm('ov-fil')">✕</button></div>
+    <div class="fr"><div class="fld"><label>Código</label><input type="text" id="f-cod" readonly style="opacity:.6"></div><div class="fld"><label>Nombre</label><input type="text" id="f-nom" placeholder="Nombre de la filial"></div></div>
+    <div class="fr"><div class="fld"><label>Pastor</label><input type="text" id="f-pas" placeholder="Nombre del pastor"></div><div class="fld"><label>Tesorero</label><input type="text" id="f-tes" placeholder="Nombre del tesorero"></div></div>
+    <div class="fr fr1"><div class="fld"><label>Dirección</label><input type="text" id="f-dir" placeholder="Dirección completa"></div></div>
+    <div class="fr"><div class="fld"><label>Teléfono</label><input type="text" id="f-tel" placeholder="Teléfono"></div><div class="fld"><label>Fecha de Fundación</label><input type="date" id="f-fun"></div></div>
+    <div class="modal-ft"><button class="btn btn-s" onclick="cm('ov-fil')">Cancelar</button><button class="btn btn-p" onclick="savFil()">💾 Guardar</button></div>
+  </div>
+</div>
+
+<!-- MODAL MIEMBRO -->
+<div class="ov" id="ov-miem">
+  <div class="modal modal-lg">
+    <div class="modal-hd"><div class="modal-tit" id="miem-tit">Nuevo Miembro</div><button class="modal-x" onclick="cm('ov-miem')">✕</button></div>
+    <div class="tabs" id="miem-tabs">
+      <button class="tab-btn active" onclick="stab('miem','datos')">Datos Personales</button>
+      <button class="tab-btn" onclick="stab('miem','diezmos')">Historial Diezmos</button>
+    </div>
+    <div class="tab-cnt active" id="miem-tab-datos">
+      <div class="fr"><div class="fld"><label>Código RI</label><input type="text" id="mi-cod" readonly style="opacity:.6"></div><div class="fld"><label>Sede / Filial</label><select id="mi-fil"></select></div></div>
+      <div class="fr"><div class="fld"><label>Nombres</label><input type="text" id="mi-nom" placeholder="Nombres"></div><div class="fld"><label>Apellidos</label><input type="text" id="mi-ape" placeholder="Apellidos"></div></div>
+      <div class="fr"><div class="fld"><label>DNI</label><input type="text" id="mi-dni" placeholder="DNI"></div><div class="fld"><label>Teléfono</label><input type="text" id="mi-tel" placeholder="Teléfono"></div></div>
+      <div class="fr"><div class="fld"><label>Fecha Nacimiento</label><input type="date" id="mi-nac"></div><div class="fld"><label>Fecha Ingreso</label><input type="date" id="mi-ing"></div></div>
+      <div class="fr fr1"><div class="fld"><label>Dirección</label><input type="text" id="mi-dir" placeholder="Dirección"></div></div>
+    </div>
+    <div class="tab-cnt" id="miem-tab-diezmos">
+      <div class="alert alert-info">💡 Los diezmos se vinculan automáticamente al registrar movimientos con categoría "Diezmos" y el miembro seleccionado.</div>
+      <div id="miem-diez-preview" style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-top:12px"></div>
+    </div>
+    <div class="modal-ft"><button class="btn btn-s" onclick="cm('ov-miem')">Cancelar</button><button class="btn btn-p" onclick="savMiem()">💾 Guardar</button></div>
+  </div>
+</div>
+
+<!-- MODAL VOTO -->
+<div class="ov" id="ov-vot">
+  <div class="modal">
+    <div class="modal-hd"><div class="modal-tit" id="vot-tit">Nuevo Voto</div><button class="modal-x" onclick="cm('ov-vot')">✕</button></div>
+    <div class="fr"><div class="fld"><label>Miembro</label><select id="v-miem"></select></div><div class="fld"><label>Sede / Filial</label><select id="v-fil"></select></div></div>
+    <div class="fr fr1"><div class="fld"><label>Descripción del Voto</label><input type="text" id="v-desc" placeholder="Descripción del voto"></div></div>
+    <div class="fr"><div class="fld"><label>Monto Comprometido (S/.)</label><input type="number" id="v-mon" placeholder="0.00" step="0.01"></div><div class="fld"><label>Fecha Límite</label><input type="date" id="v-lim"></div></div>
+    <div class="fr"><div class="fld"><label>Estado</label><select id="v-est"><option value="pendiente">Pendiente</option><option value="cumplido">Cumplido</option><option value="vencido">Vencido</option></select></div><div class="fld"><label>Fecha Cumplimiento</label><input type="date" id="v-cum"></div></div>
+    <div class="fr fr1"><div class="fld"><label>Observaciones</label><textarea id="v-obs" placeholder="Notas..."></textarea></div></div>
+    <div class="modal-ft"><button class="btn btn-s" onclick="cm('ov-vot')">Cancelar</button><button class="btn btn-p" onclick="savVot()">💾 Guardar</button></div>
+  </div>
+</div>
+
+<!-- MODAL CATEGORIA -->
+<div class="ov" id="ov-cat">
+  <div class="modal" style="max-width:340px">
+    <div class="modal-hd"><div class="modal-tit" id="cat-tit">Nueva Categoría</div><button class="modal-x" onclick="cm('ov-cat')">✕</button></div>
+    <div class="fr fr1"><div class="fld"><label>Nombre</label><input type="text" id="cat-nom" placeholder="Nombre de la categoría"></div></div>
+    <input type="hidden" id="cat-tipo">
+    <div class="modal-ft"><button class="btn btn-s" onclick="cm('ov-cat')">Cancelar</button><button class="btn btn-p" onclick="savCat()">💾 Guardar</button></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ===================== DATA =====================
+const SK='horeb_v3';
+function ld(){try{const r=localStorage.getItem(SK);if(r)return JSON.parse(r);}catch(e){}return null;}
+function sd(){try{localStorage.setItem(SK,JSON.stringify(DB));}catch(e){}}
+
+const MESES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const ROLES={pastor:'Pastor Principal',tesorero_principal:'Tesorero Principal',tesorero_sede:'Tesorero Sede Central',tesorero_filial:'Tesorero Filial'};
+
+function initDB(){
+  const DB={
+    filiales:[
+      {id:'sede',cod:'S000',nom:'Sede Central',pastor:'Hno. Pastor Principal',tes:'Hno. Tesorero Principal',dir:'Av. Principal 123, Perus, Lima',tel:'987654321',fun:'2000-01-01'},
+      {id:'F001',cod:'F001',nom:'Filial Los Jardines',pastor:'Hno. Juan Pérez',tes:'Hno. Pedro Quispe',dir:'Jr. Los Jardines 456, Comas',tel:'987111222',fun:'2005-03-15'},
+      {id:'F002',cod:'F002',nom:'Filial San Martín',pastor:'Hno. Carlos López',tes:'Hna. María Huanca',dir:'Av. San Martín 789, SMP',tel:'987333444',fun:'2010-06-20'},
+    ],
+    miembros:[
+      {id:'RI-001',cod:'RI-001',nom:'Ana',ape:'García Torres',dni:'12345678',fil:'sede',tel:'987000001',nac:'1985-03-12',ing:'2010-01-15',dir:'Av. Lima 100'},
+      {id:'RI-002',cod:'RI-002',nom:'Luis',ape:'Mamani Condori',dni:'23456789',fil:'sede',tel:'987000002',nac:'1978-07-22',ing:'2008-05-10',dir:'Jr. Los Pinos 200'},
+      {id:'RI-003',cod:'RI-003',nom:'Rosa',ape:'Quispe Huanca',dni:'34567890',fil:'F001',tel:'987000003',nac:'1990-11-05',ing:'2015-03-20',dir:'Calle 5 N°300'},
+      {id:'RI-004',cod:'RI-004',nom:'Pedro',ape:'Torres Salas',dni:'45678901',fil:'F001',tel:'987000004',nac:'1982-04-18',ing:'2012-08-01',dir:'Av. Comas 400'},
+      {id:'RI-005',cod:'RI-005',nom:'Carmen',ape:'López Vargas',dni:'56789012',fil:'F002',tel:'987000005',nac:'1975-09-30',ing:'2011-02-14',dir:'Jr. 28 de Julio 500'},
+    ],
+    movimientos:[],
+    votos:[
+      {id:'V001',miem:'RI-001',fil:'sede',desc:'Ofrenda de acción de gracias por trabajo',mon:500,lim:'2025-06-30',est:'pendiente',cum:'',obs:'',fec:'2025-01-10'},
+      {id:'V002',miem:'RI-002',fil:'sede',desc:'Voto por sanidad de familiar',mon:300,lim:'2024-12-31',est:'cumplido',cum:'2024-11-15',obs:'Cumplido en su totalidad',fec:'2024-08-20'},
+      {id:'V003',miem:'RI-003',fil:'F001',desc:'Ofrenda por bendición en negocios',mon:200,lim:'2024-10-01',est:'vencido',cum:'',obs:'',fec:'2024-07-01'},
+    ],
+    cats:{ing:['Diezmos','Ofrendas','Primicias','Donativos','Ofrendas Especiales','Votos','Misiones'],
+          eg:['Servicios Básicos','Mantenimiento','Evangelismo','Material de Oficina','Transporte','Alimentación','Construcción','Donaciones','Gastos Administrativos']},
+    usuarios:[
+      {user:'pastor',pass:'pastor123',nom:'Pastor Principal',rol:'pastor',niv:1,fil:'all'},
+      {user:'tesorero',pass:'tesoro123',nom:'Tesorero Principal',rol:'tesorero_principal',niv:2,fil:'all'},
+      {user:'tscentral',pass:'sede123',nom:'Tesorero Sede Central',rol:'tesorero_sede',niv:3,fil:'sede'},
+      {user:'tsfilial1',pass:'filial123',nom:'Tesorero Los Jardines',rol:'tesorero_filial',niv:4,fil:'F001'},
+    ]
+  };
+  // Demo movements
+  const fils=['sede','F001','F002'];
+  const y=2025; let id=1;
+  fils.forEach(f=>{
+    for(let m=1;m<=12;m++){
+      // diezmos x3
+      for(let w=1;w<=3;w++){
+        const d=Math.min(w*7,28);
+        DB.movimientos.push({id:'M'+String(id++).padStart(4,'0'),tipo:'ingreso',cat:'Diezmos',desc:'Diezmos domingo '+w,mon:Math.round((150+Math.random()*350)*100)/100,fec:y+'-'+String(m).padStart(2,'0')+'-'+String(d).padStart(2,'0'),met:'efectivo',comp:'',fil:f,miem:'',obs:''});
+      }
+      // ofrenda
+      DB.movimientos.push({id:'M'+String(id++).padStart(4,'0'),tipo:'ingreso',cat:'Ofrendas',desc:'Ofrenda dominical',mon:Math.round((60+Math.random()*180)*100)/100,fec:y+'-'+String(m).padStart(2,'0')+'-15',met:'efectivo',comp:'',fil:f,miem:'',obs:''});
+      // egresos
+      DB.movimientos.push({id:'M'+String(id++).padStart(4,'0'),tipo:'egreso',cat:'Servicios Básicos',desc:'Pago servicios mes '+m,mon:Math.round((90+Math.random()*130)*100)/100,fec:y+'-'+String(m).padStart(2,'0')+'-05',met:'transferencia',comp:'REC-'+id,fil:f,miem:'',obs:''});
+      if(m%3===0) DB.movimientos.push({id:'M'+String(id++).padStart(4,'0'),tipo:'egreso',cat:'Evangelismo',desc:'Materiales evangelismo',mon:Math.round((40+Math.random()*90)*100)/100,fec:y+'-'+String(m).padStart(2,'0')+'-20',met:'efectivo',comp:'',fil:f,miem:'',obs:''});
+    }
+  });
+  return DB;
+}
+
+let DB;
+try{
+  DB=ld();
+  if(!DB||!DB.filiales||!DB.miembros||!DB.movimientos||!DB.cats||!DB.usuarios){DB=initDB();}
+  if(DB.movimientos.length===0){const tmp=initDB();DB.movimientos=tmp.movimientos;}
+}catch(e){DB=initDB();}
+try{sd();}catch(e){console.warn('localStorage no disponible.');}
+
+// ===================== SESSION =====================
+let CU=null,EID=null;
+
+function fd(u,p){document.getElementById('lu').value=u;document.getElementById('lp').value=p;}
+
+// Usuarios fijos — siempre disponibles sin depender del localStorage
+const USUARIOS_FIJOS=[
+  {user:'pastor',    pass:'pastor123', nom:'Pastor Principal',        rol:'pastor',            niv:1, fil:'all'},
+  {user:'tesorero',  pass:'tesoro123', nom:'Tesorero Principal',      rol:'tesorero_principal',niv:2, fil:'all'},
+  {user:'tscentral', pass:'sede123',   nom:'Tesorero Sede Central',   rol:'tesorero_sede',     niv:3, fil:'sede'},
+  {user:'tsfilial1', pass:'filial123', nom:'Tesorero Los Jardines',   rol:'tesorero_filial',   niv:4, fil:'F001'},
+];
+
+function doLogin(){
+  const u=document.getElementById('lu').value.trim(),p=document.getElementById('lp').value.trim();
+  // Buscar primero en usuarios fijos, luego en DB por si se agregaron más
+  let usr=USUARIOS_FIJOS.find(x=>x.user===u&&x.pass===p);
+  if(!usr&&DB&&DB.usuarios)usr=DB.usuarios.find(x=>x.user===u&&x.pass===p);
+  document.getElementById('lerr').style.display=usr?'none':'block';
+  if(!usr)return;
+  CU=usr;
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('app').style.display='block';
+  document.getElementById('uav').textContent=usr.nom[0];
+  document.getElementById('uname').textContent=usr.nom;
+  document.getElementById('urol').textContent=ROLES[usr.rol]||usr.rol;
+  if(CU.niv>2)document.querySelectorAll('.nav-filiales').forEach(e=>e.style.display='none');
+  document.getElementById('curdate').textContent=new Date().toLocaleDateString('es-PE',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  popFil();popYrs();sm('dashboard');
+}
+
+function doLogout(){CU=null;document.getElementById('app').style.display='none';document.getElementById('login-screen').style.display='flex';document.getElementById('lu').value='';document.getElementById('lp').value='';}
+
+// ===================== NAV =====================
+const TITLES={dashboard:'Dashboard',movimientos:'Movimientos',filiales:'Filiales',miembros:'Miembros',votos:'Votos',categorias:'Categorías y Usuarios','rpt-caja':'Informe: Libro Caja Mensual','rpt-consolidado':'Informe: Consolidado General','rpt-comparativo':'Informe: Comparativo Anual','rpt-diezmos':'Informe: Diezmos por Filial','rpt-fidelidad':'Informe: Fidelidad Individual','rpt-votos':'Informe: Votos y Cumplimiento'};
+
+function sm(n){
+  document.querySelectorAll('.mod').forEach(m=>m.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(ni=>ni.classList.remove('active'));
+  const el=document.getElementById('mod-'+n);
+  if(el)el.classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(ni=>{if(ni.getAttribute('onclick')&&ni.getAttribute('onclick').includes("'"+n+"'"))ni.classList.add('active');});
+  document.getElementById('pt').textContent=TITLES[n]||n;
+  if(n==='dashboard')renderDash();
+  else if(n==='movimientos')renderMov();
+  else if(n==='filiales')renderFil();
+  else if(n==='miembros')renderMiem();
+  else if(n==='votos')renderVot();
+  else if(n==='categorias')renderCats();
+}
+
+// ===================== HELPERS =====================
+function gAccMov(){if(!CU)return[];return CU.niv<=2?DB.movimientos:DB.movimientos.filter(m=>m.fil===CU.fil);}
+function gAccFil(){if(!CU)return[];return CU.niv<=2?DB.filiales:DB.filiales.filter(f=>f.id===CU.fil);}
+function gAccMiem(){if(!CU)return[];return CU.niv<=2?DB.miembros:DB.miembros.filter(m=>m.fil===CU.fil);}
+function fmt(n){return'S/. '+Number(n||0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',');}
+function fd2(d){if(!d)return'—';const p=d.split('-');return p[2]+'/'+p[1]+'/'+p[0];}
+function today(){return new Date().toISOString().split('T')[0];}
+function gid(p){return p+Date.now().toString(36).toUpperCase();}
+function gfn(id){const f=DB.filiales.find(x=>x.id===id);return f?f.nom:id;}
+function gmn(id){if(!id)return'—';const m=DB.miembros.find(x=>x.id===id);return m?m.nom+' '+m.ape:id;}
+function toast(msg,t='ok'){const el=document.getElementById('toast');el.style.borderColor=t==='ok'?'rgba(46,204,113,.4)':'rgba(231,76,60,.4)';el.textContent=(t==='ok'?'✅ ':'❌ ')+msg;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),3000);}
+function om(id){document.getElementById(id).classList.add('open');}
+function cm(id){document.getElementById(id).classList.remove('open');EID=null;}
+function stab(p,t){document.querySelectorAll('#'+p+'-tabs .tab-btn').forEach(b=>b.classList.remove('active'));document.querySelectorAll('[id^="'+p+'-tab-"]').forEach(tc=>tc.classList.remove('active'));const tb=document.querySelector('#'+p+'-tabs .tab-btn[onclick*="\''+t+'\'"]');if(tb)tb.classList.add('active');const tc=document.getElementById(p+'-tab-'+t);if(tc)tc.classList.add('active');}
+
+function popFil(){
+  const fils=DB.filiales;
+  const sids=['m-fil','mi-fil','v-fil','mov-ff','vot-ff','miem-ff','rc-fil','rcon-fil','rfid-fil','rvot-fil'];
+  sids.forEach(sid=>{
+    const sel=document.getElementById(sid);if(!sel)return;
+    sel.querySelectorAll('[data-dyn]').forEach(o=>o.remove());
+    const accFils=CU&&CU.niv<=2?fils:fils.filter(f=>f.id===(CU&&CU.fil));
+    accFils.forEach(f=>{const o=document.createElement('option');o.value=f.id;o.textContent=f.nom;o.setAttribute('data-dyn','1');sel.appendChild(o);});
+  });
+}
+
+function popYrs(){
+  const yrs=[];for(let y=2020;y<=new Date().getFullYear()+1;y++)yrs.push(y);
+  ['ch-year','rc-anio','rcon-anio','rcomp-a1','rcomp-a2','rdz-anio','rfid-anio'].forEach(sid=>{
+    const sel=document.getElementById(sid);if(!sel)return;
+    sel.innerHTML='';yrs.forEach(y=>{const o=document.createElement('option');o.value=y;o.textContent=y;sel.appendChild(o);});
+    sel.value=new Date().getFullYear();
+  });
+  if(document.getElementById('rcomp-a2'))document.getElementById('rcomp-a2').value=new Date().getFullYear()-1;
+  const ms=document.getElementById('mov-fm');
+  if(ms){ms.innerHTML='<option value="">Todos los meses</option>';MESES.forEach((m,i)=>{const o=document.createElement('option');o.value=String(i+1).padStart(2,'0');o.textContent=m;ms.appendChild(o);});}
+  const rc=document.getElementById('rc-mes');if(rc)rc.value=new Date().getMonth()+1;
+}
+
+function updCats(){
+  const tipo=document.getElementById('m-tipo').value;
+  const sel=document.getElementById('m-cat');sel.innerHTML='';
+  const cats=tipo==='ingreso'?DB.cats.ing:DB.cats.eg;
+  cats.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;sel.appendChild(o);});
+}
+
+function popMiem(sid){
+  const sel=document.getElementById(sid);if(!sel)return;
+  sel.innerHTML='<option value="">— Sin miembro —</option>';
+  gAccMiem().forEach(m=>{const o=document.createElement('option');o.value=m.id;o.textContent=m.cod+' — '+m.nom+' '+m.ape;sel.appendChild(o);});
+}
+
+function calcFid(mid,y){
+  let p=0;for(let m=1;m<=12;m++){if(DB.movimientos.some(mv=>mv.tipo==='ingreso'&&mv.cat==='Diezmos'&&mv.miem===mid&&mv.fec.startsWith(y+'-'+String(m).padStart(2,'0'))))p++;}
+  return Math.round((p/12)*100);
+}
+
+// ===================== DASHBOARD =====================
+let chBar=null,chDona=null,cCompCharts=[];
+
+function renderDash(){
+  const movs=gAccMov();const now=new Date();const curM=now.getMonth()+1;const curY=now.getFullYear();
+  const cm2=movs.filter(m=>{const[y,mo]=m.fec.split('-').map(Number);return y===curY&&mo===curM;});
+  const ing=cm2.filter(m=>m.tipo==='ingreso').reduce((a,m)=>a+Number(m.mon),0);
+  const eg=cm2.filter(m=>m.tipo==='egreso').reduce((a,m)=>a+Number(m.mon),0);
+  document.getElementById('dash-stats').innerHTML=`
+    <div class="stat-card sc-ing"><div class="stat-lbl">Ingresos del Mes</div><div class="stat-val ing">${fmt(ing)}</div><div class="stat-sub">Mes actual</div></div>
+    <div class="stat-card sc-eg"><div class="stat-lbl">Egresos del Mes</div><div class="stat-val eg">${fmt(eg)}</div><div class="stat-sub">Mes actual</div></div>
+    <div class="stat-card sc-bal"><div class="stat-lbl">Balance del Mes</div><div class="stat-val bal">${fmt(ing-eg)}</div><div class="stat-sub">${ing-eg>=0?'Superávit':'Déficit'}</div></div>
+    <div class="stat-card sc-mem"><div class="stat-lbl">Total Miembros</div><div class="stat-val" style="color:#5DADE2">${gAccMiem().length}</div><div class="stat-sub">Registrados</div></div>`;
+  // bar chart
+  const mn=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const lbls=[],ingD=[],egD=[];
+  for(let i=5;i>=0;i--){const d=new Date(curY,now.getMonth()-i,1);lbls.push(mn[d.getMonth()]+' '+d.getFullYear());const mm=movs.filter(m=>{const[y,mo]=m.fec.split('-').map(Number);return y===d.getFullYear()&&mo===d.getMonth()+1;});ingD.push(mm.filter(m=>m.tipo==='ingreso').reduce((a,m)=>a+Number(m.mon),0));egD.push(mm.filter(m=>m.tipo==='egreso').reduce((a,m)=>a+Number(m.mon),0));}
+  if(chBar)chBar.destroy();
+  chBar=new Chart(document.getElementById('ch-bar'),{type:'bar',data:{labels:lbls,datasets:[{label:'Ingresos',data:ingD,backgroundColor:'rgba(46,204,113,.6)',borderColor:'rgba(46,204,113,1)',borderWidth:1,borderRadius:3},{label:'Egresos',data:egD,backgroundColor:'rgba(231,76,60,.6)',borderColor:'rgba(231,76,60,1)',borderWidth:1,borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'rgba(247,243,233,.7)',font:{size:10}}}},scales:{x:{ticks:{color:'rgba(247,243,233,.45)',font:{size:9}},grid:{color:'rgba(255,255,255,.04)'}},y:{ticks:{color:'rgba(247,243,233,.45)',font:{size:9},callback:v=>'S/.'+v.toLocaleString()},grid:{color:'rgba(255,255,255,.04)'}}}}});
+  // dona
+  const ct={};movs.filter(m=>m.tipo==='ingreso').forEach(m=>{ct[m.cat]=(ct[m.cat]||0)+Number(m.mon);});
+  if(chDona)chDona.destroy();
+  chDona=new Chart(document.getElementById('ch-dona'),{type:'doughnut',data:{labels:Object.keys(ct),datasets:[{data:Object.values(ct),backgroundColor:['rgba(201,168,76,.8)','rgba(46,204,113,.8)','rgba(52,152,219,.8)','rgba(243,156,18,.8)','rgba(155,89,182,.8)','rgba(26,188,156,.8)'],borderWidth:2,borderColor:'rgba(13,27,42,.8)'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:'rgba(247,243,233,.7)',font:{size:9},boxWidth:10}}}}});
+  // recent
+  const rec=[...movs].sort((a,b)=>b.fec.localeCompare(a.fec)).slice(0,8);
+  document.getElementById('dash-rec').innerHTML=rec.map(m=>`<tr><td>${fd2(m.fec)}</td><td>${m.desc}</td><td>${m.cat}</td><td><span class="badge b-${m.tipo==='ingreso'?'ing':'eg'}">${m.tipo==='ingreso'?'Ingreso':'Egreso'}</span></td><td class="amt-${m.tipo==='ingreso'?'i':'e'}">${fmt(m.mon)}</td><td style="font-size:11px">${gfn(m.fil)}</td></tr>`).join('');
+}
+
+// ===================== MOVIMIENTOS =====================
+let movPg=1;const MPP=15;
+
+function renderMov(){
+  let movs=gAccMov();
+  const s=document.getElementById('mov-s').value.toLowerCase();
+  const ft=document.getElementById('mov-ft').value;
+  const fm=document.getElementById('mov-fm').value;
+  const fc=document.getElementById('mov-fc').value;
+  const ff=document.getElementById('mov-ff').value;
+  if(s)movs=movs.filter(m=>m.desc.toLowerCase().includes(s)||m.cat.toLowerCase().includes(s)||(m.comp||'').toLowerCase().includes(s));
+  if(ft)movs=movs.filter(m=>m.tipo===ft);
+  if(fm)movs=movs.filter(m=>m.fec.split('-')[1]===fm);
+  if(fc)movs=movs.filter(m=>m.cat===fc);
+  if(ff&&ff!=='all')movs=movs.filter(m=>m.fil===ff);
+  movs.sort((a,b)=>b.fec.localeCompare(a.fec));
+  const ti=movs.filter(m=>m.tipo==='ingreso').reduce((a,m)=>a+Number(m.mon),0);
+  const te=movs.filter(m=>m.tipo==='egreso').reduce((a,m)=>a+Number(m.mon),0);
+  document.getElementById('mov-tot').textContent=`Ingresos: ${fmt(ti)} | Egresos: ${fmt(te)} | Balance: ${fmt(ti-te)}`;
+  const pgs=Math.ceil(movs.length/MPP)||1;if(movPg>pgs)movPg=1;
+  const sl=movs.slice((movPg-1)*MPP,movPg*MPP);
+  const tb=document.getElementById('mov-body');
+  if(!sl.length){tb.innerHTML='<tr><td colspan="10"><div class="empty"><span class="ic">💰</span><p>No hay movimientos</p></div></td></tr>';return;}
+  tb.innerHTML=sl.map((m,i)=>`<tr><td style="color:rgba(247,243,233,.35);font-size:10px">${(movPg-1)*MPP+i+1}</td><td>${fd2(m.fec)}</td><td>${m.desc}</td><td>${m.cat}</td><td style="font-size:10px">${m.met}</td><td><span class="badge b-${m.tipo==='ingreso'?'ing':'eg'}">${m.tipo==='ingreso'?'Ingreso':'Egreso'}</span></td><td class="amt-${m.tipo==='ingreso'?'i':'e'}">${fmt(m.mon)}</td><td style="font-size:10px;color:rgba(247,243,233,.4)">${m.comp||'—'}</td><td style="font-size:10px">${gfn(m.fil)}</td><td><button class="btn btn-sm btn-s" onclick="edMov('${m.id}')">✏️</button> <button class="btn btn-sm btn-d" onclick="delMov('${m.id}')">🗑️</button></td></tr>`).join('');
+  // pagination
+  const pag=document.getElementById('mov-pag');pag.innerHTML='';
+  if(pgs>1)for(let p=1;p<=pgs;p++){const b=document.createElement('button');b.className='pg-btn'+(p===movPg?' active':'');b.textContent=p;b.onclick=()=>{movPg=p;renderMov();};pag.appendChild(b);}
+  // cat filter
+  const csel=document.getElementById('mov-fc');const cv=csel.value;
+  csel.innerHTML='<option value="">Todas las categorías</option>';
+  [...DB.cats.ing,...DB.cats.eg].forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;csel.appendChild(o);});csel.value=cv;
+}
+
+function openMovModal(id=null){
+  EID=id;updCats();popMiem('m-miem');
+  const fs=document.getElementById('m-fil');fs.innerHTML='';
+  gAccFil().forEach(f=>{const o=document.createElement('option');o.value=f.id;o.textContent=f.nom;fs.appendChild(o);});
+  if(CU.niv>=3)fs.value=CU.fil;
+  if(id){
+    const m=DB.movimientos.find(x=>x.id===id);
+    document.getElementById('mov-tit').textContent='Editar Movimiento';
+    document.getElementById('m-tipo').value=m.tipo;updCats();
+    document.getElementById('m-cat').value=m.cat;
+    document.getElementById('m-fecha').value=m.fec;
+    document.getElementById('m-monto').value=m.mon;
+    document.getElementById('m-desc').value=m.desc;
+    document.getElementById('m-met').value=m.met;
+    document.getElementById('m-comp').value=m.comp||'';
+    document.getElementById('m-fil').value=m.fil;
+    document.getElementById('m-miem').value=m.miem||'';
+    document.getElementById('m-obs').value=m.obs||'';
+  }else{
+    document.getElementById('mov-tit').textContent='Nuevo Movimiento';
+    document.getElementById('m-tipo').value='ingreso';updCats();
+    document.getElementById('m-fecha').value=today();
+    ['m-monto','m-desc','m-comp','m-obs'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('m-met').value='efectivo';document.getElementById('m-miem').value='';
+  }
+  om('ov-mov');
+}
+
+function savMov(){
+  const tipo=document.getElementById('m-tipo').value;
+  const fec=document.getElementById('m-fecha').value;
+  const mon=parseFloat(document.getElementById('m-monto').value);
+  const desc=document.getElementById('m-desc').value.trim();
+  const cat=document.getElementById('m-cat').value;
+  const fil=document.getElementById('m-fil').value;
+  if(!fec||!desc||isNaN(mon)||mon<=0){toast('Complete todos los campos obligatorios','err');return;}
+  const obj={id:EID||gid('M'),tipo,fec,mon,desc,cat,fil,met:document.getElementById('m-met').value,comp:document.getElementById('m-comp').value,miem:document.getElementById('m-miem').value,obs:document.getElementById('m-obs').value};
+  if(EID){const i=DB.movimientos.findIndex(x=>x.id===EID);DB.movimientos[i]=obj;}
+  else DB.movimientos.push(obj);
+  sd();cm('ov-mov');renderMov();toast(EID?'Movimiento actualizado':'Movimiento registrado');
+}
+function edMov(id){openMovModal(id);}
+function delMov(id){if(!confirm('¿Eliminar este movimiento?'))return;DB.movimientos=DB.movimientos.filter(m=>m.id!==id);sd();renderMov();toast('Movimiento eliminado','err');}
+
+// ===================== FILIALES =====================
+function renderFil(){
+  const s=document.getElementById('fil-s').value.toLowerCase();
+  let fils=DB.filiales.filter(f=>!s||f.nom.toLowerCase().includes(s)||f.cod.toLowerCase().includes(s)||f.pastor.toLowerCase().includes(s));
+  const tb=document.getElementById('fil-body');
+  if(!fils.length){tb.innerHTML='<tr><td colspan="8"><div class="empty"><span class="ic">🏛️</span><p>No hay filiales</p></div></td></tr>';return;}
+  tb.innerHTML=fils.map(f=>{
+    const nm=DB.miembros.filter(m=>m.fil===f.id).length;
+    return`<tr><td style="font-family:'Cinzel',serif;color:var(--gold-light);font-size:11px">${f.cod}</td><td><strong>${f.nom}</strong></td><td>${f.pastor}</td><td>${f.tes}</td><td style="font-size:11px">${f.dir}</td><td style="text-align:center">${nm}</td><td><span class="badge b-act">Activa</span></td><td><button class="btn btn-sm btn-s" onclick="edFil('${f.id}')">✏️</button>${f.id!=='sede'?` <button class="btn btn-sm btn-d" onclick="delFil('${f.id}')">🗑️</button>`:''}</td></tr>`;
+  }).join('');
+}
+
+function openFilModal(id=null){
+  EID=id;
+  if(id){
+    const f=DB.filiales.find(x=>x.id===id);
+    document.getElementById('fil-tit').textContent='Editar Filial';
+    document.getElementById('f-cod').value=f.cod;document.getElementById('f-nom').value=f.nom;
+    document.getElementById('f-pas').value=f.pastor;document.getElementById('f-tes').value=f.tes;
+    document.getElementById('f-dir').value=f.dir;document.getElementById('f-tel').value=f.tel;
+    document.getElementById('f-fun').value=f.fun||'';
+  }else{
+    document.getElementById('fil-tit').textContent='Nueva Filial';
+    const cnt=DB.filiales.filter(f=>f.id!=='sede').length+1;
+    document.getElementById('f-cod').value='F'+String(cnt).padStart(3,'0');
+    ['f-nom','f-pas','f-tes','f-dir','f-tel','f-fun'].forEach(id=>document.getElementById(id).value='');
+  }
+  om('ov-fil');
+}
+function savFil(){
+  const nom=document.getElementById('f-nom').value.trim();const pas=document.getElementById('f-pas').value.trim();
+  if(!nom||!pas){toast('Complete nombre y pastor','err');return;}
+  const cod=document.getElementById('f-cod').value;
+  const obj={id:EID||cod,cod,nom,pastor:pas,tes:document.getElementById('f-tes').value,dir:document.getElementById('f-dir').value,tel:document.getElementById('f-tel').value,fun:document.getElementById('f-fun').value};
+  if(EID){const i=DB.filiales.findIndex(x=>x.id===EID);DB.filiales[i]=obj;}else DB.filiales.push(obj);
+  sd();cm('ov-fil');renderFil();popFil();toast(EID?'Filial actualizada':'Filial registrada');
+}
+function edFil(id){openFilModal(id);}
+function delFil(id){if(!confirm('¿Eliminar esta filial?'))return;DB.filiales=DB.filiales.filter(f=>f.id!==id);sd();renderFil();popFil();toast('Filial eliminada','err');}
+
+// ===================== MIEMBROS =====================
+let miemPg=1;const MMP=15;
+
+function renderMiem(){
+  let ms=gAccMiem();
+  const s=document.getElementById('miem-s').value.toLowerCase();
+  const ff=document.getElementById('miem-ff').value;
+  const fd3=document.getElementById('miem-fd').value;
+  const y=new Date().getFullYear();
+  if(s)ms=ms.filter(m=>(m.nom+' '+m.ape).toLowerCase().includes(s)||m.cod.toLowerCase().includes(s)||m.dni.includes(s));
+  if(ff&&ff!=='all')ms=ms.filter(m=>m.fil===ff);
+  ms=ms.map(m=>({...m,fid:calcFid(m.id,y)}));
+  if(fd3==='fiel')ms=ms.filter(m=>m.fid>=90);
+  else if(fd3==='regular')ms=ms.filter(m=>m.fid>=60&&m.fid<90);
+  else if(fd3==='irregular')ms=ms.filter(m=>m.fid<60);
+  const pgs=Math.ceil(ms.length/MMP)||1;if(miemPg>pgs)miemPg=1;
+  const sl=ms.slice((miemPg-1)*MMP,miemPg*MMP);
+  const tb=document.getElementById('miem-body');
+  if(!sl.length){tb.innerHTML='<tr><td colspan="8"><div class="empty"><span class="ic">👥</span><p>No hay miembros</p></div></td></tr>';return;}
+  tb.innerHTML=sl.map(m=>{
+    const dz=DB.movimientos.filter(mv=>mv.tipo==='ingreso'&&mv.cat==='Diezmos'&&mv.miem===m.id&&mv.fec.startsWith(y+'-')).reduce((a,mv)=>a+Number(mv.mon),0);
+    const fc=m.fid>=90?'#2ECC71':m.fid>=60?'#F39C12':'#E74C3C';
+    const fb=m.fid>=90?'b-fiel':m.fid>=60?'b-pend':'b-ven';
+    return`<tr><td style="font-family:'Cinzel',serif;color:var(--gold-light);font-size:11px">${m.cod}</td><td><strong>${m.nom} ${m.ape}</strong></td><td style="font-size:10px">${gfn(m.fil)}</td><td style="font-size:10px">${m.tel||'—'}</td><td>${dz>0?'<span class="amt-i">'+fmt(dz)+'</span>':'<span style="color:rgba(247,243,233,.3)">S/. 0.00</span>'}</td><td><div style="display:flex;align-items:center;gap:6px"><span class="badge ${fb}">${m.fid}%</span><div class="fid-bar" style="width:55px"><div class="fid-fill" style="width:${m.fid}%;background:${fc}"></div></div></div></td><td><span class="badge b-act">Activo</span></td><td><button class="btn btn-sm btn-s" onclick="edMiem('${m.id}')">✏️</button> <button class="btn btn-sm btn-d" onclick="delMiem('${m.id}')">🗑️</button></td></tr>`;
+  }).join('');
+  const pag=document.getElementById('miem-pag');pag.innerHTML='';
+  if(pgs>1)for(let p=1;p<=pgs;p++){const b=document.createElement('button');b.className='pg-btn'+(p===miemPg?' active':'');b.textContent=p;b.onclick=()=>{miemPg=p;renderMiem();};pag.appendChild(b);}
+}
+
+function openMiemModal(id=null){
+  EID=id;stab('miem','datos');
+  const fs=document.getElementById('mi-fil');fs.innerHTML='';
+  gAccFil().forEach(f=>{const o=document.createElement('option');o.value=f.id;o.textContent=f.nom;fs.appendChild(o);});
+  if(CU.niv>=3)fs.value=CU.fil;
+  if(id){
+    const m=DB.miembros.find(x=>x.id===id);
+    document.getElementById('miem-tit').textContent='Editar Miembro';
+    document.getElementById('mi-cod').value=m.cod;document.getElementById('mi-fil').value=m.fil;
+    document.getElementById('mi-nom').value=m.nom;document.getElementById('mi-ape').value=m.ape;
+    document.getElementById('mi-dni').value=m.dni;document.getElementById('mi-tel').value=m.tel;
+    document.getElementById('mi-nac').value=m.nac||'';document.getElementById('mi-ing').value=m.ing||'';
+    document.getElementById('mi-dir').value=m.dir||'';
+  }else{
+    document.getElementById('miem-tit').textContent='Nuevo Miembro';
+    const cnt=DB.miembros.length+1;
+    document.getElementById('mi-cod').value='RI-'+String(cnt).padStart(3,'0');
+    ['mi-nom','mi-ape','mi-dni','mi-tel','mi-nac','mi-dir'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('mi-ing').value=today();
+  }
+  om('ov-miem');
+}
+function savMiem(){
+  const nom=document.getElementById('mi-nom').value.trim();const ape=document.getElementById('mi-ape').value.trim();
+  if(!nom||!ape){toast('Complete nombres y apellidos','err');return;}
+  const cod=document.getElementById('mi-cod').value;
+  const obj={id:EID||cod,cod,fil:document.getElementById('mi-fil').value,nom,ape,dni:document.getElementById('mi-dni').value,tel:document.getElementById('mi-tel').value,nac:document.getElementById('mi-nac').value,ing:document.getElementById('mi-ing').value,dir:document.getElementById('mi-dir').value};
+  if(EID){const i=DB.miembros.findIndex(x=>x.id===EID);DB.miembros[i]=obj;}else DB.miembros.push(obj);
+  sd();cm('ov-miem');renderMiem();toast(EID?'Miembro actualizado':'Miembro registrado');
+}
+function edMiem(id){openMiemModal(id);}
+function delMiem(id){if(!confirm('¿Eliminar miembro?'))return;DB.miembros=DB.miembros.filter(m=>m.id!==id);sd();renderMiem();toast('Miembro eliminado','err');}
+
+// ===================== VOTOS =====================
+function renderVot(){
+  let vs=[...DB.votos];
+  vs.forEach(v=>{if(v.est==='pendiente'&&v.lim&&v.lim<today())v.est='vencido';});
+  const s=document.getElementById('vot-s').value.toLowerCase();
+  const fe=document.getElementById('vot-fe').value;
+  const ff=document.getElementById('vot-ff').value;
+  if(s)vs=vs.filter(v=>gmn(v.miem).toLowerCase().includes(s)||v.desc.toLowerCase().includes(s));
+  if(fe)vs=vs.filter(v=>v.est===fe);
+  if(ff&&ff!=='all')vs=vs.filter(v=>v.fil===ff);
+  const tb=document.getElementById('vot-body');
+  if(!vs.length){tb.innerHTML='<tr><td colspan="8"><div class="empty"><span class="ic">🙏</span><p>No hay votos</p></div></td></tr>';return;}
+  tb.innerHTML=vs.map((v,i)=>`<tr><td style="color:rgba(247,243,233,.35);font-size:10px">${i+1}</td><td>${gmn(v.miem)}</td><td>${v.desc}</td><td class="amt-i">${fmt(v.mon)}</td><td>${fd2(v.lim)}</td><td style="font-size:10px">${gfn(v.fil)}</td><td><span class="badge b-${v.est==='cumplido'?'cum':v.est==='vencido'?'ven':'pend'}">${v.est.charAt(0).toUpperCase()+v.est.slice(1)}</span></td><td><button class="btn btn-sm btn-s" onclick="edVot('${v.id}')">✏️</button> <button class="btn btn-sm btn-d" onclick="delVot('${v.id}')">🗑️</button></td></tr>`).join('');
+}
+function openVotModal(id=null){
+  EID=id;popMiem('v-miem');
+  const fs=document.getElementById('v-fil');fs.innerHTML='';
+  gAccFil().forEach(f=>{const o=document.createElement('option');o.value=f.id;o.textContent=f.nom;fs.appendChild(o);});
+  if(id){
+    const v=DB.votos.find(x=>x.id===id);
+    document.getElementById('vot-tit').textContent='Editar Voto';
+    document.getElementById('v-miem').value=v.miem;document.getElementById('v-fil').value=v.fil;
+    document.getElementById('v-desc').value=v.desc;document.getElementById('v-mon').value=v.mon;
+    document.getElementById('v-lim').value=v.lim;document.getElementById('v-est').value=v.est;
+    document.getElementById('v-cum').value=v.cum||'';document.getElementById('v-obs').value=v.obs||'';
+  }else{
+    document.getElementById('vot-tit').textContent='Nuevo Voto';
+    ['v-desc','v-mon','v-lim','v-cum','v-obs'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('v-est').value='pendiente';
+  }
+  om('ov-vot');
+}
+function savVot(){
+  const desc=document.getElementById('v-desc').value.trim();const mon=parseFloat(document.getElementById('v-mon').value);
+  if(!desc||isNaN(mon)){toast('Complete descripción y monto','err');return;}
+  const obj={id:EID||gid('V'),miem:document.getElementById('v-miem').value,fil:document.getElementById('v-fil').value,desc,mon,lim:document.getElementById('v-lim').value,est:document.getElementById('v-est').value,cum:document.getElementById('v-cum').value,obs:document.getElementById('v-obs').value,fec:today()};
+  if(EID){const i=DB.votos.findIndex(x=>x.id===EID);DB.votos[i]=obj;}else DB.votos.push(obj);
+  sd();cm('ov-vot');renderVot();toast(EID?'Voto actualizado':'Voto registrado');
+}
+function edVot(id){openVotModal(id);}
+function delVot(id){if(!confirm('¿Eliminar voto?'))return;DB.votos=DB.votos.filter(v=>v.id!==id);sd();renderVot();toast('Voto eliminado','err');}
+
+// ===================== CATEGORIAS =====================
+function renderCats(){
+  document.getElementById('cat-ing').innerHTML=DB.cats.ing.map(c=>`<span class="cat-chip cat-i">${c}<span class="cat-rm" onclick="delCat('ing','${c}')">×</span></span>`).join('');
+  document.getElementById('cat-eg').innerHTML=DB.cats.eg.map(c=>`<span class="cat-chip cat-e">${c}<span class="cat-rm" onclick="delCat('eg','${c}')">×</span></span>`).join('');
+  document.getElementById('usr-body').innerHTML=DB.usuarios.map(u=>`<tr><td style="font-family:monospace;color:var(--gold-light)">${u.user}</td><td>${u.nom}</td><td>${ROLES[u.rol]||u.rol}</td><td style="font-size:11px">${u.niv<=2?'Todo el sistema':gfn(u.fil)}</td></tr>`).join('');
+}
+function openCatModal(tipo){
+  document.getElementById('cat-tit').textContent='Nueva Categoría de '+(tipo==='ingreso'?'Ingreso':'Egreso');
+  document.getElementById('cat-nom').value='';document.getElementById('cat-tipo').value=tipo;om('ov-cat');
+}
+function savCat(){
+  const nom=document.getElementById('cat-nom').value.trim();const tipo=document.getElementById('cat-tipo').value;
+  if(!nom){toast('Ingrese un nombre','err');return;}
+  const arr=tipo==='ingreso'?DB.cats.ing:DB.cats.eg;
+  if(arr.includes(nom)){toast('Categoría ya existe','err');return;}
+  arr.push(nom);sd();cm('ov-cat');renderCats();toast('Categoría agregada');
+}
+function delCat(tipo,nom){
+  if(!confirm('¿Eliminar categoría "'+nom+'"?'))return;
+  const arr=tipo==='ing'?DB.cats.ing:DB.cats.eg;
+  const i=arr.indexOf(nom);if(i>-1)arr.splice(i,1);
+  sd();renderCats();toast('Categoría eliminada','err');
+}
+
+// ===================== REPORTS =====================
+function rptHd(title,sub){
+  return`<div class="rpt-hd"><div class="rpt-logo-circle">✝</div><div><div class="rpt-church">Iglesia La Roca de Horeb — Ministerio de Perus</div><div class="rpt-title">${title}</div><div class="rpt-sub">${sub} | Generado: ${new Date().toLocaleDateString('es-PE',{day:'2-digit',month:'long',year:'numeric'})}</div></div></div>`;
+}
+
+function prtRpt(divId){
+  const el=document.getElementById(divId);
+  if(!el||!el.innerHTML.trim()){toast('Primero genere el informe','err');return;}
+  const w=window.open('','_blank','width=950,height=720');
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Informe — Iglesia La Roca de Horeb</title><style>body{font-family:Arial,sans-serif;margin:20px;color:#1a1a1a}.rpt-hd{background:#0D1B2A;color:white;padding:16px 20px;display:flex;align-items:center;gap:14px;border-radius:4px;margin-bottom:14px}.rpt-logo-circle{width:54px;height:54px;border:2px solid #C9A84C;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0}.rpt-church{color:#C9A84C;font-size:12px;font-weight:bold}.rpt-title{font-size:17px;font-weight:bold;color:white;margin:3px 0}.rpt-sub{font-size:11px;color:rgba(255,255,255,.55)}table{width:100%;border-collapse:collapse;font-size:11px}thead th{background:#0D1B2A;color:#C9A84C;padding:6px 8px;text-align:left;font-size:9px;text-transform:uppercase}tbody td{padding:6px 8px;border-bottom:1px solid #eee;color:#333}tbody tr:nth-child(even){background:#f9f9f9}tfoot td{background:#eee;font-weight:bold;padding:6px 8px}.rpt-totals{margin-top:10px;padding:10px;background:#f8f5ef;border:1px solid #C9A84C;border-radius:4px;font-size:12px}.rpt-sign{margin-top:36px;display:flex;gap:36px;justify-content:flex-end}.rpt-sign-ln{border-top:1px solid #333;width:160px;text-align:center;padding-top:3px;font-size:10px;color:#555}h3{color:#0D1B2A;margin:14px 0 7px;font-size:13px}@media print{button{display:none}}</style></head><body>${el.innerHTML}<div style="margin-top:14px;font-size:10px;color:#999;text-align:right;border-top:1px solid #eee;padding-top:8px">Sistema de Tesorería — Iglesia La Roca de Horeb | Ministerio de Perus</div><script>window.onload=()=>window.print()<\/script></body></html>`);
+  w.document.close();
+}
+
+// RPT LIBRO CAJA
+function genCaja(){
+  const mes=parseInt(document.getElementById('rc-mes').value);
+  const anio=parseInt(document.getElementById('rc-anio').value);
+  const fil=document.getElementById('rc-fil').value;
+  let movs=gAccMov().filter(m=>{const[y,mo]=m.fec.split('-').map(Number);return y===anio&&mo===mes&&(fil==='all'||m.fil===fil);});
+  movs.sort((a,b)=>a.fec.localeCompare(b.fec));
+  let saldo=0;
+  const ti=movs.filter(m=>m.tipo==='ingreso').reduce((a,m)=>a+Number(m.mon),0);
+  const te=movs.filter(m=>m.tipo==='egreso').reduce((a,m)=>a+Number(m.mon),0);
+  const rows=movs.map(m=>{if(m.tipo==='ingreso')saldo+=Number(m.mon);else saldo-=Number(m.mon);return`<tr><td>${fd2(m.fec)}</td><td>${m.desc}</td><td>${m.cat}</td><td>${m.comp||'—'}</td><td style="color:green;font-weight:bold">${m.tipo==='ingreso'?'S/. '+Number(m.mon).toFixed(2):''}</td><td style="color:red;font-weight:bold">${m.tipo==='egreso'?'S/. '+Number(m.mon).toFixed(2):''}</td><td style="font-weight:bold;color:${saldo>=0?'green':'red'}">${saldo>=0?'':'('}S/. ${Math.abs(saldo).toFixed(2)}${saldo>=0?'':')'}</td></tr>`;}).join('');
+  const fn=fil==='all'?'Todas las Sedes':gfn(fil);
+  document.getElementById('rc-prev').innerHTML=`<div class="rpt-wrap">${rptHd('Libro de Caja Mensual',MESES[mes-1]+' '+anio+' — '+fn)}<div class="rpt-body"><table><thead><tr><th>Fecha</th><th>Descripción</th><th>Categoría</th><th>Comprobante</th><th>Ingresos</th><th>Egresos</th><th>Saldo</th></tr></thead><tbody>${rows||'<tr><td colspan="7" style="text-align:center;padding:18px;color:#888">Sin movimientos en este período</td></tr>'}</tbody></table><div class="rpt-totals"><table><tr><td><strong>Total Ingresos:</strong></td><td style="color:green;font-weight:bold">S/. ${ti.toFixed(2)}</td><td style="padding-left:18px"><strong>Total Egresos:</strong></td><td style="color:red;font-weight:bold">S/. ${te.toFixed(2)}</td><td style="padding-left:18px"><strong>Balance:</strong></td><td style="font-weight:bold;color:${ti-te>=0?'green':'red'}">S/. ${(ti-te).toFixed(2)}</td></tr></table></div><div class="rpt-sign"><div class="rpt-sign-ln">Tesorero</div><div class="rpt-sign-ln">Pastor</div></div></div></div>`;
+  toast('Libro Caja generado');
+}
+
+// RPT CONSOLIDADO
+function genCons(){
+  const per=document.getElementById('rcon-per').value;
+  const anio=parseInt(document.getElementById('rcon-anio').value);
+  const fil=document.getElementById('rcon-fil').value;
+  let movs=gAccMov().filter(m=>{const y=parseInt(m.fec.split('-')[0]);return y===anio&&(fil==='all'||m.fil===fil);});
+  let ti=0,te=0,rows='';
+  if(per==='mensual'||per==='trimestral'){
+    const gs=per==='mensual'?MESES.map((n,i)=>({n,ms:[i+1]})):[{n:'1er Trimestre',ms:[1,2,3]},{n:'2do Trimestre',ms:[4,5,6]},{n:'3er Trimestre',ms:[7,8,9]},{n:'4to Trimestre',ms:[10,11,12]}];
+    gs.forEach(g=>{const gm=movs.filter(m=>g.ms.includes(parseInt(m.fec.split('-')[1])));const i=gm.filter(m=>m.tipo==='ingreso').reduce((a,m)=>a+Number(m.mon),0);const e=gm.filter(m=>m.tipo==='egreso').reduce((a,m)=>a+Number(m.mon),0);ti+=i;te+=e;rows+=`<tr><td><strong>${g.n}</strong></td><td style="color:green">S/. ${i.toFixed(2)}</td><td style="color:red">S/. ${e.toFixed(2)}</td><td style="font-weight:bold;color:${i-e>=0?'green':'red'}">S/. ${(i-e).toFixed(2)}</td></tr>`;});
+  }else{
+    const ct={};movs.forEach(m=>{if(!ct[m.cat])ct[m.cat]={tipo:m.tipo,t:0};ct[m.cat].t+=Number(m.mon);});
+    Object.entries(ct).sort((a,b)=>b[1].t-a[1].t).forEach(([c,d])=>{if(d.tipo==='ingreso')ti+=d.t;else te+=d.t;rows+=`<tr><td>${c}</td><td>${d.tipo==='ingreso'?'Ingreso':'Egreso'}</td><td style="color:${d.tipo==='ingreso'?'green':'red'};font-weight:bold">S/. ${d.t.toFixed(2)}</td></tr>`;});
+  }
+  const isA=per==='anual';const fn=fil==='all'?'Todas las Sedes':gfn(fil);
+  document.getElementById('rcon-prev').innerHTML=`<div class="rpt-wrap">${rptHd('Informe Consolidado '+(per.charAt(0).toUpperCase()+per.slice(1)),anio+' — '+fn)}<div class="rpt-body"><table><thead><tr>${isA?'<th>Categoría</th><th>Tipo</th><th>Total</th>':'<th>Período</th><th>Ingresos</th><th>Egresos</th><th>Balance</th>'}</tr></thead><tbody>${rows}</tbody></table><div class="rpt-totals"><table><tr><td><strong>Total Ingresos:</strong></td><td style="color:green;font-weight:bold">S/. ${ti.toFixed(2)}</td><td style="padding-left:18px"><strong>Total Egresos:</strong></td><td style="color:red;font-weight:bold">S/. ${te.toFixed(2)}</td><td style="padding-left:18px"><strong>Balance:</strong></td><td style="font-weight:bold;color:${ti-te>=0?'green':'red'}">S/. ${(ti-te).toFixed(2)}</td></tr></table></div></div></div>`;
+  toast('Consolidado generado');
+}
+
+// RPT COMPARATIVO
+function genComp(){
+  const a1=parseInt(document.getElementById('rcomp-a1').value);
+  const a2=parseInt(document.getElementById('rcomp-a2').value);
+  if(a1===a2){toast('Seleccione años diferentes','err');return;}
+  const movs=gAccMov();
+  const gd=y=>MESES.map((_,i)=>{const mm=movs.filter(m=>{const[yr,mo]=m.fec.split('-').map(Number);return yr===y&&mo===i+1;});return{i:mm.filter(m=>m.tipo==='ingreso').reduce((a,m)=>a+Number(m.mon),0),e:mm.filter(m=>m.tipo==='egreso').reduce((a,m)=>a+Number(m.mon),0)};});
+  const d1=gd(a1),d2=gd(a2);
+  const t1i=d1.reduce((a,d)=>a+d.i,0),t1e=d1.reduce((a,d)=>a+d.e,0),t2i=d2.reduce((a,d)=>a+d.i,0),t2e=d2.reduce((a,d)=>a+d.e,0);
+  const rows=MESES.map((m,i)=>`<tr><td><strong>${m}</strong></td><td style="color:green">S/. ${d1[i].i.toFixed(2)}</td><td style="color:red">S/. ${d1[i].e.toFixed(2)}</td><td style="font-weight:bold">S/. ${(d1[i].i-d1[i].e).toFixed(2)}</td><td style="color:green">S/. ${d2[i].i.toFixed(2)}</td><td style="color:red">S/. ${d2[i].e.toFixed(2)}</td><td style="font-weight:bold">S/. ${(d2[i].i-d2[i].e).toFixed(2)}</td><td style="color:${d2[i].i-d1[i].i>=0?'green':'red'}">${d2[i].i-d1[i].i>=0?'▲':'▼'} S/. ${Math.abs(d2[i].i-d1[i].i).toFixed(2)}</td></tr>`).join('');
+  document.getElementById('rcomp-prev').innerHTML=`<div class="rpt-wrap">${rptHd('Comparativo Anual',a1+' vs '+a2)}<div class="rpt-body"><table><thead><tr><th>Mes</th><th colspan="3" style="text-align:center">${a1}</th><th colspan="3" style="text-align:center">${a2}</th><th>Var. Ing.</th></tr><tr><th></th><th>Ingresos</th><th>Egresos</th><th>Balance</th><th>Ingresos</th><th>Egresos</th><th>Balance</th><th></th></tr></thead><tbody>${rows}</tbody><tfoot><tr><td>TOTAL</td><td style="color:green">S/. ${t1i.toFixed(2)}</td><td style="color:red">S/. ${t1e.toFixed(2)}</td><td>S/. ${(t1i-t1e).toFixed(2)}</td><td style="color:green">S/. ${t2i.toFixed(2)}</td><td style="color:red">S/. ${t2e.toFixed(2)}</td><td>S/. ${(t2i-t2e).toFixed(2)}</td><td style="color:${t2i-t1i>=0?'green':'red'}">${t2i-t1i>=0?'▲':'▼'} S/. ${Math.abs(t2i-t1i).toFixed(2)}</td></tr></tfoot></table></div></div>`;
+  // charts
+  cCompCharts.forEach(c=>c.destroy());cCompCharts=[];
+  document.getElementById('rcomp-charts').innerHTML=`<div class="card"><div class="card-title">Ingresos: ${a1} vs ${a2}</div><div class="chart-box"><canvas id="comp-c1"></canvas></div></div><div class="card"><div class="card-title">Egresos: ${a1} vs ${a2}</div><div class="chart-box"><canvas id="comp-c2"></canvas></div></div>`;
+  setTimeout(()=>{
+    const mn=MESES.map(m=>m.slice(0,3));
+    cCompCharts.push(new Chart(document.getElementById('comp-c1'),{type:'line',data:{labels:mn,datasets:[{label:String(a1),data:d1.map(d=>d.i),borderColor:'rgba(201,168,76,.8)',backgroundColor:'rgba(201,168,76,.1)',tension:.4,fill:true},{label:String(a2),data:d2.map(d=>d.i),borderColor:'rgba(46,204,113,.8)',backgroundColor:'rgba(46,204,113,.1)',tension:.4,fill:true}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'rgba(247,243,233,.7)',font:{size:10}}}},scales:{x:{ticks:{color:'rgba(247,243,233,.45)',font:{size:9}},grid:{color:'rgba(255,255,255,.04)'}},y:{ticks:{color:'rgba(247,243,233,.45)',font:{size:9}},grid:{color:'rgba(255,255,255,.04)'}}}}}}));
+    cCompCharts.push(new Chart(document.getElementById('comp-c2'),{type:'bar',data:{labels:mn,datasets:[{label:String(a1),data:d1.map(d=>d.e),backgroundColor:'rgba(231,76,60,.6)',borderRadius:3},{label:String(a2),data:d2.map(d=>d.e),backgroundColor:'rgba(155,89,182,.6)',borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'rgba(247,243,233,.7)',font:{size:10}}}},scales:{x:{ticks:{color:'rgba(247,243,233,.45)',font:{size:9}},grid:{color:'rgba(255,255,255,.04)'}},y:{ticks:{color:'rgba(247,243,233,.45)',font:{size:9}},grid:{color:'rgba(255,255,255,.04)'}}}}}}));
+  },100);
+  toast('Comparativo generado');
+}
+
+// RPT DIEZMOS
+function genDiez(){
+  const anio=parseInt(document.getElementById('rdz-anio').value);
+  const fils=gAccFil();const movs=gAccMov();
+  const rows=fils.map(f=>{
+    const md=MESES.map((_,i)=>{const mm=movs.filter(mv=>mv.tipo==='ingreso'&&mv.cat==='Diezmos'&&mv.fil===f.id&&parseInt(mv.fec.split('-')[0])===anio&&parseInt(mv.fec.split('-')[1])===i+1);return mm.reduce((a,mv)=>a+Number(mv.mon),0);});
+    const tot=md.reduce((a,b)=>a+b,0);const pg=md.filter(d=>d>0).length;const fid=Math.round((pg/12)*100);
+    return`<tr><td><strong>${f.cod}</strong></td><td>${f.nom}</td>${md.map(d=>`<td style="text-align:right;font-size:10px">${d>0?'<span style="color:green">'+d.toFixed(0)+'</span>':'<span style="color:#ccc">—</span>'}</td>`).join('')}<td style="font-weight:bold;text-align:right">S/. ${tot.toFixed(2)}</td><td style="text-align:center;color:${fid>=90?'green':fid>=60?'orange':'red'};font-weight:bold">${fid}%</td></tr>`;
+  }).join('');
+  document.getElementById('rdz-prev').innerHTML=`<div class="rpt-wrap">${rptHd('Diezmos por Filial — 12 Meses','Año '+anio)}<div class="rpt-body" style="overflow-x:auto"><table><thead><tr><th>Cód.</th><th>Sede / Filial</th>${MESES.map(m=>`<th style="text-align:right;min-width:48px">${m.slice(0,3)}</th>`).join('')}<th style="text-align:right">Total</th><th>Fidel.</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+  toast('Informe de diezmos generado');
+}
+
+// RPT FIDELIDAD
+function genFid(){
+  const anio=parseInt(document.getElementById('rfid-anio').value);
+  const fil=document.getElementById('rfid-fil').value;
+  let ms=gAccMiem();if(fil!=='all')ms=ms.filter(m=>m.fil===fil);
+  const rows=ms.map(m=>{
+    const md=MESES.map((_,i)=>{const mm=DB.movimientos.filter(mv=>mv.tipo==='ingreso'&&mv.cat==='Diezmos'&&mv.miem===m.id&&parseInt(mv.fec.split('-')[0])===anio&&parseInt(mv.fec.split('-')[1])===i+1);return mm.reduce((a,mv)=>a+Number(mv.mon),0);});
+    const tot=md.reduce((a,b)=>a+b,0);const pg=md.filter(d=>d>0).length;const fid=Math.round((pg/12)*100);
+    return`<tr><td style="font-size:10px">${m.cod}</td><td>${m.nom} ${m.ape}</td><td style="font-size:10px">${gfn(m.fil)}</td>${md.map(d=>`<td style="text-align:center;font-size:11px">${d>0?'<span style="color:green">✓</span>':'<span style="color:#ddd">·</span>'}</td>`).join('')}<td style="text-align:right;font-weight:bold">S/. ${tot.toFixed(2)}</td><td style="text-align:center;font-weight:bold;color:${fid>=90?'green':fid>=60?'orange':'red'}">${fid}%</td><td style="text-align:center"><span style="padding:1px 7px;border-radius:9px;font-size:9px;background:${fid>=90?'#e8f5e9':fid>=60?'#fff3e0':'#ffebee'};color:${fid>=90?'green':fid>=60?'orange':'red'}">${fid>=90?'Fiel':fid>=60?'Regular':'Irregular'}</span></td></tr>`;
+  }).join('');
+  const fn=fil==='all'?'Todas las sedes':gfn(fil);
+  document.getElementById('rfid-prev').innerHTML=`<div class="rpt-wrap">${rptHd('Fidelidad Individual de Diezmos','Año '+anio+' — '+fn)}<div class="rpt-body" style="overflow-x:auto"><table><thead><tr><th>Código</th><th>Miembro</th><th>Sede/Filial</th>${MESES.map(m=>`<th style="text-align:center;min-width:28px">${m.slice(0,1)}</th>`).join('')}<th>Total</th><th>%</th><th>Estado</th></tr></thead><tbody>${rows||'<tr><td colspan="18" style="text-align:center;padding:18px;color:#888">Sin datos</td></tr>'}</tbody></table><div style="margin-top:10px;font-size:10px;color:#888">✓ = Diezmo registrado | Fiel ≥90% | Regular 60-89% | Irregular &lt;60%</div></div></div>`;
+  toast('Informe de fidelidad generado');
+}
+
+// RPT VOTOS
+function genVotRpt(){
+  const est=document.getElementById('rvot-est').value;
+  const fil=document.getElementById('rvot-fil').value;
+  let vs=DB.votos;
+  if(est!=='all')vs=vs.filter(v=>v.est===est);
+  if(fil!=='all')vs=vs.filter(v=>v.fil===fil);
+  const pend=vs.filter(v=>v.est==='pendiente').length;const cum=vs.filter(v=>v.est==='cumplido').length;const ven=vs.filter(v=>v.est==='vencido').length;
+  const tm=vs.reduce((a,v)=>a+Number(v.mon),0);const mc=vs.filter(v=>v.est==='cumplido').reduce((a,v)=>a+Number(v.mon),0);
+  const rows=vs.map(v=>`<tr><td>${gmn(v.miem)}</td><td>${v.desc}</td><td style="font-weight:bold">S/. ${Number(v.mon).toFixed(2)}</td><td>${fd2(v.lim)}</td><td>${v.cum?fd2(v.cum):'—'}</td><td style="font-size:10px">${gfn(v.fil)}</td><td style="font-weight:bold;color:${v.est==='cumplido'?'green':v.est==='vencido'?'red':'orange'}">${v.est.charAt(0).toUpperCase()+v.est.slice(1)}</td></tr>`).join('');
+  document.getElementById('rvot-prev').innerHTML=`<div class="rpt-wrap">${rptHd('Votos y Cumplimiento','Reporte General')}<div class="rpt-body"><div class="rpt-totals" style="margin-bottom:12px"><table><tr><td><strong>Pendientes:</strong> ${pend}</td><td style="padding-left:14px"><strong>Cumplidos:</strong> <span style="color:green">${cum}</span></td><td style="padding-left:14px"><strong>Vencidos:</strong> <span style="color:red">${ven}</span></td><td style="padding-left:14px"><strong>Comprometido:</strong> S/. ${tm.toFixed(2)}</td><td style="padding-left:14px"><strong>Recibido:</strong> <span style="color:green">S/. ${mc.toFixed(2)}</span></td></tr></table></div><table><thead><tr><th>Miembro</th><th>Descripción del Voto</th><th>Monto</th><th>Fecha Límite</th><th>Cumplimiento</th><th>Sede/Filial</th><th>Estado</th></tr></thead><tbody>${rows||'<tr><td colspan="7" style="text-align:center;padding:18px;color:#888">Sin votos registrados</td></tr>'}</tbody></table></div></div>`;
+  toast('Informe de votos generado');
+}
+
+// ===================== INIT =====================
+document.addEventListener('DOMContentLoaded',()=>{
+  document.getElementById('lp').addEventListener('keypress',e=>{if(e.key==='Enter')doLogin();});
+});
+</script>
+</body>
+</html>
