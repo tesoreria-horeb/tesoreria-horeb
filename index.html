@@ -523,7 +523,7 @@ const MESES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','
 const ROLES={pastor:'Pastor Principal',tesorero_principal:'Tesorero Principal',tesorero_sede:'Tesorero Sede Central',tesorero_filial:'Tesorero Filial'};
 
 function initDB(){
-  const DB={
+  const data={
     filiales:[
       {id:'sede',cod:'S000',nom:'Sede Central',pastor:'Hno. Pastor Principal',tes:'Hno. Tesorero Principal',dir:'Av. Principal 123, Perus, Lima',tel:'987654321',fun:'2000-01-01'},
       {id:'F001',cod:'F001',nom:'Filial Los Jardines',pastor:'Hno. Juan Pérez',tes:'Hno. Pedro Quispe',dir:'Jr. Los Jardines 456, Comas',tel:'987111222',fun:'2005-03-15'},
@@ -559,16 +559,16 @@ function initDB(){
       // diezmos x3
       for(let w=1;w<=3;w++){
         const d=Math.min(w*7,28);
-        DB.movimientos.push({id:'M'+String(id++).padStart(4,'0'),tipo:'ingreso',cat:'Diezmos',desc:'Diezmos domingo '+w,mon:Math.round((150+Math.random()*350)*100)/100,fec:y+'-'+String(m).padStart(2,'0')+'-'+String(d).padStart(2,'0'),met:'efectivo',comp:'',fil:f,miem:'',obs:''});
+        data.movimientos.push({id:'M'+String(id++).padStart(4,'0'),tipo:'ingreso',cat:'Diezmos',desc:'Diezmos domingo '+w,mon:Math.round((150+Math.random()*350)*100)/100,fec:y+'-'+String(m).padStart(2,'0')+'-'+String(d).padStart(2,'0'),met:'efectivo',comp:'',fil:f,miem:'',obs:''});
       }
       // ofrenda
-      DB.movimientos.push({id:'M'+String(id++).padStart(4,'0'),tipo:'ingreso',cat:'Ofrendas',desc:'Ofrenda dominical',mon:Math.round((60+Math.random()*180)*100)/100,fec:y+'-'+String(m).padStart(2,'0')+'-15',met:'efectivo',comp:'',fil:f,miem:'',obs:''});
+      data.movimientos.push({id:'M'+String(id++).padStart(4,'0'),tipo:'ingreso',cat:'Ofrendas',desc:'Ofrenda dominical',mon:Math.round((60+Math.random()*180)*100)/100,fec:y+'-'+String(m).padStart(2,'0')+'-15',met:'efectivo',comp:'',fil:f,miem:'',obs:''});
       // egresos
-      DB.movimientos.push({id:'M'+String(id++).padStart(4,'0'),tipo:'egreso',cat:'Servicios Básicos',desc:'Pago servicios mes '+m,mon:Math.round((90+Math.random()*130)*100)/100,fec:y+'-'+String(m).padStart(2,'0')+'-05',met:'transferencia',comp:'REC-'+id,fil:f,miem:'',obs:''});
-      if(m%3===0) DB.movimientos.push({id:'M'+String(id++).padStart(4,'0'),tipo:'egreso',cat:'Evangelismo',desc:'Materiales evangelismo',mon:Math.round((40+Math.random()*90)*100)/100,fec:y+'-'+String(m).padStart(2,'0')+'-20',met:'efectivo',comp:'',fil:f,miem:'',obs:''});
+      data.movimientos.push({id:'M'+String(id++).padStart(4,'0'),tipo:'egreso',cat:'Servicios Básicos',desc:'Pago servicios mes '+m,mon:Math.round((90+Math.random()*130)*100)/100,fec:y+'-'+String(m).padStart(2,'0')+'-05',met:'transferencia',comp:'REC-'+id,fil:f,miem:'',obs:''});
+      if(m%3===0) data.movimientos.push({id:'M'+String(id++).padStart(4,'0'),tipo:'egreso',cat:'Evangelismo',desc:'Materiales evangelismo',mon:Math.round((40+Math.random()*90)*100)/100,fec:y+'-'+String(m).padStart(2,'0')+'-20',met:'efectivo',comp:'',fil:f,miem:'',obs:''});
     }
   });
-  return DB;
+  return data;
 }
 
 let DB;
