@@ -887,9 +887,14 @@ function renderMov(){
   const tb=document.getElementById('mov-body');
   if(!sl.length){tb.innerHTML='<tr><td colspan="10"><div class="empty"><span class="ic">💰</span><p>No hay movimientos</p></div></td></tr>';return;}
   tb.innerHTML=sl.map(function(m,i){
-    var compImg=m.compFile?'<a href="'+m.compFile+'" target="_blank" style="color:var(--gold-light);font-size:10px">📎 Ver</a>':'';
-    var compTxt=m.comp?'<span style="font-size:10px;color:rgba(247,243,233,.4)">'+m.comp+'</span>':'—';
-    var compCell=compImg||compTxt;
+    var compCell='';
+    if(m.compFile||m.hasFile){
+      compCell='<button class="btn btn-sm btn-s" onclick="verComprobante(this)" data-id="'+m.id+'" style="font-size:10px;padding:3px 8px">&#128206; Ver</button>';
+    } else if(m.comp){
+      compCell='<span style="font-size:10px;color:rgba(247,243,233,.4)">'+m.comp+'</span>';
+    } else {
+      compCell='<span style="color:rgba(247,243,233,.2)">—</span>';
+    }
     return '<tr>'
       +'<td style="color:rgba(247,243,233,.35);font-size:10px">'+(((movPg-1)*MPP)+i+1)+'</td>'
       +'<td>'+fd2(m.fec)+'</td>'
@@ -941,7 +946,9 @@ function openMovModal(id){
     document.getElementById('m-miem').value=m.miem||'';
     document.getElementById('m-obs').value=m.obs||'';
     var pp=document.getElementById('m-comp-preview');
-    if(pp&&m.compFile){var icon=m.compFile.includes('pdf')?'📄':'🖼️';pp.innerHTML=icon+' Comprobante adjunto <a href="'+m.compFile+'" target="_blank" style="color:var(--gold-light)">Ver</a>';}
+    if(pp&&(m.compFile||m.hasFile)){
+      pp.innerHTML='&#128206; Comprobante adjunto &nbsp;<button class="btn btn-sm btn-s" onclick="verComprobante(this)" data-id="'+m.id+'" style="font-size:10px">&#128065;&#65039; Ver</button>';
+    }
   }else{
     document.getElementById('mov-tit').textContent='Nuevo Movimiento';
     document.getElementById('m-tipo').value='ingreso';updCats();
@@ -963,31 +970,28 @@ function savMov(){
   var cat=document.getElementById('m-cat').value;
   var fil=document.getElementById('m-fil').value;
 
-  // Detailed validation with specific messages
   if(!fec){toast('Seleccione la fecha','err');return;}
   if(!desc){toast('Ingrese una descripcion','err');return;}
   if(!monStr||isNaN(mon)||mon<=0){toast('Ingrese un monto valido mayor a 0','err');return;}
   if(!cat){toast('Seleccione una categoria','err');return;}
   if(!fil){toast('Seleccione la sede o filial','err');return;}
 
-  var compFile='';
+  var movId=EID||gid('M');
+
+  // Get file data
   var fileInput=document.getElementById('m-comp-file');
-  if(fileInput&&fileInput.files&&fileInput.files[0]){
-    compFile=fileInput.getAttribute('data-b64')||'';
+  var compFile='';
+  if(fileInput&&fileInput.getAttribute('data-b64')){
+    compFile=fileInput.getAttribute('data-b64');
   }
   // Keep existing file if editing and no new file selected
   if(EID&&!compFile){
     var existing=DB.movimientos.find(function(x){return x.id===EID;});
     if(existing)compFile=existing.compFile||'';
   }
+
   var obj={
-    id:EID||gid('M'),
-    tipo:tipo,
-    fec:fec,
-    mon:mon,
-    desc:desc,
-    cat:cat,
-    fil:fil,
+    id:movId,tipo:tipo,fec:fec,mon:mon,desc:desc,cat:cat,fil:fil,
     met:document.getElementById('m-met').value||'efectivo',
     comp:document.getElementById('m-comp').value||'',
     miem:document.getElementById('m-miem').value||'',
@@ -1002,10 +1006,43 @@ function savMov(){
     DB.movimientos.push(obj);
   }
   try{sd();}catch(e){}
-  fbSave('movimientos', obj.id, obj);
+
+  // Save to Firebase - split file if needed
+  if(compFile&&compFile.length>900000){
+    // File too large for one doc - save metadata only to Firebase, file stays local
+    var objNoFile=Object.assign({},obj);
+    objNoFile.compFile='';
+    objNoFile.hasFile=true;
+    fbSave('movimientos', obj.id, objNoFile);
+    try{localStorage.setItem('comp_'+movId, compFile);}catch(e){}
+    toast((EID?'Movimiento actualizado':'Movimiento registrado')+' (comprobante guardado localmente)');
+  } else {
+    fbSave('movimientos', obj.id, obj);
+    toast(EID?'Movimiento actualizado':'Movimiento registrado');
+  }
   cm('ov-mov');
-  toast(EID?'Movimiento actualizado':'Movimiento registrado');
+  renderMov();
 }
+
+
+function verComprobante(b){
+  var movId=b&&b.getAttribute?b.getAttribute('data-id'):b;
+  // Try from DB first (Firebase synced)
+  var mov=DB.movimientos.find(function(x){return x.id===movId;});
+  var data=mov&&mov.compFile?mov.compFile:'';
+  // Fallback to localStorage
+  if(!data){try{data=localStorage.getItem('comp_'+movId)||'';}catch(e){}}
+  if(!data){toast('Comprobante no disponible','err');return;}
+  var w=window.open('','_blank');
+  if(!w){toast('Permite ventanas emergentes para ver el comprobante','err');return;}
+  if(data.indexOf('application/pdf')>-1){
+    w.document.write('<html><body style="margin:0"><iframe src="'+data+'" style="width:100%;height:100vh;border:none"></iframe></body></html>');
+  } else {
+    w.document.write('<html><body style="margin:0;background:#111;display:flex;align-items:center;justify-content:center;min-height:100vh"><img src="'+data+'" style="max-width:100%;max-height:100vh;object-fit:contain"></body></html>');
+  }
+  w.document.close();
+}
+
 function edMov(b){openMovModal(b&&b.getAttribute?b.getAttribute('data-id'):b);}
 function delMov(b){var id=b&&b.getAttribute?b.getAttribute('data-id'):b;if(!confirm('¿Eliminar este movimiento?'))return;DB.movimientos=DB.movimientos.filter(m=>m.id!==id);sd();renderMov();toast('Movimiento eliminado','err');}
 
@@ -1629,7 +1666,15 @@ function startRealtimeSync(){
       if(snap.empty && col !== 'categorias') return;
 
       if(col === 'movimientos'){
-        var items=[];snap.forEach(function(d){items.push(d.data());});
+        var items=[];
+        snap.forEach(function(d){
+          var item=d.data();
+          // Check localStorage for files saved there (large files)
+          if(!item.compFile&&item.hasFile){
+            try{var lf=localStorage.getItem('comp_'+item.id);if(lf)item.compFile=lf;}catch(e){}
+          }
+          items.push(item);
+        });
         if(items.length>0){DB.movimientos=items;try{sd();}catch(e){}}
       } else if(col === 'filiales'){
         var items=[];snap.forEach(function(d){items.push(d.data());});
