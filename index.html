@@ -204,29 +204,23 @@ tbody td{padding:9px 11px;color:rgba(247,243,233,.8);vertical-align:middle}
 ::-webkit-scrollbar-thumb{background:rgba(201,168,76,.2);border-radius:3px}
 </style>
 
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, collection, doc, setDoc, getDoc, getDocs, deleteDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyAAUOs1p9F4l4j4_BJINc7QrCok76U4IWA",
-  authDomain: "tesoreria-horeb.firebaseapp.com",
-  projectId: "tesoreria-horeb",
-  storageBucket: "tesoreria-horeb.firebasestorage.app",
-  messagingSenderId: "858345426862",
-  appId: "1:858345426862:web:282da438c981a2c4c0c23f"
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-
-// Make Firebase available globally
-window.FB_DB = db;
-window.FB = { collection, doc, setDoc, getDoc, getDocs, deleteDoc, onSnapshot, query, orderBy };
-window.FB_READY = true;
-
-// Notify app that Firebase is ready
-window.dispatchEvent(new Event('firebase-ready'));
+<!-- Firebase compat SDK (works on all browsers/mobile) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script>
+  var firebaseConfig = {
+    apiKey: "AIzaSyAAUOs1p9F4l4j4_BJINc7QrCok76U4IWA",
+    authDomain: "tesoreria-horeb.firebaseapp.com",
+    projectId: "tesoreria-horeb",
+    storageBucket: "tesoreria-horeb.firebasestorage.app",
+    messagingSenderId: "858345426862",
+    appId: "1:858345426862:web:282da438c981a2c4c0c23f"
+  };
+  firebase.initializeApp(firebaseConfig);
+  var _fbdb = firebase.firestore();
+  window.FB_DB = _fbdb;
+  window.FB_READY = true;
+  window.dispatchEvent(new Event('firebase-ready'));
 </script>
 </head>
 <body>
@@ -1064,30 +1058,10 @@ function prtRpt(divId){
   if(!el||!el.innerHTML.trim()){toast('Primero genere el informe','err');return;}
   const w=window.open('','_blank','width=950,height=720');
   w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Informe — Iglesia La Roca de Horeb</title><style>body{font-family:Arial,sans-serif;margin:20px;color:#1a1a1a}.rpt-hd{background:#0D1B2A;color:white;padding:16px 20px;display:flex;align-items:center;gap:14px;border-radius:4px;margin-bottom:14px}.rpt-logo-circle{width:54px;height:54px;border:2px solid #C9A84C;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0}.rpt-church{color:#C9A84C;font-size:12px;font-weight:bold}.rpt-title{font-size:17px;font-weight:bold;color:white;margin:3px 0}.rpt-sub{font-size:11px;color:rgba(255,255,255,.55)}table{width:100%;border-collapse:collapse;font-size:11px}thead th{background:#0D1B2A;color:#C9A84C;padding:6px 8px;text-align:left;font-size:9px;text-transform:uppercase}tbody td{padding:6px 8px;border-bottom:1px solid #eee;color:#333}tbody tr:nth-child(even){background:#f9f9f9}tfoot td{background:#eee;font-weight:bold;padding:6px 8px}.rpt-totals{margin-top:10px;padding:10px;background:#f8f5ef;border:1px solid #C9A84C;border-radius:4px;font-size:12px}.rpt-sign{margin-top:36px;display:flex;gap:36px;justify-content:flex-end}.rpt-sign-ln{border-top:1px solid #333;width:160px;text-align:center;padding-top:3px;font-size:10px;color:#555}h3{color:#0D1B2A;margin:14px 0 7px;font-size:13px}@media print{button{display:none}}</style>
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, collection, doc, setDoc, getDoc, getDocs, deleteDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+<!-- Firebase compat SDK (works on all browsers/mobile) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 
-const firebaseConfig = {
-  apiKey: "AIzaSyAAUOs1p9F4l4j4_BJINc7QrCok76U4IWA",
-  authDomain: "tesoreria-horeb.firebaseapp.com",
-  projectId: "tesoreria-horeb",
-  storageBucket: "tesoreria-horeb.firebasestorage.app",
-  messagingSenderId: "858345426862",
-  appId: "1:858345426862:web:282da438c981a2c4c0c23f"
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-
-// Make Firebase available globally
-window.FB_DB = db;
-window.FB = { collection, doc, setDoc, getDoc, getDocs, deleteDoc, onSnapshot, query, orderBy };
-window.FB_READY = true;
-
-// Notify app that Firebase is ready
-window.dispatchEvent(new Event('firebase-ready'));
-</script>
 </head><body>${el.innerHTML}<div style="margin-top:14px;font-size:10px;color:#999;text-align:right;border-top:1px solid #eee;padding-top:8px">Sistema de Tesorería — Iglesia La Roca de Horeb | Ministerio de Perus</div><scr"+"ipt>window.onload=()=>window.print()<\/scr"+"ipt></body></html>`);
   w.document.close();
 }
@@ -1339,23 +1313,23 @@ function delUsr(btn){var id=btn.getAttribute?btn.getAttribute('data-id'):btn;
 async function fbSave(coleccion, id, data){
   try{
     if(!window.FB_DB)return;
-    await window.FB.setDoc(window.FB.doc(window.FB_DB, coleccion, id), data);
+    await window.FB_DB.collection(coleccion).doc(id).set(data);
   }catch(e){console.warn('Firebase save error:',e);}
 }
 
 async function fbDelete(coleccion, id){
   try{
     if(!window.FB_DB)return;
-    await window.FB.deleteDoc(window.FB.doc(window.FB_DB, coleccion, id));
+    await window.FB_DB.collection(coleccion).doc(id).delete();
   }catch(e){console.warn('Firebase delete error:',e);}
 }
 
 async function fbLoadAll(coleccion){
   try{
     if(!window.FB_DB)return null;
-    const snap = await window.FB.getDocs(window.FB.collection(window.FB_DB, coleccion));
-    const items = [];
-    snap.forEach(d=>items.push(d.data()));
+    var snap = await window.FB_DB.collection(coleccion).get();
+    var items = [];
+    snap.forEach(function(d){items.push(d.data());});
     return items;
   }catch(e){console.warn('Firebase load error:',e);return null;}
 }
