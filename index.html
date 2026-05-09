@@ -660,9 +660,10 @@ function doLogin(){
   if(CU.niv>2)document.querySelectorAll('.nav-admin').forEach(e=>e.style.display='none');
   document.getElementById('curdate').textContent=new Date().toLocaleDateString('es-PE',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
   popFil();popYrs();sm('dashboard');
+  try{sessionStorage.setItem('horeb_session',JSON.stringify({user:usr.user,pass:usr.pass}));}catch(e){}
 }
 
-function doLogout(){CU=null;document.getElementById('app').style.display='none';document.getElementById('login-screen').style.display='flex';document.getElementById('lu').value='';document.getElementById('lp').value='';}
+function doLogout(){CU=null;try{sessionStorage.removeItem('horeb_session');}catch(e){}document.getElementById('app').style.display='none';document.getElementById('login-screen').style.display='flex';document.getElementById('lu').value='';document.getElementById('lp').value='';}
 
 // ===================== NAV =====================
 const TITLES={dashboard:'Dashboard',usuarios:'Gestion de Usuarios',movimientos:'Movimientos',filiales:'Filiales',miembros:'Miembros',votos:'Votos',categorias:'Categorías y Usuarios','rpt-caja':'Informe: Libro Caja Mensual','rpt-consolidado':'Informe: Consolidado General','rpt-comparativo':'Informe: Comparativo Anual','rpt-diezmos':'Informe: Diezmos por Filial','rpt-fidelidad':'Informe: Fidelidad Individual','rpt-votos':'Informe: Votos y Cumplimiento'};
@@ -1268,6 +1269,16 @@ function delUsr(btn){var id=btn.getAttribute?btn.getAttribute('data-id'):btn;
 // ===================== INIT =====================
 document.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('lp').addEventListener('keypress',e=>{if(e.key==='Enter')doLogin();});
+  // Restaurar sesion si existe
+  try{
+    var saved=sessionStorage.getItem('horeb_session');
+    if(saved){
+      var s=JSON.parse(saved);
+      document.getElementById('lu').value=s.user;
+      document.getElementById('lp').value=s.pass;
+      doLogin();
+    }
+  }catch(e){}
 });
 </script>
 </body>
