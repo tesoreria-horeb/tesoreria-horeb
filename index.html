@@ -202,6 +202,39 @@ tbody td{padding:9px 11px;color:rgba(247,243,233,.8);vertical-align:middle}
 ::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:rgba(201,168,76,.2);border-radius:3px}
+
+/* ===== MOBILE RESPONSIVE ===== */
+#menu-btn{display:none}
+#sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:190}
+#sidebar-overlay.open{display:block}
+@media(max-width:768px){
+  :root{--sidebar-w:0px}
+  .sidebar{width:78vw!important;max-width:280px;transform:translateX(-100%);transition:transform .3s ease;z-index:300!important;position:fixed!important}
+  .sidebar.open{transform:translateX(0)!important}
+  .main{margin-left:0!important;width:100vw!important}
+  .topbar{padding:10px 12px!important;position:fixed!important;top:0;left:0;right:0;z-index:150;height:56px}
+  .pg{padding:66px 10px 20px!important}
+  .stat-grid{grid-template-columns:1fr 1fr!important;gap:8px!important}
+  .stat-val{font-size:16px!important}
+  .charts-grid{grid-template-columns:1fr!important}
+  .tb{gap:6px!important}
+  .sb{min-width:100%!important}
+  .modal,.modal-lg{width:96vw!important;max-width:96vw!important;padding:14px!important;max-height:88vh!important}
+  .fr{grid-template-columns:1fr!important;gap:8px!important}
+  .fr.fr3{grid-template-columns:1fr!important}
+  .tw{overflow-x:auto!important}
+  table{font-size:11px!important;min-width:480px}
+  thead th{padding:5px 5px!important;font-size:8px!important}
+  tbody td{padding:5px 5px!important;font-size:11px!important}
+  .hide-mobile{display:none!important}
+  #menu-btn{display:flex!important;align-items:center;justify-content:center;width:36px;height:36px;background:rgba(201,168,76,.15);border:1px solid rgba(201,168,76,.3);border-radius:6px;cursor:pointer;font-size:22px;color:var(--gold-light);flex-shrink:0;margin-right:4px}
+  .topbar-title{font-size:13px!important}
+  .topbar-sub{display:none!important}
+  #sync-btn-top{font-size:10px!important;padding:3px 7px!important}
+  .card{padding:12px!important}
+  .btn{padding:7px 10px!important;font-size:11px!important}
+  .btn-sm{padding:4px 7px!important;font-size:10px!important}
+}
 </style>
 
 <!-- Firebase compat SDK via CDN -->
@@ -354,7 +387,7 @@ tbody td{padding:9px 11px;color:rgba(247,243,233,.8);vertical-align:middle}
         </div>
         <div class="card">
           <div class="card-title">Registro de Movimientos <span id="mov-tot" style="font-size:11px;color:rgba(247,243,233,.45);font-family:'Lato',sans-serif;font-weight:400"></span></div>
-          <div class="tw"><table><thead><tr><th>#</th><th>Fecha</th><th>Descripción</th><th>Categoría</th><th>Método</th><th>Tipo</th><th>Monto</th><th class="hide-mobile">Comprobante</th><th class="hide-mobile">Sede/Filial</th><th>Acciones</th></tr></thead><tbody id="mov-body"></tbody></table></div>
+          <div class="tw"><table><thead><tr><th>#</th><th>Fecha</th><th>Descripción</th><th>Categoría</th><th class="hide-mobile">Miembro</th><th class="hide-mobile">Método</th><th>Tipo</th><th>Monto</th><th class="hide-mobile">Comprobante</th><th class="hide-mobile">Sede/Filial</th><th>Acciones</th></tr></thead><tbody id="mov-body"></tbody></table></div>
           <div class="pag" id="mov-pag"></div>
         </div>
       </div>
@@ -518,6 +551,7 @@ tbody td{padding:9px 11px;color:rgba(247,243,233,.8);vertical-align:middle}
     <div class="fr"><div class="fld"><label>Categoría</label><select id="m-cat"></select></div><div class="fld"><label>Monto (S/.)</label><input type="number" id="m-monto" placeholder="0.00" step="0.01" min="0"></div></div>
     <div class="fr fr1"><div class="fld"><label>Descripción</label><input type="text" id="m-desc" placeholder="Descripción del movimiento"></div></div>
     <div class="fr"><div class="fld"><label>Método de Pago</label><select id="m-met"><option value="efectivo">Efectivo</option><option value="transferencia">Transferencia</option><option value="yape">Yape</option><option value="plin">Plin</option><option value="deposito">Depósito bancario</option><option value="cheque">Cheque</option></select></div><div class="fld"><label>N° Comprobante</label><input type="text" id="m-comp" placeholder="Opcional"></div></div>
+    <div class="fr"><div class="fld"><label>Adjuntar Comprobante (JPG, PNG, PDF)</label><input type="file" id="m-comp-file" accept=".jpg,.jpeg,.png,.pdf" style="padding:6px;background:rgba(13,27,42,.7);border:1px solid rgba(201,168,76,.2);border-radius:6px;color:var(--cream);font-size:12px;width:100%"></div><div class="fld" id="m-comp-preview-box" style="display:flex;align-items:center"><div id="m-comp-preview" style="font-size:12px;color:var(--gold-light)"></div></div></div>
     <div class="fr"><div class="fld"><label>Sede / Filial</label><select id="m-fil"></select></div><div class="fld"><label>Miembro (si aplica)</label><select id="m-miem"><option value="">— Sin miembro —</option></select></div></div>
     <div class="fr fr1"><div class="fld"><label>Observaciones</label><textarea id="m-obs" placeholder="Notas adicionales..."></textarea></div></div>
     <div class="modal-ft"><button class="btn btn-s" onclick="cm('ov-mov')">Cancelar</button><button class="btn btn-p" onclick="savMov()">💾 Guardar</button></div>
@@ -852,7 +886,24 @@ function renderMov(){
   const sl=movs.slice((movPg-1)*MPP,movPg*MPP);
   const tb=document.getElementById('mov-body');
   if(!sl.length){tb.innerHTML='<tr><td colspan="10"><div class="empty"><span class="ic">💰</span><p>No hay movimientos</p></div></td></tr>';return;}
-  tb.innerHTML=sl.map((m,i)=>`<tr><td style="color:rgba(247,243,233,.35);font-size:10px">${(movPg-1)*MPP+i+1}</td><td>${fd2(m.fec)}</td><td>${m.desc}</td><td>${m.cat}</td><td style="font-size:10px">${m.met}</td><td><span class="badge b-${m.tipo==='ingreso'?'ing':'eg'}">${m.tipo==='ingreso'?'Ingreso':'Egreso'}</span></td><td class="amt-${m.tipo==='ingreso'?'i':'e'}">${fmt(m.mon)}</td><td style="font-size:10px;color:rgba(247,243,233,.4)">${m.comp||'—'}</td><td style="font-size:10px">${gfn(m.fil)}</td><td><button class="btn btn-sm btn-s" onclick="edMov('${m.id}')">✏️</button> <button class="btn btn-sm btn-d" onclick="delMov('${m.id}')">🗑️</button></td></tr>`).join('');
+  tb.innerHTML=sl.map(function(m,i){
+    var compImg=m.compFile?'<a href="'+m.compFile+'" target="_blank" style="color:var(--gold-light);font-size:10px">📎 Ver</a>':'';
+    var compTxt=m.comp?'<span style="font-size:10px;color:rgba(247,243,233,.4)">'+m.comp+'</span>':'—';
+    var compCell=compImg||compTxt;
+    return '<tr>'
+      +'<td style="color:rgba(247,243,233,.35);font-size:10px">'+(((movPg-1)*MPP)+i+1)+'</td>'
+      +'<td>'+fd2(m.fec)+'</td>'
+      +'<td>'+m.desc+'</td>'
+      +'<td>'+m.cat+'</td>'
+      +'<td class="hide-mobile" style="font-size:10px">'+gmn(m.miem)+'</td>'
+      +'<td class="hide-mobile" style="font-size:10px">'+m.met+'</td>'
+      +'<td><span class="badge b-'+(m.tipo==='ingreso'?'ing':'eg')+'">'+(m.tipo==='ingreso'?'Ingreso':'Egreso')+'</span></td>'
+      +'<td class="amt-'+(m.tipo==='ingreso'?'i':'e')+'">'+fmt(m.mon)+'</td>'
+      +'<td class="hide-mobile">'+compCell+'</td>'
+      +'<td class="hide-mobile" style="font-size:10px">'+gfn(m.fil)+'</td>'
+      +'<td><button class="btn btn-sm btn-s" onclick="edMov(this)" data-id="'+m.id+'">✏️</button> <button class="btn btn-sm btn-d" onclick="delMov(this)" data-id="'+m.id+'">🗑️</button></td>'
+      +'</tr>';
+  }).join('');
   // pagination
   const pag=document.getElementById('mov-pag');pag.innerHTML='';
   if(pgs>1)for(let p=1;p<=pgs;p++){const b=document.createElement('button');b.className='pg-btn'+(p===movPg?' active':'');b.textContent=p;b.onclick=()=>{movPg=p;renderMov();};pag.appendChild(b);}
@@ -889,12 +940,16 @@ function openMovModal(id){
     document.getElementById('m-fil').value=m.fil;
     document.getElementById('m-miem').value=m.miem||'';
     document.getElementById('m-obs').value=m.obs||'';
+    var pp=document.getElementById('m-comp-preview');
+    if(pp&&m.compFile){var icon=m.compFile.includes('pdf')?'📄':'🖼️';pp.innerHTML=icon+' Comprobante adjunto <a href="'+m.compFile+'" target="_blank" style="color:var(--gold-light)">Ver</a>';}
   }else{
     document.getElementById('mov-tit').textContent='Nuevo Movimiento';
     document.getElementById('m-tipo').value='ingreso';updCats();
     document.getElementById('m-fecha').value=today();
     ['m-monto','m-desc','m-comp','m-obs'].forEach(id=>document.getElementById(id).value='');
     document.getElementById('m-met').value='efectivo';document.getElementById('m-miem').value='';
+  var fi=document.getElementById('m-comp-file');if(fi){fi.value='';fi.removeAttribute('data-b64');}
+  var pp=document.getElementById('m-comp-preview');if(pp)pp.textContent='';
   }
   om('ov-mov');
 }
@@ -915,6 +970,16 @@ function savMov(){
   if(!cat){toast('Seleccione una categoria','err');return;}
   if(!fil){toast('Seleccione la sede o filial','err');return;}
 
+  var compFile='';
+  var fileInput=document.getElementById('m-comp-file');
+  if(fileInput&&fileInput.files&&fileInput.files[0]){
+    compFile=fileInput.getAttribute('data-b64')||'';
+  }
+  // Keep existing file if editing and no new file selected
+  if(EID&&!compFile){
+    var existing=DB.movimientos.find(function(x){return x.id===EID;});
+    if(existing)compFile=existing.compFile||'';
+  }
   var obj={
     id:EID||gid('M'),
     tipo:tipo,
@@ -926,7 +991,8 @@ function savMov(){
     met:document.getElementById('m-met').value||'efectivo',
     comp:document.getElementById('m-comp').value||'',
     miem:document.getElementById('m-miem').value||'',
-    obs:document.getElementById('m-obs').value||''
+    obs:document.getElementById('m-obs').value||'',
+    compFile:compFile
   };
 
   if(EID){
@@ -940,8 +1006,8 @@ function savMov(){
   cm('ov-mov');
   toast(EID?'Movimiento actualizado':'Movimiento registrado');
 }
-function edMov(id){openMovModal(id);}
-function delMov(id){if(!confirm('¿Eliminar este movimiento?'))return;DB.movimientos=DB.movimientos.filter(m=>m.id!==id);sd();renderMov();toast('Movimiento eliminado','err');}
+function edMov(b){openMovModal(b&&b.getAttribute?b.getAttribute('data-id'):b);}
+function delMov(b){var id=b&&b.getAttribute?b.getAttribute('data-id'):b;if(!confirm('¿Eliminar este movimiento?'))return;DB.movimientos=DB.movimientos.filter(m=>m.id!==id);sd();renderMov();toast('Movimiento eliminado','err');}
 
 // ===================== FILIALES =====================
 function renderFil(){
@@ -1142,7 +1208,7 @@ function prtRpt(divId){
     +'.rpt-sign{margin-top:36px;display:flex;gap:36px;justify-content:flex-end}'
     +'.rpt-sign-ln{border-top:1px solid #333;width:160px;text-align:center;padding-top:3px;font-size:10px;color:#555}'
     +'h3{color:#0D1B2A;margin:14px 0 7px;font-size:13px}'
-    +'@media print{button{display:none}}';
+    +'';
   var html='<!DOCTYPE html><html><head><meta charset="UTF-8">'
     +'<title>Informe - Iglesia La Roca de Horeb</title>'
     +'<style>'+css+'</style>'
@@ -1661,6 +1727,29 @@ function closeSidebar(){
 }
 
 document.addEventListener('DOMContentLoaded',()=>{
+  // File reader for comprobante
+  document.addEventListener('change', function(e){
+    if(e.target && e.target.id === 'm-comp-file'){
+      var file = e.target.files[0];
+      if(!file) return;
+      var preview = document.getElementById('m-comp-preview');
+      var maxSize = 2 * 1024 * 1024; // 2MB limit
+      if(file.size > maxSize){
+        if(preview) preview.textContent = '⚠️ Archivo muy grande (máx 2MB)';
+        e.target.value = '';
+        return;
+      }
+      var reader = new FileReader();
+      reader.onload = function(ev){
+        e.target.setAttribute('data-b64', ev.target.result);
+        if(preview){
+          var icon = file.type.includes('pdf') ? '📄' : '🖼️';
+          preview.innerHTML = icon + ' ' + file.name + ' (' + Math.round(file.size/1024) + ' KB)';
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  });
   document.getElementById('lp').addEventListener('keypress',e=>{if(e.key==='Enter')doLogin();});
   // Restaurar sesion si existe
   try{
