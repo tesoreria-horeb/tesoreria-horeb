@@ -326,6 +326,7 @@ tbody td{padding:9px 11px;color:rgba(247,243,233,.8);vertical-align:middle}
       <div class="nav-sec">Configuración</div>
       <div class="nav-item" onclick="sm('categorias')"><span class="ic">🏷️</span>Categorías</div>
       <div class="nav-item nav-admin" onclick="sm('usuarios')"><span class="ic">👤</span>Usuarios</div>
+      <div class="nav-item nav-admin" onclick="sm('backup')"><span class="ic">💾</span>Backup</div>
       <div class="nav-sec">Informes</div>
       <div class="nav-item" onclick="sm('rpt-caja')"><span class="ic">📋</span>Libro Caja</div>
       <div class="nav-item" onclick="sm('rpt-consolidado')"><span class="ic">📈</span>Consolidado</div>
@@ -380,6 +381,7 @@ tbody td{padding:9px 11px;color:rgba(247,243,233,.8);vertical-align:middle}
         <div class="tb">
           <input class="sb" id="mov-s" placeholder="🔍 Buscar..." oninput="renderMov()">
           <select class="fs" id="mov-ft" onchange="renderMov()"><option value="">Todos los tipos</option><option value="ingreso">Ingresos</option><option value="egreso">Egresos</option></select>
+          <select class="fs" id="mov-fa" onchange="renderMov()"></select>
           <select class="fs" id="mov-fm" onchange="renderMov()"><option value="">Todos los meses</option></select>
           <select class="fs" id="mov-fc" onchange="renderMov()"><option value="">Todas las categorías</option></select>
           <select class="fs" id="mov-ff" onchange="renderMov()"><option value="">Todas las sedes</option></select>
@@ -468,6 +470,82 @@ tbody td{padding:9px 11px;color:rgba(247,243,233,.8);vertical-align:middle}
           <div class="card-title">Gestion de Usuarios del Sistema</div>
           <div class="alert alert-info">Solo el Pastor Principal y Tesorero Principal pueden gestionar usuarios.</div>
           <div class="tw"><table><thead><tr><th>Usuario</th><th>Nombre</th><th>Rol</th><th>Sede/Filial</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="usr-list"></tbody></table></div>
+        </div>
+      </div>
+
+      <!-- BACKUP -->
+      <div class="mod" id="mod-backup">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+
+          <!-- EXPORT -->
+          <div class="card">
+            <div class="card-title">💾 Exportar Backup Completo</div>
+            <p style="font-size:13px;color:rgba(247,243,233,.6);margin-bottom:16px;line-height:1.6">
+              Descarga un archivo con <strong>todos los datos</strong> del sistema: movimientos, miembros, filiales, votos, categorías y usuarios.<br><br>
+              Guarda este archivo en un lugar seguro (Google Drive, USB, etc).
+            </p>
+            <div style="background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.2);border-radius:6px;padding:12px;margin-bottom:16px">
+              <div style="font-size:11px;color:var(--gold-light);margin-bottom:8px;font-weight:700">RESUMEN DE DATOS</div>
+              <div id="backup-summary" style="font-size:12px;color:rgba(247,243,233,.7);line-height:1.8"></div>
+            </div>
+            <button class="btn btn-p" onclick="exportBackup()" style="width:100%;justify-content:center;padding:12px">
+              ⬇️ Descargar Backup (JSON)
+            </button>
+            <div style="margin-top:10px">
+              <button class="btn btn-g" onclick="exportBackupExcel()" style="width:100%;justify-content:center;padding:12px">
+                📊 Exportar Movimientos a Excel (CSV)
+              </button>
+            </div>
+          </div>
+
+          <!-- IMPORT/RESTORE -->
+          <div class="card">
+            <div class="card-title">📂 Restaurar Backup</div>
+            <div class="alert alert-info" style="margin-bottom:14px">
+              ⚠️ <strong>Atención:</strong> Restaurar un backup reemplazará TODOS los datos actuales. Use solo en caso de emergencia.
+            </div>
+            <p style="font-size:13px;color:rgba(247,243,233,.6);margin-bottom:16px;line-height:1.6">
+              Selecciona un archivo de backup (.json) previamente exportado desde este sistema.
+            </p>
+            <div class="fld" style="margin-bottom:14px">
+              <label>Seleccionar archivo de backup</label>
+              <input type="file" id="backup-file-input" accept=".json" style="padding:8px;background:rgba(13,27,42,.7);border:1px solid rgba(201,168,76,.2);border-radius:6px;color:var(--cream);font-size:12px;width:100%">
+            </div>
+            <div id="backup-file-preview" style="font-size:12px;color:var(--gold-light);margin-bottom:12px;min-height:20px"></div>
+            <button class="btn btn-d" onclick="importBackup()" style="width:100%;justify-content:center;padding:12px">
+              ⬆️ Restaurar Backup
+            </button>
+            <div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(201,168,76,.1)">
+              <div style="font-size:11px;color:var(--gold-light);font-weight:700;margin-bottom:8px">HISTORIAL DE BACKUPS</div>
+              <div id="backup-history" style="font-size:12px;color:rgba(247,243,233,.5)">No hay backups registrados</div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- AUTO BACKUP STATUS -->
+        <div class="card" style="margin-top:14px">
+          <div class="card-title">🔄 Backup Automático Firebase</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+            <div style="padding:12px;background:rgba(46,204,113,.08);border:1px solid rgba(46,204,113,.2);border-radius:6px;text-align:center">
+              <div style="font-size:24px">☁️</div>
+              <div style="font-size:12px;color:#2ECC71;font-weight:700;margin-top:4px">Firebase Activo</div>
+              <div style="font-size:11px;color:rgba(247,243,233,.4);margin-top:2px">Datos en servidores Google</div>
+            </div>
+            <div style="padding:12px;background:rgba(46,204,113,.08);border:1px solid rgba(46,204,113,.2);border-radius:6px;text-align:center">
+              <div style="font-size:24px">🔒</div>
+              <div style="font-size:12px;color:#2ECC71;font-weight:700;margin-top:4px">Cifrado SSL</div>
+              <div style="font-size:11px;color:rgba(247,243,233,.4);margin-top:2px">Conexión segura</div>
+            </div>
+            <div style="padding:12px;background:rgba(46,204,113,.08);border:1px solid rgba(46,204,113,.2);border-radius:6px;text-align:center">
+              <div style="font-size:24px">⚡</div>
+              <div style="font-size:12px;color:#2ECC71;font-weight:700;margin-top:4px">Tiempo Real</div>
+              <div style="font-size:11px;color:rgba(247,243,233,.4);margin-top:2px">Sync automático</div>
+            </div>
+          </div>
+          <p style="font-size:12px;color:rgba(247,243,233,.4);margin-top:12px">
+            💡 <strong>Recomendación:</strong> Realiza un backup manual al menos una vez al mes y guárdalo en Google Drive o un USB.
+          </p>
         </div>
       </div>
 
@@ -741,8 +819,10 @@ function doLogin(){
   document.getElementById('uav').textContent=usr.nom[0];
   document.getElementById('uname').textContent=usr.nom;
   document.getElementById('urol').textContent=ROLES[usr.rol]||usr.rol;
+  // Hide filiales nav for non-admins
   if(CU.niv>2)document.querySelectorAll('.nav-filiales').forEach(e=>e.style.display='none');
-  if(CU.niv>2)document.querySelectorAll('.nav-admin').forEach(e=>e.style.display='none');
+  // Hide admin-only items for filial treasurers (nivel 4)
+  if(CU.niv>=4)document.querySelectorAll('.nav-admin').forEach(e=>e.style.display='none');
   document.getElementById('curdate').textContent=new Date().toLocaleDateString('es-PE',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
   popFil();popYrs();
   try{localStorage.setItem('horeb_session',JSON.stringify({user:usr.user,pass:usr.pass}));}catch(e){}
@@ -758,7 +838,7 @@ function doLogin(){
 function doLogout(){CU=null;try{localStorage.removeItem('horeb_session');}catch(e){}document.getElementById('app').style.display='none';document.getElementById('login-screen').style.display='flex';document.getElementById('lu').value='';document.getElementById('lp').value='';}
 
 // ===================== NAV =====================
-const TITLES={dashboard:'Dashboard',usuarios:'Gestion de Usuarios',movimientos:'Movimientos',filiales:'Filiales',miembros:'Miembros',votos:'Votos',categorias:'Categorías y Usuarios','rpt-caja':'Informe: Libro Caja Mensual','rpt-consolidado':'Informe: Consolidado General','rpt-comparativo':'Informe: Comparativo Anual','rpt-diezmos':'Informe: Diezmos por Filial','rpt-fidelidad':'Informe: Fidelidad Individual','rpt-votos':'Informe: Votos y Cumplimiento'};
+const TITLES={dashboard:'Dashboard',usuarios:'Gestion de Usuarios',backup:'Sistema de Backup',movimientos:'Movimientos',filiales:'Filiales',miembros:'Miembros',votos:'Votos',categorias:'Categorías y Usuarios','rpt-caja':'Informe: Libro Caja Mensual','rpt-consolidado':'Informe: Consolidado General','rpt-comparativo':'Informe: Comparativo Anual','rpt-diezmos':'Informe: Diezmos por Filial','rpt-fidelidad':'Informe: Fidelidad Individual','rpt-votos':'Informe: Votos y Cumplimiento'};
 
 function sm(n){
   // Close sidebar on mobile when navigating
@@ -777,6 +857,7 @@ function sm(n){
   else if(n==='categorias')renderCats();
   else if(n==='rpt-fidelidad'){updFidMiems();}
   else if(n==='usuarios'){if(CU&&CU.niv<=2)renderUsrs();else{toast('Sin acceso','err');sm('dashboard');}}
+  else if(n==='backup'){if(CU&&CU.niv<=2)renderBackup();else{toast('Sin acceso','err');sm('dashboard');}}
 }
 
 // ===================== HELPERS =====================
@@ -807,7 +888,7 @@ function popFil(){
 
 function popYrs(){
   const yrs=[];for(let y=2020;y<=new Date().getFullYear()+1;y++)yrs.push(y);
-  ['ch-year','rc-anio','rcon-anio','rcomp-a1','rcomp-a2','rdz-anio','rfid-anio'].forEach(sid=>{
+  ['ch-year','rc-anio','rcon-anio','rcomp-a1','rcomp-a2','rdz-anio','rfid-anio','mov-fa'].forEach(sid=>{
     const sel=document.getElementById(sid);if(!sel)return;
     sel.innerHTML='';yrs.forEach(y=>{const o=document.createElement('option');o.value=y;o.textContent=y;sel.appendChild(o);});
     sel.value=new Date().getFullYear();
@@ -874,8 +955,10 @@ function renderMov(){
   const fm=document.getElementById('mov-fm').value;
   const fc=document.getElementById('mov-fc').value;
   const ff=document.getElementById('mov-ff').value;
+  const fa=document.getElementById('mov-fa')?document.getElementById('mov-fa').value:'';
   if(s)movs=movs.filter(m=>m.desc.toLowerCase().includes(s)||m.cat.toLowerCase().includes(s)||(m.comp||'').toLowerCase().includes(s));
   if(ft)movs=movs.filter(m=>m.tipo===ft);
+  if(fa)movs=movs.filter(m=>m.fec.split('-')[0]===fa);
   if(fm)movs=movs.filter(m=>m.fec.split('-')[1]===fm);
   if(fc)movs=movs.filter(m=>m.cat===fc);
   if(ff&&ff!=='all')movs=movs.filter(m=>m.fil===ff);
@@ -1428,45 +1511,24 @@ function genFid(){
         +'</tr>';
     }).join('');
 
-    var resumen='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin:14px 0">'
-      +'<div style="padding:12px;background:#f0f7f0;border-radius:6px;text-align:center">'
-        +'<div style="font-size:11px;color:#666">Meses Pagados</div>'
-        +'<div style="font-size:24px;font-weight:bold;color:green">'+pg+'/12</div>'
-      +'</div>'
-      +'<div style="padding:12px;background:#f8f5ef;border:1px solid #C9A84C;border-radius:6px;text-align:center">'
-        +'<div style="font-size:11px;color:#666">Total Diezmos '+anio+'</div>'
-        +'<div style="font-size:24px;font-weight:bold;color:#8B6914">S/. '+tot.toFixed(2)+'</div>'
-      +'</div>'
-      +'<div style="padding:12px;background:'+(fid>=90?'#e8f5e9':fid>=60?'#fff3e0':'#ffebee')+';border-radius:6px;text-align:center">'
-        +'<div style="font-size:11px;color:#666">Fidelidad</div>'
-        +'<div style="font-size:24px;font-weight:bold;color:'+fidCol+'">'+fid+'%</div>'
-        +'<div style="font-size:11px;color:'+fidCol+'">'+fidLbl+'</div>'
-      +'</div>'
-    +'</div>';
+    var resumen='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:8px 0">'      +'<div style="padding:8px;background:#f0f7f0;border-radius:4px;text-align:center">'        +'<div style="font-size:10px;color:#666">Meses Pagados</div>'        +'<div style="font-size:20px;font-weight:bold;color:green">'+pg+'/12</div>'      +'</div>'      +'<div style="padding:8px;background:#f8f5ef;border:1px solid #C9A84C;border-radius:4px;text-align:center">'        +'<div style="font-size:10px;color:#666">Total Diezmos '+anio+'</div>'        +'<div style="font-size:20px;font-weight:bold;color:#8B6914">S/. '+tot.toFixed(2)+'</div>'      +'</div>'      +'<div style="padding:8px;background:'+(fid>=90?'#e8f5e9':fid>=60?'#fff3e0':'#ffebee')+';border-radius:4px;text-align:center">'        +'<div style="font-size:10px;color:#666">Fidelidad</div>'        +'<div style="font-size:20px;font-weight:bold;color:'+fidCol+'">'+fid+'% — '+fidLbl+'</div>'      +'</div>'    +'</div>';
 
-    var infoMiem='<div style="padding:12px;background:#f5f5f5;border-radius:6px;margin-bottom:14px;font-size:13px">'
-      +'<strong>Miembro:</strong> '+m.nom+' '+m.ape
-      +' &nbsp;|&nbsp; <strong>Código:</strong> '+m.cod
-      +' &nbsp;|&nbsp; <strong>Sede/Filial:</strong> '+gfn(m.fil)
-      +(m.ing?' &nbsp;|&nbsp; <strong>Ingresó:</strong> '+fd2(m.ing):'')
-      +'</div>';
+    var infoMiem='<div style="padding:8px;background:#f5f5f5;border-radius:4px;margin-bottom:8px;font-size:12px">'      +'<strong>Miembro:</strong> '+m.nom+' '+m.ape      +' &nbsp;|&nbsp; <strong>Código:</strong> '+m.cod      +' &nbsp;|&nbsp; <strong>Sede/Filial:</strong> '+gfn(m.fil)      +(m.ing?' &nbsp;|&nbsp; <strong>Ingresó:</strong> '+fd2(m.ing):'')      +'</div>';
 
-    var html='<div class="rpt-wrap">'
-      +rptHd('Informe Individual de Fidelidad',''+m.nom+' '+m.ape+' — Año '+anio)
-      +'<div class="rpt-body">'
-      +infoMiem
-      +resumen
-      +'<table><thead><tr><th>Mes</th><th style="text-align:center">Estado</th><th style="text-align:right">Monto Diezmo</th></tr></thead>'
-      +'<tbody>'+mesesRows+'</tbody>'
-      +'<tfoot><tr><td><strong>TOTAL '+anio+'</strong></td><td style="text-align:center;color:'+fidCol+'"><strong>'+pg+' de 12 meses ('+fid+'%)</strong></td><td style="text-align:right;font-weight:bold;color:green">S/. '+tot.toFixed(2)+'</td></tr></tfoot>'
-      +'</table>'
-      +'<div style="margin-top:12px;font-size:11px;color:#888">Fiel: ≥90% | Regular: 60-89% | Irregular: &lt;60%</div>'
-      +'<div class="rpt-sign"><div class="rpt-sign-ln">Tesorero</div><div class="rpt-sign-ln">Pastor</div></div>'
-      +'</div></div>';
+    // Compact 2-column month table to fit one page
+    var mesesRows='';
+    for(var mi=0;mi<12;mi+=2){
+      var d0=md[mi],d1=md[mi+1];
+      var m0=MESES[mi],m1=MESES[mi+1];
+      var est0=d0.monto>0?'<span style="color:green;font-weight:bold">&#10003; S/. '+d0.monto.toFixed(2)+'</span>':'<span style="color:#ccc">— S/. 0.00</span>';
+      var est1=d1.monto>0?'<span style="color:green;font-weight:bold">&#10003; S/. '+d1.monto.toFixed(2)+'</span>':'<span style="color:#ccc">— S/. 0.00</span>';
+      mesesRows+='<tr>'        +'<td style="font-weight:bold;width:18%">'+m0+'</td><td style="width:32%">'+est0+'</td>'        +'<td style="font-weight:bold;width:18%">'+m1+'</td><td style="width:32%">'+est1+'</td>'        +'</tr>';
+    }
+
+    var html='<div class="rpt-wrap">'      +rptHd('Informe Individual de Fidelidad',m.nom+' '+m.ape+' — Año '+anio)      +'<div class="rpt-body" style="font-size:12px">'      +infoMiem      +resumen      +'<table style="font-size:12px"><thead><tr>'        +'<th>Mes</th><th>Diezmo</th><th>Mes</th><th>Diezmo</th>'      +'</tr></thead>'      +'<tbody>'+mesesRows+'</tbody>'      +'<tfoot><tr><td colspan="2"><strong>Total '+anio+'</strong></td>'        +'<td colspan="2" style="text-align:right;font-weight:bold;color:green">S/. '+tot.toFixed(2)+' &nbsp;|&nbsp; '+pg+'/12 meses &nbsp;|&nbsp; <span style="color:'+fidCol+'">'+fid+'% — '+fidLbl+'</span></td>'      +'</tr></tfoot>'      +'</table>'      +'<div style="margin-top:8px;font-size:10px;color:#888">Fiel: &#8805;90% &nbsp;|&nbsp; Regular: 60-89% &nbsp;|&nbsp; Irregular: &lt;60%</div>'      +'<div style="display:flex;gap:40px;justify-content:flex-end;margin-top:30px">'        +'<div style="border-top:1px solid #333;width:160px;text-align:center;padding-top:3px;font-size:10px">Tesorero</div>'        +'<div style="border-top:1px solid #333;width:160px;text-align:center;padding-top:3px;font-size:10px">Pastor</div>'      +'</div>'      +'</div></div>';
 
     document.getElementById('rfid-prev').innerHTML=html;
-    toast('Informe individual generado');
-    return;
+    toast('Informe individual generado'); return;
   }
 
   // Multiple members - table view
@@ -1627,6 +1689,160 @@ function delUsr(btn){var id=btn.getAttribute?btn.getAttribute('data-id'):btn;
   sd();renderUsrs();toast('Usuario eliminado','err');
 }
 
+// ===================== BACKUP =====================
+function renderBackup(){
+  // Summary
+  var sum=document.getElementById('backup-summary');
+  if(sum){
+    sum.innerHTML=
+      '📋 Movimientos: <strong>'+DB.movimientos.length+'</strong><br>'+
+      '👥 Miembros: <strong>'+DB.miembros.length+'</strong><br>'+
+      '🏛️ Filiales: <strong>'+DB.filiales.length+'</strong><br>'+
+      '🙏 Votos: <strong>'+DB.votos.length+'</strong><br>'+
+      '🏷️ Categorías Ingresos: <strong>'+DB.cats.ing.length+'</strong><br>'+
+      '🏷️ Categorías Egresos: <strong>'+DB.cats.eg.length+'</strong>';
+  }
+  // History
+  renderBackupHistory();
+  // File input listener
+  var fi=document.getElementById('backup-file-input');
+  if(fi){
+    fi.onchange=function(){
+      var f=fi.files[0];
+      if(!f)return;
+      var prev=document.getElementById('backup-file-preview');
+      if(prev)prev.textContent='📄 '+f.name+' ('+Math.round(f.size/1024)+' KB)';
+    };
+  }
+}
+
+function renderBackupHistory(){
+  var hist=document.getElementById('backup-history');
+  if(!hist)return;
+  try{
+    var h=JSON.parse(localStorage.getItem('backup_history')||'[]');
+    if(!h.length){hist.textContent='No hay backups registrados';return;}
+    hist.innerHTML=h.slice(-5).reverse().map(function(b){
+      return '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(201,168,76,.08)">'+
+        '<span>'+b.fecha+'</span>'+
+        '<span style="color:var(--gold-light)">'+b.movs+' mov. | '+b.miembros+' miembros</span>'+
+      '</div>';
+    }).join('');
+  }catch(e){hist.textContent='Error al cargar historial';}
+}
+
+function exportBackup(){
+  var backup={
+    version:'1.0',
+    fecha:new Date().toISOString(),
+    iglesia:'Iglesia La Roca de Horeb - Ministerio de Perus',
+    datos:{
+      movimientos:DB.movimientos,
+      miembros:DB.miembros,
+      filiales:DB.filiales,
+      votos:DB.votos,
+      categorias:DB.cats,
+      usuarios:DB.usuarios.map(function(u){
+        // Don't export passwords in plain text - just export structure
+        return {user:u.user,nom:u.nom,rol:u.rol,niv:u.niv,fil:u.fil,act:u.act};
+      })
+    }
+  };
+
+  var json=JSON.stringify(backup, null, 2);
+  var blob=new Blob([json],{type:'application/json'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');
+  var fecha=new Date().toLocaleDateString('es-PE').replace(/\//g,'-');
+  a.href=url;
+  a.download='backup_tesoreria_horeb_'+fecha+'.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+
+  // Save to history
+  try{
+    var h=JSON.parse(localStorage.getItem('backup_history')||'[]');
+    h.push({
+      fecha:new Date().toLocaleDateString('es-PE',{day:'2-digit',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'}),
+      movs:DB.movimientos.length,
+      miembros:DB.miembros.length
+    });
+    localStorage.setItem('backup_history',JSON.stringify(h));
+  }catch(e){}
+
+  toast('Backup descargado correctamente');
+  renderBackupHistory();
+}
+
+function exportBackupExcel(){
+  var headers=['ID','Fecha','Tipo','Categoria','Descripcion','Monto','Metodo','Comprobante','Sede/Filial','Miembro','Observaciones'];
+  var rows=DB.movimientos.map(function(m){
+    return [
+      m.id, fd2(m.fec),
+      m.tipo==='ingreso'?'Ingreso':'Egreso',
+      m.cat,
+      '"'+(m.desc||'').replace(/"/g,"'")+'"',
+      Number(m.mon).toFixed(2),
+      m.met, m.comp||'',
+      gfn(m.fil), gmn(m.miem),
+      '"'+(m.obs||'').replace(/"/g,"'")+'"'
+    ].join(',');
+  });
+  var nl=String.fromCharCode(13,10);
+  var csv=headers.join(',')+nl+rows.join(nl);
+  var blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');
+  var fecha=new Date().toLocaleDateString('es-PE').replace(/\//g,'-');
+  a.href=url; a.download='movimientos_horeb_'+fecha+'.csv';
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+  toast('Movimientos exportados a CSV');
+}
+
+function importBackup(){
+  var fi=document.getElementById('backup-file-input');
+  if(!fi||!fi.files||!fi.files[0]){toast('Selecciona un archivo de backup','err');return;}
+  if(!confirm('ATENCION: Esto reemplazara TODOS los datos actuales con los del backup. ¿Estas seguro?'))return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var backup=JSON.parse(e.target.result);
+      if(!backup.datos){toast('Archivo de backup inválido','err');return;}
+      var d=backup.datos;
+      if(d.movimientos)DB.movimientos=d.movimientos;
+      if(d.miembros)DB.miembros=d.miembros;
+      if(d.filiales)DB.filiales=d.filiales;
+      if(d.votos)DB.votos=d.votos;
+      if(d.categorias)DB.cats=d.categorias;
+      // Don't restore users to avoid lockout
+      try{sd();}catch(err){}
+      // Push to Firebase
+      showSyncMsg('Restaurando datos en Firebase...');
+      Promise.all([
+        ...DB.movimientos.map(function(m){return fbSave('movimientos',m.id,m);}),
+        ...DB.miembros.map(function(m){return fbSave('miembros',m.id,m);}),
+        ...DB.filiales.map(function(f){return fbSave('filiales',f.id,f);}),
+        ...DB.votos.map(function(v){return fbSave('votos',v.id,v);}),
+        fbSave('categorias','cats',DB.cats)
+      ]).then(function(){
+        hideSyncMsg();
+        toast('Backup restaurado correctamente en todos los dispositivos');
+        renderBackup();
+        popFil();
+      }).catch(function(){
+        hideSyncMsg();
+        toast('Restaurado localmente. Sincroniza para actualizar Firebase');
+      });
+    }catch(err){
+      toast('Error al leer el archivo: '+err.message,'err');
+    }
+  };
+  reader.readAsText(fi.files[0]);
+}
+
 // ===================== INIT =====================
 // ===================== FIREBASE SYNC =====================
 var _fbListeners = []; // store unsubscribe functions
@@ -1764,6 +1980,166 @@ function hideSyncMsg(){
   if(el)el.style.display='none';
 }
 
+// ===================== BACKUP =====================
+function renderBackup(){
+  // Summary
+  var sum=document.getElementById('backup-summary');
+  if(sum){
+    sum.innerHTML=
+      '📋 Movimientos: <strong>'+DB.movimientos.length+'</strong><br>'+
+      '👥 Miembros: <strong>'+DB.miembros.length+'</strong><br>'+
+      '🏛️ Filiales: <strong>'+DB.filiales.length+'</strong><br>'+
+      '🙏 Votos: <strong>'+DB.votos.length+'</strong><br>'+
+      '🏷️ Categorías Ingresos: <strong>'+DB.cats.ing.length+'</strong><br>'+
+      '🏷️ Categorías Egresos: <strong>'+DB.cats.eg.length+'</strong>';
+  }
+  // History
+  renderBackupHistory();
+  // File input listener
+  var fi=document.getElementById('backup-file-input');
+  if(fi){
+    fi.onchange=function(){
+      var f=fi.files[0];
+      if(!f)return;
+      var prev=document.getElementById('backup-file-preview');
+      if(prev)prev.textContent='📄 '+f.name+' ('+Math.round(f.size/1024)+' KB)';
+    };
+  }
+}
+
+function renderBackupHistory(){
+  var hist=document.getElementById('backup-history');
+  if(!hist)return;
+  try{
+    var h=JSON.parse(localStorage.getItem('backup_history')||'[]');
+    if(!h.length){hist.textContent='No hay backups registrados';return;}
+    hist.innerHTML=h.slice(-5).reverse().map(function(b){
+      return '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(201,168,76,.08)">'+
+        '<span>'+b.fecha+'</span>'+
+        '<span style="color:var(--gold-light)">'+b.movs+' mov. | '+b.miembros+' miembros</span>'+
+      '</div>';
+    }).join('');
+  }catch(e){hist.textContent='Error al cargar historial';}
+}
+
+function exportBackup(){
+  var backup={
+    version:'1.0',
+    fecha:new Date().toISOString(),
+    iglesia:'Iglesia La Roca de Horeb - Ministerio de Perus',
+    datos:{
+      movimientos:DB.movimientos,
+      miembros:DB.miembros,
+      filiales:DB.filiales,
+      votos:DB.votos,
+      categorias:DB.cats,
+      usuarios:DB.usuarios.map(function(u){
+        // Don't export passwords in plain text - just export structure
+        return {user:u.user,nom:u.nom,rol:u.rol,niv:u.niv,fil:u.fil,act:u.act};
+      })
+    }
+  };
+
+  var json=JSON.stringify(backup, null, 2);
+  var blob=new Blob([json],{type:'application/json'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');
+  var fecha=new Date().toLocaleDateString('es-PE').replace(/\//g,'-');
+  a.href=url;
+  a.download='backup_tesoreria_horeb_'+fecha+'.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+
+  // Save to history
+  try{
+    var h=JSON.parse(localStorage.getItem('backup_history')||'[]');
+    h.push({
+      fecha:new Date().toLocaleDateString('es-PE',{day:'2-digit',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'}),
+      movs:DB.movimientos.length,
+      miembros:DB.miembros.length
+    });
+    localStorage.setItem('backup_history',JSON.stringify(h));
+  }catch(e){}
+
+  toast('Backup descargado correctamente');
+  renderBackupHistory();
+}
+
+function exportBackupExcel(){
+  // Export movimientos as CSV
+  var headers=['ID','Fecha','Tipo','Categoria','Descripcion','Monto','Metodo','Comprobante','Sede/Filial','Miembro','Observaciones'];
+  var rows=DB.movimientos.map(function(m){
+    return [
+      m.id,
+      fd2(m.fec),
+      m.tipo==='ingreso'?'Ingreso':'Egreso',
+      m.cat,
+      '"'+(m.desc||'').replace(/"/g,"'")+'"',
+      Number(m.mon).toFixed(2),
+      m.met,
+      m.comp||'',
+      gfn(m.fil),
+      gmn(m.miem),
+      '"'+(m.obs||'').replace(/"/g,"'")+'"'
+    ].join(',');
+  });
+  var csv=headers.join(',')+'\n'+rows.join('\n');
+  var blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');
+  var fecha=new Date().toLocaleDateString('es-PE').replace(/\//g,'-');
+  a.href=url;
+  a.download='movimientos_horeb_'+fecha+'.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast('Movimientos exportados a CSV');
+}
+
+function importBackup(){
+  var fi=document.getElementById('backup-file-input');
+  if(!fi||!fi.files||!fi.files[0]){toast('Selecciona un archivo de backup','err');return;}
+  if(!confirm('ATENCION: Esto reemplazara TODOS los datos actuales con los del backup. ¿Estas seguro?'))return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var backup=JSON.parse(e.target.result);
+      if(!backup.datos){toast('Archivo de backup inválido','err');return;}
+      var d=backup.datos;
+      if(d.movimientos)DB.movimientos=d.movimientos;
+      if(d.miembros)DB.miembros=d.miembros;
+      if(d.filiales)DB.filiales=d.filiales;
+      if(d.votos)DB.votos=d.votos;
+      if(d.categorias)DB.cats=d.categorias;
+      // Don't restore users to avoid lockout
+      try{sd();}catch(err){}
+      // Push to Firebase
+      showSyncMsg('Restaurando datos en Firebase...');
+      Promise.all([
+        ...DB.movimientos.map(function(m){return fbSave('movimientos',m.id,m);}),
+        ...DB.miembros.map(function(m){return fbSave('miembros',m.id,m);}),
+        ...DB.filiales.map(function(f){return fbSave('filiales',f.id,f);}),
+        ...DB.votos.map(function(v){return fbSave('votos',v.id,v);}),
+        fbSave('categorias','cats',DB.cats)
+      ]).then(function(){
+        hideSyncMsg();
+        toast('Backup restaurado correctamente en todos los dispositivos');
+        renderBackup();
+        popFil();
+      }).catch(function(){
+        hideSyncMsg();
+        toast('Restaurado localmente. Sincroniza para actualizar Firebase');
+      });
+    }catch(err){
+      toast('Error al leer el archivo: '+err.message,'err');
+    }
+  };
+  reader.readAsText(fi.files[0]);
+}
+
 // ===================== INIT =====================
 function toggleSidebar(){
   var sb=document.getElementById('sidebar');
@@ -1825,7 +2201,7 @@ document.addEventListener('DOMContentLoaded',()=>{
         document.getElementById('uname').textContent=usr.nom;
         document.getElementById('urol').textContent=ROLES[usr.rol]||usr.rol;
         if(CU.niv>2)document.querySelectorAll('.nav-filiales').forEach(function(e){e.style.display='none';});
-        if(CU.niv>2)document.querySelectorAll('.nav-admin').forEach(function(e){e.style.display='none';});
+        if(CU.niv>=4)document.querySelectorAll('.nav-admin').forEach(function(e){e.style.display='none';});
         document.getElementById('curdate').textContent=new Date().toLocaleDateString('es-PE',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
         popFil();popYrs();
         sm('dashboard');
