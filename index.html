@@ -862,10 +862,19 @@ function renderMov(){
   [...DB.cats.ing,...DB.cats.eg].forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;csel.appendChild(o);});csel.value=cv;
 }
 
-function openMovModal(id=null){
-  EID=id;updCats();popMiem('m-miem');
-  const fs=document.getElementById('m-fil');fs.innerHTML='';
-  gAccFil().forEach(f=>{const o=document.createElement('option');o.value=f.id;o.textContent=f.nom;fs.appendChild(o);});
+function openMovModal(id){
+  EID=id||null;updCats();popMiem('m-miem');
+  var fs=document.getElementById('m-fil');
+  fs.innerHTML='';
+  var filsToShow=gAccFil();
+  if(filsToShow.length===0){
+    // Fallback: use DB.filiales directly
+    filsToShow=CU.niv<=2?DB.filiales:DB.filiales.filter(function(f){return f.id===CU.fil;});
+  }
+  filsToShow.forEach(function(f){
+    var o=document.createElement('option');
+    o.value=f.id;o.textContent=f.nom;fs.appendChild(o);
+  });
   if(CU.niv>=3)fs.value=CU.fil;
   if(id){
     const m=DB.movimientos.find(x=>x.id===id);
@@ -891,19 +900,45 @@ function openMovModal(id=null){
 }
 
 function savMov(){
-  const tipo=document.getElementById('m-tipo').value;
-  const fec=document.getElementById('m-fecha').value;
-  const mon=parseFloat(document.getElementById('m-monto').value);
-  const desc=document.getElementById('m-desc').value.trim();
-  const cat=document.getElementById('m-cat').value;
-  const fil=document.getElementById('m-fil').value;
-  if(!fec||!desc||isNaN(mon)||mon<=0){toast('Complete todos los campos obligatorios','err');return;}
-  const obj={id:EID||gid('M'),tipo,fec,mon,desc,cat,fil,met:document.getElementById('m-met').value,comp:document.getElementById('m-comp').value,miem:document.getElementById('m-miem').value,obs:document.getElementById('m-obs').value};
-  if(EID){const i=DB.movimientos.findIndex(x=>x.id===EID);DB.movimientos[i]=obj;}
-  else DB.movimientos.push(obj);
-  sd();
-  pushToFirebase('movimientos', obj);
-  cm('ov-mov');renderMov();toast(EID?'Movimiento actualizado':'Movimiento registrado');
+  var tipo=document.getElementById('m-tipo').value;
+  var fec=document.getElementById('m-fecha').value;
+  var monStr=document.getElementById('m-monto').value;
+  var mon=parseFloat(monStr);
+  var desc=document.getElementById('m-desc').value.trim();
+  var cat=document.getElementById('m-cat').value;
+  var fil=document.getElementById('m-fil').value;
+
+  // Detailed validation with specific messages
+  if(!fec){toast('Seleccione la fecha','err');return;}
+  if(!desc){toast('Ingrese una descripcion','err');return;}
+  if(!monStr||isNaN(mon)||mon<=0){toast('Ingrese un monto valido mayor a 0','err');return;}
+  if(!cat){toast('Seleccione una categoria','err');return;}
+  if(!fil){toast('Seleccione la sede o filial','err');return;}
+
+  var obj={
+    id:EID||gid('M'),
+    tipo:tipo,
+    fec:fec,
+    mon:mon,
+    desc:desc,
+    cat:cat,
+    fil:fil,
+    met:document.getElementById('m-met').value||'efectivo',
+    comp:document.getElementById('m-comp').value||'',
+    miem:document.getElementById('m-miem').value||'',
+    obs:document.getElementById('m-obs').value||''
+  };
+
+  if(EID){
+    var i=DB.movimientos.findIndex(function(x){return x.id===EID;});
+    if(i>-1)DB.movimientos[i]=obj;
+  } else {
+    DB.movimientos.push(obj);
+  }
+  try{sd();}catch(e){}
+  fbSave('movimientos', obj.id, obj);
+  cm('ov-mov');
+  toast(EID?'Movimiento actualizado':'Movimiento registrado');
 }
 function edMov(id){openMovModal(id);}
 function delMov(id){if(!confirm('¿Eliminar este movimiento?'))return;DB.movimientos=DB.movimientos.filter(m=>m.id!==id);sd();renderMov();toast('Movimiento eliminado','err');}
@@ -1564,6 +1599,9 @@ function startRealtimeSync(){
 
 function refreshCurrentModule(){
   try{
+    // Don't refresh if any modal is open - would disrupt user input
+    var openModal=document.querySelector('.ov.open');
+    if(openModal)return;
     var active=document.querySelector('.mod.active');
     if(!active)return;
     var n=active.id.replace('mod-','');
