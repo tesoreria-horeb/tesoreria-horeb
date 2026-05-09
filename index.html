@@ -660,10 +660,10 @@ function doLogin(){
   if(CU.niv>2)document.querySelectorAll('.nav-admin').forEach(e=>e.style.display='none');
   document.getElementById('curdate').textContent=new Date().toLocaleDateString('es-PE',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
   popFil();popYrs();sm('dashboard');
-  try{sessionStorage.setItem('horeb_session',JSON.stringify({user:usr.user,pass:usr.pass}));}catch(e){}
+  try{localStorage.setItem('horeb_session',JSON.stringify({user:usr.user,pass:usr.pass}));}catch(e){}
 }
 
-function doLogout(){CU=null;try{sessionStorage.removeItem('horeb_session');}catch(e){}document.getElementById('app').style.display='none';document.getElementById('login-screen').style.display='flex';document.getElementById('lu').value='';document.getElementById('lp').value='';}
+function doLogout(){CU=null;try{localStorage.removeItem('horeb_session');}catch(e){}document.getElementById('app').style.display='none';document.getElementById('login-screen').style.display='flex';document.getElementById('lu').value='';document.getElementById('lp').value='';}
 
 // ===================== NAV =====================
 const TITLES={dashboard:'Dashboard',usuarios:'Gestion de Usuarios',movimientos:'Movimientos',filiales:'Filiales',miembros:'Miembros',votos:'Votos',categorias:'Categorías y Usuarios','rpt-caja':'Informe: Libro Caja Mensual','rpt-consolidado':'Informe: Consolidado General','rpt-comparativo':'Informe: Comparativo Anual','rpt-diezmos':'Informe: Diezmos por Filial','rpt-fidelidad':'Informe: Fidelidad Individual','rpt-votos':'Informe: Votos y Cumplimiento'};
@@ -1271,14 +1271,32 @@ document.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('lp').addEventListener('keypress',e=>{if(e.key==='Enter')doLogin();});
   // Restaurar sesion si existe
   try{
-    var saved=sessionStorage.getItem('horeb_session');
+    var saved=localStorage.getItem('horeb_session');
     if(saved){
       var s=JSON.parse(saved);
-      document.getElementById('lu').value=s.user;
-      document.getElementById('lp').value=s.pass;
-      doLogin();
+      // Buscar usuario directamente sin pasar por el formulario
+      var USERS=[
+        {user:'pastor',    pass:'pastor123', nom:'Pastor Principal',      rol:'pastor',            niv:1, fil:'all'},
+        {user:'tesorero',  pass:'tesoro123', nom:'Tesorero Principal',    rol:'tesorero_principal',niv:2, fil:'all'},
+        {user:'tscentral', pass:'sede123',   nom:'Tesorero Sede Central', rol:'tesorero_sede',     niv:3, fil:'sede'},
+        {user:'tsfilial1', pass:'filial123', nom:'Tesorero Los Jardines', rol:'tesorero_filial',   niv:4, fil:'F001'},
+      ];
+      var usr=USERS.find(function(x){return x.user===s.user&&x.pass===s.pass;});
+      if(!usr&&DB&&DB.usuarios)usr=DB.usuarios.find(function(x){return x.user===s.user&&x.pass===s.pass;});
+      if(usr){
+        CU=usr;
+        document.getElementById('login-screen').style.display='none';
+        document.getElementById('app').style.display='block';
+        document.getElementById('uav').textContent=usr.nom[0];
+        document.getElementById('uname').textContent=usr.nom;
+        document.getElementById('urol').textContent=ROLES[usr.rol]||usr.rol;
+        if(CU.niv>2)document.querySelectorAll('.nav-filiales').forEach(function(e){e.style.display='none';});
+        if(CU.niv>2)document.querySelectorAll('.nav-admin').forEach(function(e){e.style.display='none';});
+        document.getElementById('curdate').textContent=new Date().toLocaleDateString('es-PE',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+        popFil();popYrs();sm('dashboard');
+      }
     }
-  }catch(e){}
+  }catch(e){console.warn('Session restore error:',e);}
 });
 </script>
 </body>
