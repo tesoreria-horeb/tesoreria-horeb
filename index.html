@@ -1054,17 +1054,37 @@ function rptHd(title,sub){
 }
 
 function prtRpt(divId){
-  const el=document.getElementById(divId);
+  var el=document.getElementById(divId);
   if(!el||!el.innerHTML.trim()){toast('Primero genere el informe','err');return;}
-  const w=window.open('','_blank','width=950,height=720');
-  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Informe — Iglesia La Roca de Horeb</title><style>body{font-family:Arial,sans-serif;margin:20px;color:#1a1a1a}.rpt-hd{background:#0D1B2A;color:white;padding:16px 20px;display:flex;align-items:center;gap:14px;border-radius:4px;margin-bottom:14px}.rpt-logo-circle{width:54px;height:54px;border:2px solid #C9A84C;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0}.rpt-church{color:#C9A84C;font-size:12px;font-weight:bold}.rpt-title{font-size:17px;font-weight:bold;color:white;margin:3px 0}.rpt-sub{font-size:11px;color:rgba(255,255,255,.55)}table{width:100%;border-collapse:collapse;font-size:11px}thead th{background:#0D1B2A;color:#C9A84C;padding:6px 8px;text-align:left;font-size:9px;text-transform:uppercase}tbody td{padding:6px 8px;border-bottom:1px solid #eee;color:#333}tbody tr:nth-child(even){background:#f9f9f9}tfoot td{background:#eee;font-weight:bold;padding:6px 8px}.rpt-totals{margin-top:10px;padding:10px;background:#f8f5ef;border:1px solid #C9A84C;border-radius:4px;font-size:12px}.rpt-sign{margin-top:36px;display:flex;gap:36px;justify-content:flex-end}.rpt-sign-ln{border-top:1px solid #333;width:160px;text-align:center;padding-top:3px;font-size:10px;color:#555}h3{color:#0D1B2A;margin:14px 0 7px;font-size:13px}@media print{button{display:none}}</style>
-<!-- Firebase compat SDK (works on all browsers/mobile) -->
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-
-</head><body>${el.innerHTML}<div style="margin-top:14px;font-size:10px;color:#999;text-align:right;border-top:1px solid #eee;padding-top:8px">Sistema de Tesorería — Iglesia La Roca de Horeb | Ministerio de Perus</div><scr"+"ipt>window.onload=()=>window.print()<\/scr"+"ipt></body></html>`);
+  var w=window.open('','_blank','width=950,height=720');
+  var css='body{font-family:Arial,sans-serif;margin:20px;color:#1a1a1a}'
+    +'.rpt-hd{background:#0D1B2A;color:white;padding:16px 20px;display:flex;align-items:center;gap:14px;border-radius:4px;margin-bottom:14px}'
+    +'.rpt-logo-circle{width:54px;height:54px;border:2px solid #C9A84C;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0}'
+    +'.rpt-church{color:#C9A84C;font-size:12px;font-weight:bold}'
+    +'.rpt-title{font-size:17px;font-weight:bold;color:white;margin:3px 0}'
+    +'.rpt-sub{font-size:11px;color:rgba(255,255,255,.55)}'
+    +'table{width:100%;border-collapse:collapse;font-size:11px}'
+    +'thead th{background:#0D1B2A;color:#C9A84C;padding:6px 8px;text-align:left;font-size:9px;text-transform:uppercase}'
+    +'tbody td{padding:6px 8px;border-bottom:1px solid #eee;color:#333}'
+    +'tbody tr:nth-child(even){background:#f9f9f9}'
+    +'tfoot td{background:#eee;font-weight:bold;padding:6px 8px}'
+    +'.rpt-totals{margin-top:10px;padding:10px;background:#f8f5ef;border:1px solid #C9A84C;border-radius:4px;font-size:12px}'
+    +'.rpt-sign{margin-top:36px;display:flex;gap:36px;justify-content:flex-end}'
+    +'.rpt-sign-ln{border-top:1px solid #333;width:160px;text-align:center;padding-top:3px;font-size:10px;color:#555}'
+    +'h3{color:#0D1B2A;margin:14px 0 7px;font-size:13px}'
+    +'@media print{button{display:none}}';
+  var html='<!DOCTYPE html><html><head><meta charset="UTF-8">'
+    +'<title>Informe - Iglesia La Roca de Horeb</title>'
+    +'<style>'+css+'</style>'
+    +'</head><body>'
+    +el.innerHTML
+    +'<div style="margin-top:14px;font-size:10px;color:#999;text-align:right;border-top:1px solid #eee;padding-top:8px">Sistema de Tesoreria - Iglesia La Roca de Horeb | Ministerio de Perus</div>'
+    +'</body></html>';
+  w.document.write(html);
   w.document.close();
+  setTimeout(function(){w.print();},500);
 }
+
 
 // RPT LIBRO CAJA
 function genCaja(){
