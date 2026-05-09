@@ -203,6 +203,31 @@ tbody td{padding:9px 11px;color:rgba(247,243,233,.8);vertical-align:middle}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:rgba(201,168,76,.2);border-radius:3px}
 </style>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, doc, setDoc, getDoc, getDocs, deleteDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAAUOs1p9F4l4j4_BJINc7QrCok76U4IWA",
+  authDomain: "tesoreria-horeb.firebaseapp.com",
+  projectId: "tesoreria-horeb",
+  storageBucket: "tesoreria-horeb.firebasestorage.app",
+  messagingSenderId: "858345426862",
+  appId: "1:858345426862:web:282da438c981a2c4c0c23f"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// Make Firebase available globally
+window.FB_DB = db;
+window.FB = { collection, doc, setDoc, getDoc, getDocs, deleteDoc, onSnapshot, query, orderBy };
+window.FB_READY = true;
+
+// Notify app that Firebase is ready
+window.dispatchEvent(new Event('firebase-ready'));
+</script>
 </head>
 <body>
 
@@ -267,7 +292,7 @@ tbody td{padding:9px 11px;color:rgba(247,243,233,.8);vertical-align:middle}
   <main class="main">
     <div class="topbar">
       <div><div class="topbar-title" id="pt">Dashboard</div><div class="topbar-sub" id="ps">Resumen general</div></div>
-      <div style="font-size:11px;color:rgba(247,243,233,.35)" id="curdate"></div>
+      <div style="display:flex;align-items:center;gap:12px"><span id="sync-msg" style="font-size:11px;color:var(--gold-light);display:none"></span><button class="btn btn-s" onclick="syncFromFirebase()" style="font-size:10px;padding:4px 10px">☁️ Sincronizar</button><span style="font-size:11px;color:rgba(247,243,233,.35)" id="curdate"></span></div>
     </div>
     <div class="pg">
 
@@ -659,8 +684,15 @@ function doLogin(){
   if(CU.niv>2)document.querySelectorAll('.nav-filiales').forEach(e=>e.style.display='none');
   if(CU.niv>2)document.querySelectorAll('.nav-admin').forEach(e=>e.style.display='none');
   document.getElementById('curdate').textContent=new Date().toLocaleDateString('es-PE',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
-  popFil();popYrs();sm('dashboard');
+  popFil();popYrs();
   try{localStorage.setItem('horeb_session',JSON.stringify({user:usr.user,pass:usr.pass}));}catch(e){}
+  // Sync from Firebase after login
+  if(window.FB_READY){
+    syncFromFirebase().then(function(){sm('dashboard');});
+  } else {
+    window.addEventListener('firebase-ready', function(){syncFromFirebase().then(function(){sm('dashboard');});}, {once:true});
+    sm('dashboard');
+  }
 }
 
 function doLogout(){CU=null;try{localStorage.removeItem('horeb_session');}catch(e){}document.getElementById('app').style.display='none';document.getElementById('login-screen').style.display='flex';document.getElementById('lu').value='';document.getElementById('lp').value='';}
@@ -841,7 +873,9 @@ function savMov(){
   const obj={id:EID||gid('M'),tipo,fec,mon,desc,cat,fil,met:document.getElementById('m-met').value,comp:document.getElementById('m-comp').value,miem:document.getElementById('m-miem').value,obs:document.getElementById('m-obs').value};
   if(EID){const i=DB.movimientos.findIndex(x=>x.id===EID);DB.movimientos[i]=obj;}
   else DB.movimientos.push(obj);
-  sd();cm('ov-mov');renderMov();toast(EID?'Movimiento actualizado':'Movimiento registrado');
+  sd();
+  pushToFirebase('movimientos', obj);
+  cm('ov-mov');renderMov();toast(EID?'Movimiento actualizado':'Movimiento registrado');
 }
 function edMov(id){openMovModal(id);}
 function delMov(id){if(!confirm('¿Eliminar este movimiento?'))return;DB.movimientos=DB.movimientos.filter(m=>m.id!==id);sd();renderMov();toast('Movimiento eliminado','err');}
@@ -881,7 +915,9 @@ function savFil(){
   const cod=document.getElementById('f-cod').value;
   const obj={id:EID||cod,cod,nom,pastor:pas,tes:document.getElementById('f-tes').value,dir:document.getElementById('f-dir').value,tel:document.getElementById('f-tel').value,fun:document.getElementById('f-fun').value};
   if(EID){const i=DB.filiales.findIndex(x=>x.id===EID);DB.filiales[i]=obj;}else DB.filiales.push(obj);
-  sd();cm('ov-fil');renderFil();popFil();toast(EID?'Filial actualizada':'Filial registrada');
+  sd();
+  pushToFirebase('filiales', obj);
+  cm('ov-fil');renderFil();popFil();toast(EID?'Filial actualizada':'Filial registrada');
 }
 function edFil(id){openFilModal(id);}
 function delFil(id){if(!confirm('¿Eliminar esta filial?'))return;DB.filiales=DB.filiales.filter(f=>f.id!==id);sd();renderFil();popFil();toast('Filial eliminada','err');}
@@ -943,7 +979,9 @@ function savMiem(){
   const cod=document.getElementById('mi-cod').value;
   const obj={id:EID||cod,cod,fil:document.getElementById('mi-fil').value,nom,ape,dni:document.getElementById('mi-dni').value,tel:document.getElementById('mi-tel').value,nac:document.getElementById('mi-nac').value,ing:document.getElementById('mi-ing').value,dir:document.getElementById('mi-dir').value};
   if(EID){const i=DB.miembros.findIndex(x=>x.id===EID);DB.miembros[i]=obj;}else DB.miembros.push(obj);
-  sd();cm('ov-miem');renderMiem();toast(EID?'Miembro actualizado':'Miembro registrado');
+  sd();
+  pushToFirebase('miembros', obj);
+  cm('ov-miem');renderMiem();toast(EID?'Miembro actualizado':'Miembro registrado');
 }
 function edMiem(id){openMiemModal(id);}
 function delMiem(id){if(!confirm('¿Eliminar miembro?'))return;DB.miembros=DB.miembros.filter(m=>m.id!==id);sd();renderMiem();toast('Miembro eliminado','err');}
@@ -985,7 +1023,9 @@ function savVot(){
   if(!desc||isNaN(mon)){toast('Complete descripción y monto','err');return;}
   const obj={id:EID||gid('V'),miem:document.getElementById('v-miem').value,fil:document.getElementById('v-fil').value,desc,mon,lim:document.getElementById('v-lim').value,est:document.getElementById('v-est').value,cum:document.getElementById('v-cum').value,obs:document.getElementById('v-obs').value,fec:today()};
   if(EID){const i=DB.votos.findIndex(x=>x.id===EID);DB.votos[i]=obj;}else DB.votos.push(obj);
-  sd();cm('ov-vot');renderVot();toast(EID?'Voto actualizado':'Voto registrado');
+  sd();
+  pushToFirebase('votos', obj);
+  cm('ov-vot');renderVot();toast(EID?'Voto actualizado':'Voto registrado');
 }
 function edVot(id){openVotModal(id);}
 function delVot(id){if(!confirm('¿Eliminar voto?'))return;DB.votos=DB.votos.filter(v=>v.id!==id);sd();renderVot();toast('Voto eliminado','err');}
@@ -1005,7 +1045,7 @@ function savCat(){
   if(!nom){toast('Ingrese un nombre','err');return;}
   const arr=tipo==='ingreso'?DB.cats.ing:DB.cats.eg;
   if(arr.includes(nom)){toast('Categoría ya existe','err');return;}
-  arr.push(nom);sd();cm('ov-cat');renderCats();toast('Categoría agregada');
+  arr.push(nom);sd();fbSave('categorias','cats',DB.cats);cm('ov-cat');renderCats();toast('Categoría agregada');
 }
 function delCat(tipo,nom){
   if(!confirm('¿Eliminar categoría "'+nom+'"?'))return;
@@ -1023,7 +1063,32 @@ function prtRpt(divId){
   const el=document.getElementById(divId);
   if(!el||!el.innerHTML.trim()){toast('Primero genere el informe','err');return;}
   const w=window.open('','_blank','width=950,height=720');
-  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Informe — Iglesia La Roca de Horeb</title><style>body{font-family:Arial,sans-serif;margin:20px;color:#1a1a1a}.rpt-hd{background:#0D1B2A;color:white;padding:16px 20px;display:flex;align-items:center;gap:14px;border-radius:4px;margin-bottom:14px}.rpt-logo-circle{width:54px;height:54px;border:2px solid #C9A84C;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0}.rpt-church{color:#C9A84C;font-size:12px;font-weight:bold}.rpt-title{font-size:17px;font-weight:bold;color:white;margin:3px 0}.rpt-sub{font-size:11px;color:rgba(255,255,255,.55)}table{width:100%;border-collapse:collapse;font-size:11px}thead th{background:#0D1B2A;color:#C9A84C;padding:6px 8px;text-align:left;font-size:9px;text-transform:uppercase}tbody td{padding:6px 8px;border-bottom:1px solid #eee;color:#333}tbody tr:nth-child(even){background:#f9f9f9}tfoot td{background:#eee;font-weight:bold;padding:6px 8px}.rpt-totals{margin-top:10px;padding:10px;background:#f8f5ef;border:1px solid #C9A84C;border-radius:4px;font-size:12px}.rpt-sign{margin-top:36px;display:flex;gap:36px;justify-content:flex-end}.rpt-sign-ln{border-top:1px solid #333;width:160px;text-align:center;padding-top:3px;font-size:10px;color:#555}h3{color:#0D1B2A;margin:14px 0 7px;font-size:13px}@media print{button{display:none}}</style></head><body>${el.innerHTML}<div style="margin-top:14px;font-size:10px;color:#999;text-align:right;border-top:1px solid #eee;padding-top:8px">Sistema de Tesorería — Iglesia La Roca de Horeb | Ministerio de Perus</div><scr"+"ipt>window.onload=()=>window.print()<\/scr"+"ipt></body></html>`);
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Informe — Iglesia La Roca de Horeb</title><style>body{font-family:Arial,sans-serif;margin:20px;color:#1a1a1a}.rpt-hd{background:#0D1B2A;color:white;padding:16px 20px;display:flex;align-items:center;gap:14px;border-radius:4px;margin-bottom:14px}.rpt-logo-circle{width:54px;height:54px;border:2px solid #C9A84C;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0}.rpt-church{color:#C9A84C;font-size:12px;font-weight:bold}.rpt-title{font-size:17px;font-weight:bold;color:white;margin:3px 0}.rpt-sub{font-size:11px;color:rgba(255,255,255,.55)}table{width:100%;border-collapse:collapse;font-size:11px}thead th{background:#0D1B2A;color:#C9A84C;padding:6px 8px;text-align:left;font-size:9px;text-transform:uppercase}tbody td{padding:6px 8px;border-bottom:1px solid #eee;color:#333}tbody tr:nth-child(even){background:#f9f9f9}tfoot td{background:#eee;font-weight:bold;padding:6px 8px}.rpt-totals{margin-top:10px;padding:10px;background:#f8f5ef;border:1px solid #C9A84C;border-radius:4px;font-size:12px}.rpt-sign{margin-top:36px;display:flex;gap:36px;justify-content:flex-end}.rpt-sign-ln{border-top:1px solid #333;width:160px;text-align:center;padding-top:3px;font-size:10px;color:#555}h3{color:#0D1B2A;margin:14px 0 7px;font-size:13px}@media print{button{display:none}}</style>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, doc, setDoc, getDoc, getDocs, deleteDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAAUOs1p9F4l4j4_BJINc7QrCok76U4IWA",
+  authDomain: "tesoreria-horeb.firebaseapp.com",
+  projectId: "tesoreria-horeb",
+  storageBucket: "tesoreria-horeb.firebasestorage.app",
+  messagingSenderId: "858345426862",
+  appId: "1:858345426862:web:282da438c981a2c4c0c23f"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// Make Firebase available globally
+window.FB_DB = db;
+window.FB = { collection, doc, setDoc, getDoc, getDocs, deleteDoc, onSnapshot, query, orderBy };
+window.FB_READY = true;
+
+// Notify app that Firebase is ready
+window.dispatchEvent(new Event('firebase-ready'));
+</script>
+</head><body>${el.innerHTML}<div style="margin-top:14px;font-size:10px;color:#999;text-align:right;border-top:1px solid #eee;padding-top:8px">Sistema de Tesorería — Iglesia La Roca de Horeb | Ministerio de Perus</div><scr"+"ipt>window.onload=()=>window.print()<\/scr"+"ipt></body></html>`);
   w.document.close();
 }
 
@@ -1253,7 +1318,10 @@ function savUsr(){
   } else {
     DB.usuarios.push({user:usr,pass:pass,nom:nom,rol:rol,niv:nivMap[rol]||4,fil:fil,act:act});
   }
-  sd();cm('ov-usr');renderUsrs();toast(EID?'Usuario actualizado':'Usuario creado');
+  sd();
+  var savedUsr=DB.usuarios.find(function(u){return u.user===(EID||usr);});
+  if(savedUsr)pushToFirebase('usuarios',savedUsr);
+  cm('ov-usr');renderUsrs();toast(EID?'Usuario actualizado':'Usuario creado');
 }
 
 function edUsr(btn){openUsrModal(btn.getAttribute?btn.getAttribute('data-id'):btn);}
@@ -1264,6 +1332,82 @@ function delUsr(btn){var id=btn.getAttribute?btn.getAttribute('data-id'):btn;
   if(!confirm('Eliminar usuario "'+id+'"?'))return;
   DB.usuarios=DB.usuarios.filter(function(u){return u.user!==id;});
   sd();renderUsrs();toast('Usuario eliminado','err');
+}
+
+// ===================== INIT =====================
+// ===================== FIREBASE SYNC =====================
+async function fbSave(coleccion, id, data){
+  try{
+    if(!window.FB_DB)return;
+    await window.FB.setDoc(window.FB.doc(window.FB_DB, coleccion, id), data);
+  }catch(e){console.warn('Firebase save error:',e);}
+}
+
+async function fbDelete(coleccion, id){
+  try{
+    if(!window.FB_DB)return;
+    await window.FB.deleteDoc(window.FB.doc(window.FB_DB, coleccion, id));
+  }catch(e){console.warn('Firebase delete error:',e);}
+}
+
+async function fbLoadAll(coleccion){
+  try{
+    if(!window.FB_DB)return null;
+    const snap = await window.FB.getDocs(window.FB.collection(window.FB_DB, coleccion));
+    const items = [];
+    snap.forEach(d=>items.push(d.data()));
+    return items;
+  }catch(e){console.warn('Firebase load error:',e);return null;}
+}
+
+async function syncFromFirebase(){
+  showSyncMsg('Sincronizando con la nube...');
+  try{
+    const [movs, fils, miems, vots, cats, usrs] = await Promise.all([
+      fbLoadAll('movimientos'),
+      fbLoadAll('filiales'),
+      fbLoadAll('miembros'),
+      fbLoadAll('votos'),
+      fbLoadAll('categorias'),
+      fbLoadAll('usuarios'),
+    ]);
+    if(movs&&movs.length>0) DB.movimientos=movs;
+    if(fils&&fils.length>0) DB.filiales=fils;
+    if(miems&&miems.length>0) DB.miembros=miems;
+    if(vots&&vots.length>0) DB.votos=vots;
+    if(cats&&cats.length>0){
+      var catObj=cats[0];
+      if(catObj&&catObj.ing)DB.cats=catObj;
+    }
+    if(usrs&&usrs.length>0){
+      // Merge with fixed users
+      usrs.forEach(function(u){
+        if(!DB.usuarios.find(function(x){return x.user===u.user;}))DB.usuarios.push(u);
+        else{var idx=DB.usuarios.findIndex(function(x){return x.user===u.user;});if(idx>-1)DB.usuarios[idx]=u;}
+      });
+    }
+    try{sd();}catch(e){}
+    hideSyncMsg();
+    // Refresh current view
+    var active=document.querySelector('.mod.active');
+    if(active){var id=active.id.replace('mod-','');sm(id);}
+  }catch(e){
+    hideSyncMsg();
+    console.warn('Sync error:',e);
+  }
+}
+
+async function pushToFirebase(coleccion, item){
+  await fbSave(coleccion, item.id||item.user||Date.now().toString(), item);
+}
+
+function showSyncMsg(msg){
+  var el=document.getElementById('sync-msg');
+  if(el){el.textContent='☁️ '+msg;el.style.display='block';}
+}
+function hideSyncMsg(){
+  var el=document.getElementById('sync-msg');
+  if(el)el.style.display='none';
 }
 
 // ===================== INIT =====================
@@ -1293,7 +1437,13 @@ document.addEventListener('DOMContentLoaded',()=>{
         if(CU.niv>2)document.querySelectorAll('.nav-filiales').forEach(function(e){e.style.display='none';});
         if(CU.niv>2)document.querySelectorAll('.nav-admin').forEach(function(e){e.style.display='none';});
         document.getElementById('curdate').textContent=new Date().toLocaleDateString('es-PE',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
-        popFil();popYrs();sm('dashboard');
+        popFil();popYrs();
+        if(window.FB_READY){
+          syncFromFirebase().then(function(){sm('dashboard');});
+        } else {
+          window.addEventListener('firebase-ready',function(){syncFromFirebase().then(function(){sm('dashboard');});},{once:true});
+          sm('dashboard');
+        }
       }
     }
   }catch(e){console.warn('Session restore error:',e);}
