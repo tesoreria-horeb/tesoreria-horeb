@@ -641,7 +641,7 @@ tbody td{padding:9px 11px;color:rgba(247,243,233,.8);vertical-align:middle}
 <div class="ov" id="ov-fil">
   <div class="modal">
     <div class="modal-hd"><div class="modal-tit" id="fil-tit">Nueva Filial</div><button class="modal-x" onclick="cm('ov-fil')">✕</button></div>
-    <div class="fr"><div class="fld"><label>Código</label><input type="text" id="f-cod" readonly style="opacity:.6"></div><div class="fld"><label>Nombre</label><input type="text" id="f-nom" placeholder="Nombre de la filial"></div></div>
+    <div class="fr"><div class="fld"><label>Código</label><input type="text" id="f-cod" placeholder="Ej: F001, S001, LIMA"></div><div class="fld"><label>Nombre</label><input type="text" id="f-nom" placeholder="Nombre de la filial"></div></div>
     <div class="fr"><div class="fld"><label>Pastor</label><input type="text" id="f-pas" placeholder="Nombre del pastor"></div><div class="fld"><label>Tesorero</label><input type="text" id="f-tes" placeholder="Nombre del tesorero"></div></div>
     <div class="fr fr1"><div class="fld"><label>Dirección</label><input type="text" id="f-dir" placeholder="Dirección completa"></div></div>
     <div class="fr"><div class="fld"><label>Teléfono</label><input type="text" id="f-tel" placeholder="Teléfono"></div><div class="fld"><label>Fecha de Fundación</label><input type="date" id="f-fun"></div></div>
@@ -1155,21 +1155,43 @@ function openFilModal(id=null){
     document.getElementById('f-fun').value=f.fun||'';
   }else{
     document.getElementById('fil-tit').textContent='Nueva Filial';
-    const cnt=DB.filiales.filter(f=>f.id!=='sede').length+1;
+    var cnt=DB.filiales.filter(function(f){return f.id!=='sede';}).length+1;
     document.getElementById('f-cod').value='F'+String(cnt).padStart(3,'0');
-    ['f-nom','f-pas','f-tes','f-dir','f-tel','f-fun'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('f-cod').style.opacity='1';
+    ['f-nom','f-pas','f-tes','f-dir','f-tel','f-fun'].forEach(function(id){document.getElementById(id).value='';});
   }
   om('ov-fil');
 }
 function savFil(){
-  const nom=document.getElementById('f-nom').value.trim();const pas=document.getElementById('f-pas').value.trim();
-  if(!nom||!pas){toast('Complete nombre y pastor','err');return;}
-  const cod=document.getElementById('f-cod').value;
-  const obj={id:EID||cod,cod,nom,pastor:pas,tes:document.getElementById('f-tes').value,dir:document.getElementById('f-dir').value,tel:document.getElementById('f-tel').value,fun:document.getElementById('f-fun').value};
-  if(EID){const i=DB.filiales.findIndex(x=>x.id===EID);DB.filiales[i]=obj;}else DB.filiales.push(obj);
-  sd();
-  pushToFirebase('filiales', obj);
-  cm('ov-fil');renderFil();popFil();toast(EID?'Filial actualizada':'Filial registrada');
+  var nom=document.getElementById('f-nom').value.trim();
+  var pas=document.getElementById('f-pas').value.trim();
+  var cod=document.getElementById('f-cod').value.trim().toUpperCase();
+  if(!cod){toast('Ingrese el código de la filial','err');return;}
+  if(!nom){toast('Ingrese el nombre de la filial','err');return;}
+  if(!pas){toast('Ingrese el nombre del pastor','err');return;}
+  // Check duplicate code (only for new records)
+  if(!EID && DB.filiales.find(function(f){return f.id===cod;})){
+    toast('Ya existe una filial con ese código','err');return;
+  }
+  var obj={
+    id:EID||cod, cod:cod, nom:nom, pastor:pas,
+    tes:document.getElementById('f-tes').value||'',
+    dir:document.getElementById('f-dir').value||'',
+    tel:document.getElementById('f-tel').value||'',
+    fun:document.getElementById('f-fun').value||''
+  };
+  if(EID){
+    var i=DB.filiales.findIndex(function(f){return f.id===EID;});
+    if(i>-1)DB.filiales[i]=obj;
+  } else {
+    DB.filiales.push(obj);
+  }
+  try{sd();}catch(e){}
+  fbSave('filiales', obj.id, obj);
+  cm('ov-fil');
+  renderFil();
+  popFil();
+  toast(EID?'Filial actualizada':'Filial registrada');
 }
 function edFil(id){openFilModal(id);}
 function delFil(id){if(!confirm('¿Eliminar esta filial?'))return;DB.filiales=DB.filiales.filter(f=>f.id!==id);sd();renderFil();popFil();toast('Filial eliminada','err');}
