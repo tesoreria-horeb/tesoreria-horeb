@@ -1254,7 +1254,7 @@ function savMiem(){
   const obj={id:EID||cod,cod,fil:document.getElementById('mi-fil').value,nom,ape,dni:document.getElementById('mi-dni').value,tel:document.getElementById('mi-tel').value,nac:document.getElementById('mi-nac').value,ing:document.getElementById('mi-ing').value,dir:document.getElementById('mi-dir').value};
   if(EID){const i=DB.miembros.findIndex(x=>x.id===EID);DB.miembros[i]=obj;}else DB.miembros.push(obj);
   sd();
-  pushToFirebase('miembros', obj);
+  fbSave('miembros', obj.id, obj);
   cm('ov-miem');renderMiem();toast(EID?'Miembro actualizado':'Miembro registrado');
 }
 function edMiem(id){openMiemModal(id);}
@@ -1298,7 +1298,7 @@ function savVot(){
   const obj={id:EID||gid('V'),miem:document.getElementById('v-miem').value,fil:document.getElementById('v-fil').value,desc,mon,lim:document.getElementById('v-lim').value,est:document.getElementById('v-est').value,cum:document.getElementById('v-cum').value,obs:document.getElementById('v-obs').value,fec:today()};
   if(EID){const i=DB.votos.findIndex(x=>x.id===EID);DB.votos[i]=obj;}else DB.votos.push(obj);
   sd();
-  pushToFirebase('votos', obj);
+  fbSave('votos', obj.id, obj);
   cm('ov-vot');renderVot();toast(EID?'Voto actualizado':'Voto registrado');
 }
 function edVot(id){openVotModal(id);}
@@ -1699,7 +1699,7 @@ function savUsr(){
   }
   sd();
   var savedUsr=DB.usuarios.find(function(u){return u.user===(EID||usr);});
-  if(savedUsr)pushToFirebase('usuarios',savedUsr);
+  if(savedUsr)fbSave('usuarios',savedUsr.user,savedUsr);
   cm('ov-usr');renderUsrs();toast(EID?'Usuario actualizado':'Usuario creado');
 }
 
