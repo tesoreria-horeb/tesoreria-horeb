@@ -779,7 +779,7 @@ tbody td{padding:9px 11px;color:rgba(247,243,233,.8);vertical-align:middle}
 <div class="ov" id="ov-usr">
   <div class="modal">
     <div class="modal-hd"><div class="modal-tit" id="usr-tit">Nuevo Usuario</div><button class="modal-x" onclick="cm('ov-usr')">X</button></div>
-    <div class="fr"><div class="fld"><label>Nombre Completo</label><input type="text" id="u-nom" placeholder="Nombre completo"></div><div class="fld"><label>Usuario (login)</label><input type="text" id="u-usr" placeholder="Ej: tsjuan" autocomplete="off"></div></div>
+    <div class="fr"><div class="fld"><label>Nombre Completo</label><input type="text" id="u-nom" placeholder="Nombre completo"></div><div class="fld"><label>Usuario (login)</label><input type="text" id="u-usr" placeholder="Ej: tsjuan" autocomplete="off"><div id="u-usr-hint" style="font-size:10px;color:rgba(247,243,233,.4);margin-top:3px;display:none">El usuario no se puede cambiar una vez creado</div></div></div>
     <div class="fr"><div class="fld"><label>Contrasena</label><input type="password" id="u-pass" placeholder="Contrasena" autocomplete="new-password"></div><div class="fld"><label>Confirmar Contrasena</label><input type="password" id="u-pass2" placeholder="Repetir contrasena"></div></div>
     <div class="fr"><div class="fld"><label>Rol</label><select id="u-rol" onchange="updUsrFil()"><option value="pastor">Pastor Principal</option><option value="tesorero_principal">Tesorero Principal</option><option value="tesorero_sede">Tesorero Sede Central</option><option value="tesorero_filial">Tesorero Filial</option><option value="contador">Contador (Solo Lectura)</option></select></div><div class="fld"><label>Sede / Filial</label><select id="u-fil"></select></div></div>
     <div class="fr fr1"><div class="fld"><label>Estado</label><select id="u-act"><option value="1">Activo</option><option value="0">Inactivo</option></select></div></div>
@@ -2083,8 +2083,11 @@ function openUsrModal(id){
     var u=DB.usuarios.find(function(x){return x.user===id;});
     document.getElementById('usr-tit').textContent='Editar Usuario';
     document.getElementById('u-nom').value=u.nom;
+    document.getElementById('u-nom').readOnly=false;
     document.getElementById('u-usr').value=u.user;
     document.getElementById('u-usr').readOnly=true;
+    document.getElementById('u-usr').style.opacity='0.5';
+    var h1=document.getElementById('u-usr-hint');if(h1)h1.style.display='block';
     document.getElementById('u-pass').value='';
     document.getElementById('u-pass2').value='';
     document.getElementById('u-rol').value=u.rol;
@@ -2094,7 +2097,10 @@ function openUsrModal(id){
   } else {
     document.getElementById('usr-tit').textContent='Nuevo Usuario';
     document.getElementById('u-usr').readOnly=false;
+    document.getElementById('u-usr').style.opacity='1';
+    var h2=document.getElementById('u-usr-hint');if(h2)h2.style.display='none';
     document.getElementById('u-nom').value='';
+    document.getElementById('u-nom').readOnly=false;
     document.getElementById('u-usr').value='';
     document.getElementById('u-pass').value='';
     document.getElementById('u-pass2').value='';
