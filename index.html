@@ -298,6 +298,7 @@ tbody td{padding:9px 11px;color:rgba(247,243,233,.8);vertical-align:middle}
         <span class="demo-tag" onclick="fd('tesorero','tesoro123')">Tesorero Principal</span>
         <span class="demo-tag" onclick="fd('tscentral','sede123')">Tesorero Sede</span>
         <span class="demo-tag" onclick="fd('tsfilial1','filial123')">Tesorero Filial</span>
+        <span class="demo-tag" onclick="fd('contador','conta123')">Contador</span>
       </div>
     </div>
   </div>
@@ -321,8 +322,8 @@ tbody td{padding:9px 11px;color:rgba(247,243,233,.8);vertical-align:middle}
       <div class="nav-sec">Gestión</div>
       <div class="nav-item" onclick="sm('movimientos')"><span class="ic">💰</span>Movimientos</div>
       <div class="nav-item nav-filiales" onclick="sm('filiales')"><span class="ic">🏛️</span>Filiales</div>
-      <div class="nav-item" onclick="sm('miembros')"><span class="ic">👥</span>Miembros</div>
-      <div class="nav-item" onclick="sm('votos')"><span class="ic">🙏</span>Votos</div>
+      <div class="nav-item nav-no-contador" onclick="sm('miembros')"><span class="ic">👥</span>Miembros</div>
+      <div class="nav-item nav-no-contador" onclick="sm('votos')"><span class="ic">🙏</span>Votos</div>
       <div class="nav-item" onclick="sm('banco')"><span class="ic">🏦</span>Banco</div>
       <div class="nav-sec">Configuración</div>
       <div class="nav-item" onclick="sm('categorias')"><span class="ic">🏷️</span>Categorías</div>
@@ -334,7 +335,7 @@ tbody td{padding:9px 11px;color:rgba(247,243,233,.8);vertical-align:middle}
       <div class="nav-item" onclick="sm('rpt-comparativo')"><span class="ic">📉</span>Comparativo Anual</div>
       <div class="nav-item" onclick="sm('rpt-diezmos')"><span class="ic">💵</span>Diezmos x Filial</div>
       <div class="nav-item" onclick="sm('rpt-fidelidad')"><span class="ic">⭐</span>Fidelidad</div>
-      <div class="nav-item" onclick="sm('rpt-votos')"><span class="ic">📜</span>Votos y Cumplimiento</div>
+      <div class="nav-item nav-no-contador" onclick="sm('rpt-votos')"><span class="ic">📜</span>Votos y Cumplimiento</div>
     </nav>
     <div class="sb-foot"><button class="btn-out" onclick="doLogout()">🚪 Cerrar Sesión</button></div>
   </nav>
@@ -758,7 +759,7 @@ tbody td{padding:9px 11px;color:rgba(247,243,233,.8);vertical-align:middle}
     <div class="modal-hd"><div class="modal-tit" id="usr-tit">Nuevo Usuario</div><button class="modal-x" onclick="cm('ov-usr')">X</button></div>
     <div class="fr"><div class="fld"><label>Nombre Completo</label><input type="text" id="u-nom" placeholder="Nombre completo"></div><div class="fld"><label>Usuario (login)</label><input type="text" id="u-usr" placeholder="Ej: tsjuan" autocomplete="off"></div></div>
     <div class="fr"><div class="fld"><label>Contrasena</label><input type="password" id="u-pass" placeholder="Contrasena" autocomplete="new-password"></div><div class="fld"><label>Confirmar Contrasena</label><input type="password" id="u-pass2" placeholder="Repetir contrasena"></div></div>
-    <div class="fr"><div class="fld"><label>Rol</label><select id="u-rol" onchange="updUsrFil()"><option value="pastor">Pastor Principal</option><option value="tesorero_principal">Tesorero Principal</option><option value="tesorero_sede">Tesorero Sede Central</option><option value="tesorero_filial">Tesorero Filial</option></select></div><div class="fld"><label>Sede / Filial</label><select id="u-fil"></select></div></div>
+    <div class="fr"><div class="fld"><label>Rol</label><select id="u-rol" onchange="updUsrFil()"><option value="pastor">Pastor Principal</option><option value="tesorero_principal">Tesorero Principal</option><option value="tesorero_sede">Tesorero Sede Central</option><option value="tesorero_filial">Tesorero Filial</option><option value="contador">Contador (Solo Lectura)</option></select></div><div class="fld"><label>Sede / Filial</label><select id="u-fil"></select></div></div>
     <div class="fr fr1"><div class="fld"><label>Estado</label><select id="u-act"><option value="1">Activo</option><option value="0">Inactivo</option></select></div></div>
     <div id="usr-err" style="color:#E74C3C;font-size:12px;margin-top:6px;display:none"></div>
     <div class="modal-ft"><button class="btn btn-s" onclick="cm('ov-usr')">Cancelar</button><button class="btn btn-p" onclick="savUsr()">Guardar</button></div>
@@ -838,7 +839,7 @@ function ld(){try{const r=localStorage.getItem(SK);if(r)return JSON.parse(r);}ca
 function sd(){try{localStorage.setItem(SK,JSON.stringify(DB));}catch(e){}}
 
 const MESES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-const ROLES={pastor:'Pastor Principal',tesorero_principal:'Tesorero Principal',tesorero_sede:'Tesorero Sede Central',tesorero_filial:'Tesorero Filial'};
+const ROLES={pastor:'Pastor Principal',tesorero_principal:'Tesorero Principal',tesorero_sede:'Tesorero Sede Central',tesorero_filial:'Tesorero Filial',contador:'Contador (Solo Lectura)'};
 
 function initDB(){
   const data={
@@ -944,11 +945,25 @@ function doLogin(){
   // Reset all nav items to visible first
   document.querySelectorAll('.nav-filiales').forEach(e=>e.style.display='');
   document.querySelectorAll('.nav-admin').forEach(e=>e.style.display='');
+  document.querySelectorAll('.nav-contador-only').forEach(e=>e.style.display='');
+  document.querySelectorAll('.nav-no-contador').forEach(e=>e.style.display='');
   // Then hide based on level
   if(CU.niv>2)document.querySelectorAll('.nav-filiales').forEach(e=>e.style.display='none');
   if(CU.niv>=4)document.querySelectorAll('.nav-admin').forEach(e=>e.style.display='none');
+  // Contador: only show financial reports and movimientos (read-only)
+  if(CU.niv===5){
+    document.querySelectorAll('.nav-no-contador').forEach(e=>e.style.display='none');
+  }
   document.getElementById('curdate').textContent=new Date().toLocaleDateString('es-PE',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
   popFil();popYrs();
+  // Apply read-only mode for contador
+  if(CU.niv===5){
+    document.body.classList.add('contador-mode');
+    var rb=document.getElementById('readonly-badge');if(rb)rb.style.display='inline';
+  } else {
+    document.body.classList.remove('contador-mode');
+    var rb=document.getElementById('readonly-badge');if(rb)rb.style.display='none';
+  }
   try{localStorage.setItem('horeb_session',JSON.stringify({user:usr.user,pass:usr.pass}));}catch(e){}
   // Start real-time sync after login
   sm('dashboard');
@@ -985,6 +1000,9 @@ function sm(n){
   else if(n==='usuarios'){if(CU&&CU.niv<=2)renderUsrs();else{toast('Sin acceso','err');sm('dashboard');}}
   else if(n==='backup'){if(CU&&CU.niv<=2)renderBackup();else{toast('Sin acceso','err');sm('dashboard');}}
   else if(n==='banco'){renderBanco();}
+  else if(n==='miembros'||n==='votos'||n==='categorias'||n==='usuarios'||n==='backup'){
+    if(CU&&CU.niv===5){toast('Acceso no permitido para Contador','err');sm('movimientos');return;}
+  }
 }
 
 // ===================== HELPERS =====================
@@ -1941,7 +1959,7 @@ function updUsrFil(){
   var rol=document.getElementById('u-rol').value;
   var sel=document.getElementById('u-fil');
   sel.innerHTML='';
-  if(rol==='pastor'||rol==='tesorero_principal'){
+  if(rol==='pastor'||rol==='tesorero_principal'||rol==='contador'){
     var o=document.createElement('option');o.value='all';o.textContent='Todo el sistema';sel.appendChild(o);
   } else {
     DB.filiales.forEach(function(f){var o=document.createElement('option');o.value=f.id;o.textContent=f.nom;sel.appendChild(o);});
@@ -1993,7 +2011,7 @@ function savUsr(){
   if(pass&&pass!==pass2){errEl.textContent='Las contrasenhas no coinciden.';errEl.style.display='block';return;}
   if(pass&&pass.length<4){errEl.textContent='La contrasena debe tener al menos 4 caracteres.';errEl.style.display='block';return;}
   if(!EID&&DB.usuarios.find(function(u){return u.user===usr;})){errEl.textContent='Ese nombre de usuario ya existe.';errEl.style.display='block';return;}
-  var nivMap={pastor:1,tesorero_principal:2,tesorero_sede:3,tesorero_filial:4};
+  var nivMap={pastor:1,tesorero_principal:2,tesorero_sede:3,tesorero_filial:4,contador:5};
   if(!DB.usuarios)DB.usuarios=[];
   if(EID){
     var idx=DB.usuarios.findIndex(function(u){return u.user===EID;});
@@ -3099,13 +3117,17 @@ document.addEventListener('DOMContentLoaded',()=>{
         document.getElementById('urol').textContent=ROLES[usr.rol]||usr.rol;
         document.querySelectorAll('.nav-filiales').forEach(function(e){e.style.display='';});
         document.querySelectorAll('.nav-admin').forEach(function(e){e.style.display='';});
+        document.querySelectorAll('.nav-no-contador').forEach(function(e){e.style.display='';});
         if(CU.niv>2)document.querySelectorAll('.nav-filiales').forEach(function(e){e.style.display='none';});
         if(CU.niv>=4)document.querySelectorAll('.nav-admin').forEach(function(e){e.style.display='none';});
+        if(CU.niv===5)document.querySelectorAll('.nav-no-contador').forEach(function(e){e.style.display='none';});
         document.getElementById('curdate').textContent=new Date().toLocaleDateString('es-PE',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
         popFil();popYrs();
         // Restore last visited module
         var lastMod='dashboard';
         try{lastMod=localStorage.getItem('horeb_last_mod')||'dashboard';}catch(e){}
+        if(CU.niv===5){document.body.classList.add('contador-mode');}
+        else{document.body.classList.remove('contador-mode');}
         sm(lastMod);
         if(window.FB_READY){
           startRealtimeSync();
