@@ -980,10 +980,8 @@ function doLogin(){
   const u=document.getElementById('lu').value.trim(),p=document.getElementById('lp').value.trim();
   // Usuarios hardcoded - siempre funcionan sin depender de nada externo
   const USERS=[
-    {user:'pastor',    pass:'pastor123', nom:'Pastor Principal',      rol:'pastor',            niv:1, fil:'all'},
-    {user:'tesorero',  pass:'tesoro123', nom:'Tesorero Principal',    rol:'tesorero_principal',niv:2, fil:'all'},
-    {user:'tscentral', pass:'sede123',   nom:'Tesorero Sede Central', rol:'tesorero_sede',     niv:3, fil:'sede'},
-    {user:'tsfilial1', pass:'filial123', nom:'Tesorero Los Jardines', rol:'tesorero_filial',   niv:4, fil:'F001'},
+    {user:'administrador', pass:'pastor123', nom:'Administrador',      rol:'pastor',            niv:1, fil:'all'},
+    {user:'tesorero',      pass:'tesoro123', nom:'Tesorero Principal', rol:'tesorero_principal',niv:2, fil:'all'},
   ];
   let usr=USERS.find(x=>x.user===u&&x.pass===p);
   if(!usr){try{if(DB&&DB.usuarios)usr=DB.usuarios.find(x=>x.user===u&&x.pass===p);}catch(e){}}
