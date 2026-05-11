@@ -2147,7 +2147,7 @@ function edUsr(btn){openUsrModal(btn.getAttribute?btn.getAttribute('data-id'):bt
 
 function delUsr(btn){
   var id=btn.getAttribute?btn.getAttribute('data-id'):btn;
-  if(id==='administrador'){toast('No se puede eliminar al Administrador','err');return;}
+  if(id==='administrador'){toast('No se puede eliminar al Administrador del sistema','err');return;}
   if(CU&&id===CU.user){toast('No puedes eliminarte a ti mismo','err');return;}
   if(!confirm('Eliminar usuario "'+id+'"?'))return;
   DB.usuarios=DB.usuarios.filter(function(u){return u.user!==id;});
@@ -2780,8 +2780,15 @@ async function fbLoadAll(coleccion){
 
 // Start real-time listeners for all collections
 function pushFixedUsersToFirebase(){
-  // Only ensure pastor and tesorero exist - never re-create other deleted users
   if(!window.FB_DB)return;
+  // Migrate 'pastor' to 'administrador' if needed
+  window.FB_DB.collection('usuarios').doc('pastor').get().then(function(doc){
+    if(doc.exists){
+      // Delete old pastor record
+      window.FB_DB.collection('usuarios').doc('pastor').delete().catch(function(){});
+    }
+  }).catch(function(){});
+  // Ensure fixed users exist
   USUARIOS_FIJOS.forEach(function(uf){
     window.FB_DB.collection('usuarios').doc(uf.user).get().then(function(doc){
       if(!doc.exists){
