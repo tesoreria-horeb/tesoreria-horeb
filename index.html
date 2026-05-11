@@ -914,10 +914,8 @@ function initDB(){
 
 // Usuarios fijos — siempre disponibles sin depender del localStorage
 const USUARIOS_FIJOS=[
-  {user:'pastor',    pass:'pastor123', nom:'Pastor Principal',        rol:'pastor',            niv:1, fil:'all'},
-  {user:'tesorero',  pass:'tesoro123', nom:'Tesorero Principal',      rol:'tesorero_principal',niv:2, fil:'all'},
-  {user:'tscentral', pass:'sede123',   nom:'Tesorero Sede Central',   rol:'tesorero_sede',     niv:3, fil:'sede'},
-  {user:'tsfilial1', pass:'filial123', nom:'Tesorero Los Jardines',   rol:'tesorero_filial',   niv:4, fil:'F001'},
+  {user:'pastor',   pass:'pastor123', nom:'Pastor Principal',   rol:'pastor',            niv:1, fil:'all'},
+  {user:'tesorero', pass:'tesoro123', nom:'Tesorero Principal', rol:'tesorero_principal',niv:2, fil:'all'},
 ];
 
 let DB;
@@ -929,13 +927,13 @@ try{
 }catch(e){DB=initDB();}
 try{sd();}catch(e){console.warn('localStorage no disponible.');}
 
-// Initialize usuarios - ensure fixed users always exist
+// Add fixed users ONLY if no users exist yet (first install)
 if(!DB.usuarios)DB.usuarios=[];
-USUARIOS_FIJOS.forEach(function(uf){
-  if(!DB.usuarios.find(function(u){return u.user===uf.user;})){
+if(DB.usuarios.length===0){
+  USUARIOS_FIJOS.forEach(function(uf){
     DB.usuarios.push({user:uf.user,pass:uf.pass,nom:uf.nom,rol:uf.rol,niv:uf.niv,fil:uf.fil,act:1});
-  }
-});
+  });
+}
 try{sd();}catch(e){}
 
 // ===================== SESSION =====================
@@ -2684,12 +2682,12 @@ async function fbLoadAll(coleccion){
 
 // Start real-time listeners for all collections
 function pushFixedUsersToFirebase(){
-  // Ensure all fixed users exist in Firebase
+  // Only ensure pastor and tesorero exist - never re-create other deleted users
+  if(!window.FB_DB)return;
   USUARIOS_FIJOS.forEach(function(uf){
     window.FB_DB.collection('usuarios').doc(uf.user).get().then(function(doc){
       if(!doc.exists){
         fbSave('usuarios',uf.user,{user:uf.user,pass:uf.pass,nom:uf.nom,rol:uf.rol,niv:uf.niv,fil:uf.fil,act:1});
-        console.log('Fixed user pushed to Firebase:', uf.user);
       }
     }).catch(function(){});
   });
@@ -2741,16 +2739,8 @@ function startRealtimeSync(){
       } else if(col === 'usuarios'){
         var fbUsers=[];snap.forEach(function(d){fbUsers.push(d.data());});
         if(fbUsers.length>0){
-          // Start with Firebase users
+          // Replace completely - Firebase is source of truth, respects deletions
           DB.usuarios=fbUsers;
-          // Add any USUARIOS_FIJOS not already in Firebase (first-time users)
-          USUARIOS_FIJOS.forEach(function(uf){
-            if(!DB.usuarios.find(function(u){return u.user===uf.user;})){
-              // This fixed user was never saved to Firebase - save it now
-              DB.usuarios.push({user:uf.user,pass:uf.pass,nom:uf.nom,rol:uf.rol,niv:uf.niv,fil:uf.fil,act:1});
-              fbSave('usuarios',uf.user,{user:uf.user,pass:uf.pass,nom:uf.nom,rol:uf.rol,niv:uf.niv,fil:uf.fil,act:1});
-            }
-          });
         }
         try{sd();}catch(e){}
       }
@@ -2797,15 +2787,9 @@ async function syncFromFirebase(){
     if(results[4]&&results[4].length>0)DB.banco=results[4];
     if(results[4]&&results[4].length>0){var c=results[4][0];if(c&&c.ing)DB.cats=c;}
     if(results[5]&&results[5].length>0){
-      // Replace with Firebase data, then ensure fixed users exist
+      // Replace completely - Firebase is source of truth
       if(results[5]&&results[5].length>0){
         DB.usuarios=results[5];
-        USUARIOS_FIJOS.forEach(function(uf){
-          if(!DB.usuarios.find(function(u){return u.user===uf.user;})){
-            DB.usuarios.push({user:uf.user,pass:uf.pass,nom:uf.nom,rol:uf.rol,niv:uf.niv,fil:uf.fil,act:1});
-            fbSave('usuarios',uf.user,{user:uf.user,pass:uf.pass,nom:uf.nom,rol:uf.rol,niv:uf.niv,fil:uf.fil,act:1});
-          }
-        });
       }
     }
     try{sd();}catch(e){}
@@ -3418,11 +3402,9 @@ document.addEventListener('DOMContentLoaded',()=>{
       var s=JSON.parse(saved);
       // Buscar usuario directamente sin pasar por el formulario
       var USERS=[
-        {user:'pastor',    pass:'pastor123', nom:'Pastor Principal',      rol:'pastor',            niv:1, fil:'all'},
-        {user:'tesorero',  pass:'tesoro123', nom:'Tesorero Principal',    rol:'tesorero_principal',niv:2, fil:'all'},
-        {user:'tscentral', pass:'sede123',   nom:'Tesorero Sede Central', rol:'tesorero_sede',     niv:3, fil:'sede'},
-        {user:'tsfilial1', pass:'filial123', nom:'Tesorero Los Jardines', rol:'tesorero_filial',   niv:4, fil:'F001'},
-      ];
+    {user:'pastor',   pass:'pastor123', nom:'Pastor Principal',   rol:'pastor',            niv:1, fil:'all'},
+    {user:'tesorero', pass:'tesoro123', nom:'Tesorero Principal', rol:'tesorero_principal',niv:2, fil:'all'},
+  ];
       var usr=USERS.find(function(x){return x.user===s.user&&x.pass===s.pass;});
       if(!usr&&DB&&DB.usuarios)usr=DB.usuarios.find(function(x){return x.user===s.user&&x.pass===s.pass;});
       if(usr){
