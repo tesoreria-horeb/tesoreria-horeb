@@ -333,6 +333,7 @@ tbody td{padding:9px 11px;color:rgba(247,243,233,.8);vertical-align:middle}
       <div class="nav-item" onclick="sm('rpt-diezmos')"><span class="ic">💵</span>Diezmos x Filial</div>
       <div class="nav-item" onclick="sm('rpt-fidelidad')"><span class="ic">⭐</span>Fidelidad</div>
       <div class="nav-item nav-no-contador" onclick="sm('rpt-votos')"><span class="ic">📜</span>Votos y Cumplimiento</div>
+      <div class="nav-item nav-admin" onclick="sm('rpt-banco')"><span class="ic">🏦</span>Informe Bancario</div>
     </nav>
     <div class="sb-foot"><button class="btn-out" onclick="doLogout()">🚪 Cerrar Sesión</button></div>
   </nav>
@@ -680,6 +681,30 @@ tbody td{padding:9px 11px;color:rgba(247,243,233,.8);vertical-align:middle}
         <div id="rvot-prev"></div>
       </div>
 
+      <!-- RPT BANCO -->
+      <div class="mod" id="mod-rpt-banco">
+        <div class="tb">
+          <select class="fs" id="rban-mes">
+            <option value="">Todo el año</option>
+            <option value="1">Enero</option><option value="2">Febrero</option>
+            <option value="3">Marzo</option><option value="4">Abril</option>
+            <option value="5">Mayo</option><option value="6">Junio</option>
+            <option value="7">Julio</option><option value="8">Agosto</option>
+            <option value="9">Septiembre</option><option value="10">Octubre</option>
+            <option value="11">Noviembre</option><option value="12">Diciembre</option>
+          </select>
+          <select class="fs" id="rban-anio"></select>
+          <select class="fs" id="rban-tipo">
+            <option value="">Todos</option>
+            <option value="deposito">Solo Depósitos</option>
+            <option value="retiro">Solo Retiros</option>
+          </select>
+          <button class="btn btn-p" onclick="genRptBanco()">🏦 Generar</button>
+          <button class="btn btn-pr" onclick="prtRpt('rban-prev')">🖨️ Imprimir</button>
+        </div>
+        <div id="rban-prev"></div>
+      </div>
+
     </div><!-- end pg -->
   </main>
 </div><!-- end app -->
@@ -974,7 +999,7 @@ function doLogin(){
 function doLogout(){CU=null;try{localStorage.removeItem('horeb_session');}catch(e){}document.getElementById('app').style.display='none';document.getElementById('login-screen').style.display='flex';document.getElementById('lu').value='';document.getElementById('lp').value='';}
 
 // ===================== NAV =====================
-const TITLES={dashboard:'Menú Principal',usuarios:'Gestion de Usuarios',backup:'Sistema de Backup',banco:'Control Bancario',movimientos:'Movimientos',filiales:'Filiales',miembros:'Miembros',votos:'Votos',categorias:'Categorías y Usuarios','rpt-caja':'Informe: Libro Caja Mensual','rpt-consolidado':'Informe: Consolidado General','rpt-comparativo':'Informe: Comparativo Anual','rpt-diezmos':'Informe: Diezmos por Filial','rpt-fidelidad':'Informe: Fidelidad Individual','rpt-votos':'Informe: Votos y Cumplimiento'};
+const TITLES={dashboard:'Menú Principal',usuarios:'Gestion de Usuarios',backup:'Sistema de Backup',banco:'Control Bancario','rpt-banco':'Informe Bancario',movimientos:'Movimientos',filiales:'Filiales',miembros:'Miembros',votos:'Votos',categorias:'Categorías y Usuarios','rpt-caja':'Informe: Libro Caja Mensual','rpt-consolidado':'Informe: Consolidado General','rpt-comparativo':'Informe: Comparativo Anual','rpt-diezmos':'Informe: Diezmos por Filial','rpt-fidelidad':'Informe: Fidelidad Individual','rpt-votos':'Informe: Votos y Cumplimiento'};
 
 function sm(n){
   // Save current module to restore after F5
@@ -997,6 +1022,12 @@ function sm(n){
   else if(n==='usuarios'){if(CU&&CU.niv<=2)renderUsrs();else{toast('Sin acceso','err');sm('dashboard');}}
   else if(n==='backup'){if(CU&&CU.niv<=2)renderBackup();else{toast('Sin acceso','err');sm('dashboard');}}
   else if(n==='banco'){renderBanco();}
+  else if(n==='rpt-banco'){
+    if(CU&&CU.niv<=2){
+      var rbanAnio=document.getElementById('rban-anio');
+      if(rbanAnio&&!rbanAnio.value)rbanAnio.value=new Date().getFullYear();
+    } else {toast('Sin acceso','err');sm('dashboard');}
+  }
   else if(n==='miembros'||n==='votos'||n==='categorias'||n==='usuarios'||n==='backup'){
     if(CU&&CU.niv===5){toast('Acceso no permitido para Contador','err');sm('movimientos');return;}
   }
@@ -1030,7 +1061,7 @@ function popFil(){
 
 function popYrs(){
   const yrs=[];for(let y=2020;y<=new Date().getFullYear()+1;y++)yrs.push(y);
-  ['ch-year','rc-anio','rcon-anio','rcomp-a1','rcomp-a2','rdz-anio','rfid-anio','mov-fa'].forEach(sid=>{
+  ['ch-year','rc-anio','rcon-anio','rcomp-a1','rcomp-a2','rdz-anio','rfid-anio','mov-fa','rban-anio'].forEach(sid=>{
     const sel=document.getElementById(sid);if(!sel)return;
     sel.innerHTML='';yrs.forEach(y=>{const o=document.createElement('option');o.value=y;o.textContent=y;sel.appendChild(o);});
     sel.value=new Date().getFullYear();
@@ -2497,6 +2528,116 @@ function importBackup(){
   reader.readAsText(fi.files[0]);
 }
 
+// ===================== RPT BANCO =====================
+function genRptBanco(){
+  if(!CU||CU.niv>2){toast('Sin acceso','err');return;}
+  var mes=document.getElementById('rban-mes').value;
+  var anio=parseInt(document.getElementById('rban-anio').value);
+  var tipo=document.getElementById('rban-tipo').value;
+  if(!anio){toast('Seleccione el año','err');return;}
+
+  var movs=(DB.banco||[]).filter(function(m){
+    var y=parseInt(m.fec.split('-')[0]);
+    var mo=parseInt(m.fec.split('-')[1]);
+    return y===anio&&(!mes||mo===parseInt(mes));
+  });
+  if(tipo)movs=movs.filter(function(m){return m.tipo===tipo;});
+  movs.sort(function(a,b){return a.fec.localeCompare(b.fec);});
+
+  // Running saldo
+  var allSorted=(DB.banco||[]).filter(function(m){
+    return parseInt(m.fec.split('-')[0])<=anio;
+  }).sort(function(a,b){return a.fec.localeCompare(b.fec);});
+
+  var saldoInicial=0;
+  allSorted.forEach(function(m){
+    if(m.fec<movs[0].fec||!movs.length){
+      saldoInicial+=(m.tipo==='deposito'?Number(m.mon):-Number(m.mon));
+    }
+  });
+
+  var totalDep=movs.filter(function(m){return m.tipo==='deposito';}).reduce(function(a,m){return a+Number(m.mon);},0);
+  var totalRet=movs.filter(function(m){return m.tipo==='retiro';}).reduce(function(a,m){return a+Number(m.mon);},0);
+  var saldoFinal=saldoInicial+totalDep-totalRet;
+
+  // Build rows with running saldo
+  var runSaldo=saldoInicial;
+  var rows=movs.map(function(m,i){
+    runSaldo+=(m.tipo==='deposito'?Number(m.mon):-Number(m.mon));
+    var tipoCell=m.tipo==='deposito'
+      ?'<span style="color:green;font-weight:bold">⬆️ Depósito</span>'
+      :'<span style="color:red;font-weight:bold">⬇️ Retiro</span>';
+    var depCell=m.tipo==='deposito'?'S/. '+Number(m.mon).toFixed(2):'';
+    var retCell=m.tipo==='retiro'?'S/. '+Number(m.mon).toFixed(2):'';
+    var saldoColor=runSaldo>=0?'#1A7A4A':'#C0392B';
+    return '<tr>'
+      +'<td style="border:1px solid #eee;padding:5px 8px;font-size:11px">'+fd2(m.fec)+'</td>'
+      +'<td style="border:1px solid #eee;padding:5px 8px;font-size:11px">'+tipoCell+'</td>'
+      +'<td style="border:1px solid #eee;padding:5px 8px;font-size:11px">'+m.desc+'</td>'
+      +'<td style="border:1px solid #eee;padding:5px 8px;font-size:11px">'+gfn(m.fil)+'</td>'
+      +'<td style="border:1px solid #eee;padding:5px 8px;font-size:11px">'+m.comp+'</td>'
+      +'<td style="border:1px solid #eee;padding:5px 8px;font-size:11px;text-align:right;color:green;font-weight:bold">'+depCell+'</td>'
+      +'<td style="border:1px solid #eee;padding:5px 8px;font-size:11px;text-align:right;color:red;font-weight:bold">'+retCell+'</td>'
+      +'<td style="border:1px solid #eee;padding:5px 8px;font-size:11px;text-align:right;font-weight:bold;color:'+saldoColor+'">S/. '+runSaldo.toFixed(2)+'</td>'
+      +'</tr>';
+  }).join('');
+
+  if(!rows){
+    rows='<tr><td colspan="8" style="text-align:center;padding:20px;color:#888">No hay movimientos bancarios en este período</td></tr>';
+  }
+
+  var periodoLabel=(mes?MESES[parseInt(mes)-1]+' ':'Año ')+anio;
+  var html='<div class="rpt-wrap">'+rptHd('Informe Bancario',periodoLabel)
+    +'<div class="rpt-body">'
+    // Summary cards
+    +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px">'
+    +'<div style="padding:12px;background:#f0f7f0;border:1px solid #2ECC71;border-radius:6px;text-align:center">'
+      +'<div style="font-size:11px;color:#666;margin-bottom:4px">Total Depósitos</div>'
+      +'<div style="font-size:20px;font-weight:bold;color:green">S/. '+totalDep.toFixed(2)+'</div>'
+      +'<div style="font-size:10px;color:#888">'+movs.filter(function(m){return m.tipo==='deposito';}).length+' operaciones</div>'
+    +'</div>'
+    +'<div style="padding:12px;background:#fff5f5;border:1px solid #E74C3C;border-radius:6px;text-align:center">'
+      +'<div style="font-size:11px;color:#666;margin-bottom:4px">Total Retiros</div>'
+      +'<div style="font-size:20px;font-weight:bold;color:red">S/. '+totalRet.toFixed(2)+'</div>'
+      +'<div style="font-size:10px;color:#888">'+movs.filter(function(m){return m.tipo==='retiro';}).length+' operaciones</div>'
+    +'</div>'
+    +'<div style="padding:12px;background:'+(saldoFinal>=0?'#f0f7f0':'#fff5f5')+';border:2px solid '+(saldoFinal>=0?'#C9A84C':'#E74C3C')+';border-radius:6px;text-align:center">'
+      +'<div style="font-size:11px;color:#666;margin-bottom:4px">Saldo Final</div>'
+      +'<div style="font-size:22px;font-weight:bold;color:'+(saldoFinal>=0?'#8B6914':'red')+'">S/. '+saldoFinal.toFixed(2)+'</div>'
+      +'<div style="font-size:10px;color:#888">'+(saldoFinal>=0?'Superávit':'Déficit')+'</div>'
+    +'</div>'
+    +'</div>'
+    // Table
+    +'<table style="font-size:12px">'
+    +'<thead><tr>'
+    +'<th style="background:#0D1B2A;color:#C9A84C;padding:7px 8px;text-align:left">Fecha</th>'
+    +'<th style="background:#0D1B2A;color:#C9A84C;padding:7px 8px;text-align:left">Tipo</th>'
+    +'<th style="background:#0D1B2A;color:#C9A84C;padding:7px 8px;text-align:left">Descripción</th>'
+    +'<th style="background:#0D1B2A;color:#C9A84C;padding:7px 8px;text-align:left">Sede/Filial</th>'
+    +'<th style="background:#0D1B2A;color:#C9A84C;padding:7px 8px;text-align:left">Referencia</th>'
+    +'<th style="background:#0D1B2A;color:#C9A84C;padding:7px 8px;text-align:right">Entrada</th>'
+    +'<th style="background:#0D1B2A;color:#C9A84C;padding:7px 8px;text-align:right">Salida</th>'
+    +'<th style="background:#0D1B2A;color:#C9A84C;padding:7px 8px;text-align:right">Saldo</th>'
+    +'</tr></thead>'
+    +'<tbody>'+rows+'</tbody>'
+    +'<tfoot><tr>'
+    +'<td colspan="5" style="background:#f8f5ef;border:1px solid #C9A84C;padding:7px 8px;font-weight:bold">TOTALES</td>'
+    +'<td style="background:#f8f5ef;border:1px solid #C9A84C;padding:7px 8px;text-align:right;font-weight:bold;color:green">S/. '+totalDep.toFixed(2)+'</td>'
+    +'<td style="background:#f8f5ef;border:1px solid #C9A84C;padding:7px 8px;text-align:right;font-weight:bold;color:red">S/. '+totalRet.toFixed(2)+'</td>'
+    +'<td style="background:#f8f5ef;border:1px solid #C9A84C;padding:7px 8px;text-align:right;font-weight:bold;color:'+(saldoFinal>=0?'green':'red')+'">S/. '+saldoFinal.toFixed(2)+'</td>'
+    +'</tr></tfoot>'
+    +'</table>'
+    +'<div style="margin-top:10px;font-size:10px;color:#888">* Valores en Soles Peruanos (S/.)</div>'
+    +'<div style="display:flex;gap:40px;justify-content:flex-end;margin-top:36px">'
+    +'<div style="border-top:1px solid #333;width:170px;text-align:center;padding-top:3px;font-size:10px">Tesorero Principal</div>'
+    +'<div style="border-top:1px solid #333;width:170px;text-align:center;padding-top:3px;font-size:10px">Pastor Principal</div>'
+    +'</div>'
+    +'</div></div>';
+
+  document.getElementById('rban-prev').innerHTML=html;
+  toast('Informe bancario generado');
+}
+
 // ===================== INIT =====================
 // ===================== FIREBASE SYNC =====================
 var _fbListeners = []; // store unsubscribe functions
@@ -3103,6 +3244,116 @@ function importBackup(){
     }
   };
   reader.readAsText(fi.files[0]);
+}
+
+// ===================== RPT BANCO =====================
+function genRptBanco(){
+  if(!CU||CU.niv>2){toast('Sin acceso','err');return;}
+  var mes=document.getElementById('rban-mes').value;
+  var anio=parseInt(document.getElementById('rban-anio').value);
+  var tipo=document.getElementById('rban-tipo').value;
+  if(!anio){toast('Seleccione el año','err');return;}
+
+  var movs=(DB.banco||[]).filter(function(m){
+    var y=parseInt(m.fec.split('-')[0]);
+    var mo=parseInt(m.fec.split('-')[1]);
+    return y===anio&&(!mes||mo===parseInt(mes));
+  });
+  if(tipo)movs=movs.filter(function(m){return m.tipo===tipo;});
+  movs.sort(function(a,b){return a.fec.localeCompare(b.fec);});
+
+  // Running saldo
+  var allSorted=(DB.banco||[]).filter(function(m){
+    return parseInt(m.fec.split('-')[0])<=anio;
+  }).sort(function(a,b){return a.fec.localeCompare(b.fec);});
+
+  var saldoInicial=0;
+  allSorted.forEach(function(m){
+    if(m.fec<movs[0].fec||!movs.length){
+      saldoInicial+=(m.tipo==='deposito'?Number(m.mon):-Number(m.mon));
+    }
+  });
+
+  var totalDep=movs.filter(function(m){return m.tipo==='deposito';}).reduce(function(a,m){return a+Number(m.mon);},0);
+  var totalRet=movs.filter(function(m){return m.tipo==='retiro';}).reduce(function(a,m){return a+Number(m.mon);},0);
+  var saldoFinal=saldoInicial+totalDep-totalRet;
+
+  // Build rows with running saldo
+  var runSaldo=saldoInicial;
+  var rows=movs.map(function(m,i){
+    runSaldo+=(m.tipo==='deposito'?Number(m.mon):-Number(m.mon));
+    var tipoCell=m.tipo==='deposito'
+      ?'<span style="color:green;font-weight:bold">⬆️ Depósito</span>'
+      :'<span style="color:red;font-weight:bold">⬇️ Retiro</span>';
+    var depCell=m.tipo==='deposito'?'S/. '+Number(m.mon).toFixed(2):'';
+    var retCell=m.tipo==='retiro'?'S/. '+Number(m.mon).toFixed(2):'';
+    var saldoColor=runSaldo>=0?'#1A7A4A':'#C0392B';
+    return '<tr>'
+      +'<td style="border:1px solid #eee;padding:5px 8px;font-size:11px">'+fd2(m.fec)+'</td>'
+      +'<td style="border:1px solid #eee;padding:5px 8px;font-size:11px">'+tipoCell+'</td>'
+      +'<td style="border:1px solid #eee;padding:5px 8px;font-size:11px">'+m.desc+'</td>'
+      +'<td style="border:1px solid #eee;padding:5px 8px;font-size:11px">'+gfn(m.fil)+'</td>'
+      +'<td style="border:1px solid #eee;padding:5px 8px;font-size:11px">'+m.comp+'</td>'
+      +'<td style="border:1px solid #eee;padding:5px 8px;font-size:11px;text-align:right;color:green;font-weight:bold">'+depCell+'</td>'
+      +'<td style="border:1px solid #eee;padding:5px 8px;font-size:11px;text-align:right;color:red;font-weight:bold">'+retCell+'</td>'
+      +'<td style="border:1px solid #eee;padding:5px 8px;font-size:11px;text-align:right;font-weight:bold;color:'+saldoColor+'">S/. '+runSaldo.toFixed(2)+'</td>'
+      +'</tr>';
+  }).join('');
+
+  if(!rows){
+    rows='<tr><td colspan="8" style="text-align:center;padding:20px;color:#888">No hay movimientos bancarios en este período</td></tr>';
+  }
+
+  var periodoLabel=(mes?MESES[parseInt(mes)-1]+' ':'Año ')+anio;
+  var html='<div class="rpt-wrap">'+rptHd('Informe Bancario',periodoLabel)
+    +'<div class="rpt-body">'
+    // Summary cards
+    +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px">'
+    +'<div style="padding:12px;background:#f0f7f0;border:1px solid #2ECC71;border-radius:6px;text-align:center">'
+      +'<div style="font-size:11px;color:#666;margin-bottom:4px">Total Depósitos</div>'
+      +'<div style="font-size:20px;font-weight:bold;color:green">S/. '+totalDep.toFixed(2)+'</div>'
+      +'<div style="font-size:10px;color:#888">'+movs.filter(function(m){return m.tipo==='deposito';}).length+' operaciones</div>'
+    +'</div>'
+    +'<div style="padding:12px;background:#fff5f5;border:1px solid #E74C3C;border-radius:6px;text-align:center">'
+      +'<div style="font-size:11px;color:#666;margin-bottom:4px">Total Retiros</div>'
+      +'<div style="font-size:20px;font-weight:bold;color:red">S/. '+totalRet.toFixed(2)+'</div>'
+      +'<div style="font-size:10px;color:#888">'+movs.filter(function(m){return m.tipo==='retiro';}).length+' operaciones</div>'
+    +'</div>'
+    +'<div style="padding:12px;background:'+(saldoFinal>=0?'#f0f7f0':'#fff5f5')+';border:2px solid '+(saldoFinal>=0?'#C9A84C':'#E74C3C')+';border-radius:6px;text-align:center">'
+      +'<div style="font-size:11px;color:#666;margin-bottom:4px">Saldo Final</div>'
+      +'<div style="font-size:22px;font-weight:bold;color:'+(saldoFinal>=0?'#8B6914':'red')+'">S/. '+saldoFinal.toFixed(2)+'</div>'
+      +'<div style="font-size:10px;color:#888">'+(saldoFinal>=0?'Superávit':'Déficit')+'</div>'
+    +'</div>'
+    +'</div>'
+    // Table
+    +'<table style="font-size:12px">'
+    +'<thead><tr>'
+    +'<th style="background:#0D1B2A;color:#C9A84C;padding:7px 8px;text-align:left">Fecha</th>'
+    +'<th style="background:#0D1B2A;color:#C9A84C;padding:7px 8px;text-align:left">Tipo</th>'
+    +'<th style="background:#0D1B2A;color:#C9A84C;padding:7px 8px;text-align:left">Descripción</th>'
+    +'<th style="background:#0D1B2A;color:#C9A84C;padding:7px 8px;text-align:left">Sede/Filial</th>'
+    +'<th style="background:#0D1B2A;color:#C9A84C;padding:7px 8px;text-align:left">Referencia</th>'
+    +'<th style="background:#0D1B2A;color:#C9A84C;padding:7px 8px;text-align:right">Entrada</th>'
+    +'<th style="background:#0D1B2A;color:#C9A84C;padding:7px 8px;text-align:right">Salida</th>'
+    +'<th style="background:#0D1B2A;color:#C9A84C;padding:7px 8px;text-align:right">Saldo</th>'
+    +'</tr></thead>'
+    +'<tbody>'+rows+'</tbody>'
+    +'<tfoot><tr>'
+    +'<td colspan="5" style="background:#f8f5ef;border:1px solid #C9A84C;padding:7px 8px;font-weight:bold">TOTALES</td>'
+    +'<td style="background:#f8f5ef;border:1px solid #C9A84C;padding:7px 8px;text-align:right;font-weight:bold;color:green">S/. '+totalDep.toFixed(2)+'</td>'
+    +'<td style="background:#f8f5ef;border:1px solid #C9A84C;padding:7px 8px;text-align:right;font-weight:bold;color:red">S/. '+totalRet.toFixed(2)+'</td>'
+    +'<td style="background:#f8f5ef;border:1px solid #C9A84C;padding:7px 8px;text-align:right;font-weight:bold;color:'+(saldoFinal>=0?'green':'red')+'">S/. '+saldoFinal.toFixed(2)+'</td>'
+    +'</tr></tfoot>'
+    +'</table>'
+    +'<div style="margin-top:10px;font-size:10px;color:#888">* Valores en Soles Peruanos (S/.)</div>'
+    +'<div style="display:flex;gap:40px;justify-content:flex-end;margin-top:36px">'
+    +'<div style="border-top:1px solid #333;width:170px;text-align:center;padding-top:3px;font-size:10px">Tesorero Principal</div>'
+    +'<div style="border-top:1px solid #333;width:170px;text-align:center;padding-top:3px;font-size:10px">Pastor Principal</div>'
+    +'</div>'
+    +'</div></div>';
+
+  document.getElementById('rban-prev').innerHTML=html;
+  toast('Informe bancario generado');
 }
 
 // ===================== INIT =====================
