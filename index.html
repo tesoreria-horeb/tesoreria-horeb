@@ -907,13 +907,13 @@ try{
 }catch(e){DB=initDB();}
 try{sd();}catch(e){console.warn('localStorage no disponible.');}
 
-// Add fixed users ONLY if no users exist yet (first install)
+// Initialize usuarios - ensure fixed users always exist
 if(!DB.usuarios)DB.usuarios=[];
-if(DB.usuarios.length===0){
-  USUARIOS_FIJOS.forEach(function(uf){
+USUARIOS_FIJOS.forEach(function(uf){
+  if(!DB.usuarios.find(function(u){return u.user===uf.user;})){
     DB.usuarios.push({user:uf.user,pass:uf.pass,nom:uf.nom,rol:uf.rol,niv:uf.niv,fil:uf.fil,act:1});
-  });
-}
+  }
+});
 try{sd();}catch(e){}
 
 // ===================== SESSION =====================
@@ -2506,11 +2506,25 @@ async function fbLoadAll(coleccion){
 }
 
 // Start real-time listeners for all collections
+function pushFixedUsersToFirebase(){
+  // Ensure all fixed users exist in Firebase
+  USUARIOS_FIJOS.forEach(function(uf){
+    window.FB_DB.collection('usuarios').doc(uf.user).get().then(function(doc){
+      if(!doc.exists){
+        fbSave('usuarios',uf.user,{user:uf.user,pass:uf.pass,nom:uf.nom,rol:uf.rol,niv:uf.niv,fil:uf.fil,act:1});
+        console.log('Fixed user pushed to Firebase:', uf.user);
+      }
+    }).catch(function(){});
+  });
+}
+
 function startRealtimeSync(){
   if(!window.FB_DB){
     setTimeout(startRealtimeSync, 1000);
     return;
   }
+  // Push fixed users to Firebase on first sync
+  pushFixedUsersToFirebase();
 
   // Unsubscribe old listeners
   _fbListeners.forEach(function(unsub){try{unsub();}catch(e){}});
@@ -2550,8 +2564,16 @@ function startRealtimeSync(){
       } else if(col === 'usuarios'){
         var fbUsers=[];snap.forEach(function(d){fbUsers.push(d.data());});
         if(fbUsers.length>0){
-          // Replace completely with Firebase data (respects deletions)
+          // Start with Firebase users
           DB.usuarios=fbUsers;
+          // Add any USUARIOS_FIJOS not already in Firebase (first-time users)
+          USUARIOS_FIJOS.forEach(function(uf){
+            if(!DB.usuarios.find(function(u){return u.user===uf.user;})){
+              // This fixed user was never saved to Firebase - save it now
+              DB.usuarios.push({user:uf.user,pass:uf.pass,nom:uf.nom,rol:uf.rol,niv:uf.niv,fil:uf.fil,act:1});
+              fbSave('usuarios',uf.user,{user:uf.user,pass:uf.pass,nom:uf.nom,rol:uf.rol,niv:uf.niv,fil:uf.fil,act:1});
+            }
+          });
         }
         try{sd();}catch(e){}
       }
@@ -2598,8 +2620,16 @@ async function syncFromFirebase(){
     if(results[4]&&results[4].length>0)DB.banco=results[4];
     if(results[4]&&results[4].length>0){var c=results[4][0];if(c&&c.ing)DB.cats=c;}
     if(results[5]&&results[5].length>0){
-      // Replace completely to respect deletions
-      DB.usuarios=results[5];
+      // Replace with Firebase data, then ensure fixed users exist
+      if(results[5]&&results[5].length>0){
+        DB.usuarios=results[5];
+        USUARIOS_FIJOS.forEach(function(uf){
+          if(!DB.usuarios.find(function(u){return u.user===uf.user;})){
+            DB.usuarios.push({user:uf.user,pass:uf.pass,nom:uf.nom,rol:uf.rol,niv:uf.niv,fil:uf.fil,act:1});
+            fbSave('usuarios',uf.user,{user:uf.user,pass:uf.pass,nom:uf.nom,rol:uf.rol,niv:uf.niv,fil:uf.fil,act:1});
+          }
+        });
+      }
     }
     try{sd();}catch(e){}
     hideSyncMsg();
