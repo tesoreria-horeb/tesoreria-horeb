@@ -889,8 +889,10 @@ function initDB(){
 
 // Usuarios fijos — siempre disponibles sin depender del localStorage
 const USUARIOS_FIJOS=[
-  {user:'pastor',   pass:'pastor123', nom:'Pastor Principal',   rol:'pastor',            niv:1, fil:'all'},
-  {user:'tesorero', pass:'tesoro123', nom:'Tesorero Principal', rol:'tesorero_principal',niv:2, fil:'all'},
+  {user:'pastor',    pass:'pastor123', nom:'Pastor Principal',        rol:'pastor',            niv:1, fil:'all'},
+  {user:'tesorero',  pass:'tesoro123', nom:'Tesorero Principal',      rol:'tesorero_principal',niv:2, fil:'all'},
+  {user:'tscentral', pass:'sede123',   nom:'Tesorero Sede Central',   rol:'tesorero_sede',     niv:3, fil:'sede'},
+  {user:'tsfilial1', pass:'filial123', nom:'Tesorero Los Jardines',   rol:'tesorero_filial',   niv:4, fil:'F001'},
 ];
 
 let DB;
@@ -1039,6 +1041,24 @@ function popYrs(){
   const rc=document.getElementById('rc-mes');if(rc)rc.value=new Date().getMonth()+1;
 }
 
+function checkBancoNote(){
+  var cat=document.getElementById('m-cat');
+  var met=document.getElementById('m-met');
+  var tipo=document.getElementById('m-tipo');
+  var note=document.getElementById('banco-auto-note');
+  if(!note||!cat||!met||!tipo)return;
+  var mets=['transferencia','yape','plin','deposito'];
+  var esBanco=(cat.value==='Depósito Bancario')||(mets.indexOf(met.value)>-1);
+  var msg='';
+  if(esBanco){
+    if(tipo.value==='ingreso')msg='🏦 Este ingreso se registrará como depósito bancario automáticamente';
+    else if(cat.value==='Depósito Bancario')msg='🏦 Este egreso se registrará como depósito bancario automáticamente';
+    else msg='🏦 Este pago se registrará como retiro bancario automáticamente';
+  }
+  note.style.display=esBanco?'flex':'none';
+  var sp=note.querySelector('strong');if(sp)sp.textContent=msg;
+}
+
 function updCats(){
   const tipo=document.getElementById('m-tipo').value;
   const sel=document.getElementById('m-cat');sel.innerHTML='';
@@ -1129,7 +1149,7 @@ function renderMov(){
       +'<td><input type="checkbox" class="mov-chk" data-id="'+m.id+'" onchange="updBulkBtn()" style="cursor:pointer"></td>'
       +'<td style="color:rgba(247,243,233,.35);font-size:10px">'+(((movPg-1)*MPP)+i+1)+'</td>'
       +'<td>'+fd2(m.fec)+'</td>'
-      +'<td>'+m.desc+(m.cat==='Depósito Bancario'?'&nbsp;<span style="font-size:9px;background:rgba(46,134,171,.2);color:#5DADE2;padding:1px 5px;border-radius:3px;border:1px solid rgba(46,134,171,.3)">🏦 BANCO</span>':'')+'</td>'
+      +'<td>'+m.desc+(function(){var mts=['transferencia','yape','plin','deposito'];return(m.cat==='Depósito Bancario'||mts.indexOf(m.met)>-1)?'&nbsp;<span style="font-size:9px;background:rgba(46,134,171,.2);color:#5DADE2;padding:1px 5px;border-radius:3px;border:1px solid rgba(46,134,171,.3)">🏦</span>':'';}())+'</td>'
       +'<td>'+m.cat+'</td>'
       +'<td class="hide-mobile" style="font-size:10px">'+gmn(m.miem)+'</td>'
       +'<td class="hide-mobile" style="font-size:10px">'+m.met+'</td>'
@@ -1251,27 +1271,33 @@ function savMov(){
     fbSave('movimientos', obj.id, obj);
   }
 
-  // Auto-link to Banco when category is Deposito Bancario
-  if(obj.cat==='Depósito Bancario'&&obj.tipo==='egreso'){
+  // Auto-link to Banco: by category OR payment method
+  var metodosBanco=['transferencia','yape','plin','deposito'];
+  var esBanco=(obj.cat==='Depósito Bancario'&&obj.tipo==='egreso')
+    ||(obj.tipo==='ingreso'&&metodosBanco.indexOf(obj.met)>-1)
+    ||(obj.tipo==='egreso'&&metodosBanco.indexOf(obj.met)>-1&&obj.cat!=='Depósito Bancario');
+  if(esBanco){
     if(!DB.banco)DB.banco=[];
     var existeBanco=DB.banco.find(function(b){return b.movId===obj.id;});
+    var tipoBanco=obj.tipo==='ingreso'?'deposito':(obj.cat==='Depósito Bancario'?'deposito':'retiro');
+    var descBanco=obj.tipo==='ingreso'
+      ?'Ingreso '+obj.met+' desde '+gfn(obj.fil)+(obj.desc?' — '+obj.desc:'')
+      :(obj.cat==='Depósito Bancario'
+        ?'Depósito desde '+gfn(obj.fil)+(obj.desc?' — '+obj.desc:'')
+        :'Pago '+obj.met+' desde '+gfn(obj.fil)+(obj.desc?' — '+obj.desc:''));
     if(!existeBanco){
-      var bancObj={id:gid('BC'),tipo:'deposito',fec:obj.fec,mon:obj.mon,
-        desc:'Depósito desde '+gfn(obj.fil)+(obj.desc?' — '+obj.desc:''),
-        fil:obj.fil,comp:obj.comp||'',compFile:obj.compFile||'',
-        obs:'Generado automáticamente desde Movimientos',
+      var bancObj={id:gid('BC'),tipo:tipoBanco,fec:obj.fec,mon:obj.mon,
+        desc:descBanco,fil:obj.fil,comp:obj.comp||'',compFile:obj.compFile||'',
+        obs:'Vinculado desde Movimientos ('+obj.met+')',
         movId:obj.id,reg:CU?CU.nom:'',regFec:today()};
-      DB.banco.push(bancObj);
-      try{sd();}catch(e){}
+      DB.banco.push(bancObj);try{sd();}catch(e){}
       fbSave('banco',bancObj.id,bancObj);
-      toast('Egreso registrado y depósito bancario creado ✅');
+      toast(tipoBanco==='deposito'?'Ingreso y depósito bancario registrados ✅':'Egreso y retiro bancario registrados ✅');
     } else {
-      existeBanco.mon=obj.mon;existeBanco.fec=obj.fec;
-      existeBanco.desc='Depósito desde '+gfn(obj.fil)+(obj.desc?' — '+obj.desc:'');
-      existeBanco.comp=obj.comp||'';existeBanco.compFile=obj.compFile||'';
-      try{sd();}catch(e){}
-      fbSave('banco',existeBanco.id,existeBanco);
-      toast('Movimiento y depósito bancario actualizados ✅');
+      existeBanco.tipo=tipoBanco;existeBanco.mon=obj.mon;existeBanco.fec=obj.fec;
+      existeBanco.desc=descBanco;existeBanco.comp=obj.comp||'';existeBanco.compFile=obj.compFile||'';
+      try{sd();}catch(e){}fbSave('banco',existeBanco.id,existeBanco);
+      toast('Movimiento y registro bancario actualizados ✅');
     }
   } else {
     toast(EID?'Movimiento actualizado':'Movimiento registrado');
@@ -1279,7 +1305,6 @@ function savMov(){
   cm('ov-mov');
   renderMov();
 }
-
 
 function verComprobante(b){
   var movId=b&&b.getAttribute?b.getAttribute('data-id'):b;
@@ -1552,10 +1577,8 @@ function rptHd(title,sub){
 function prtRpt(divId){
   var el=document.getElementById(divId);
   if(!el||!el.innerHTML.trim()){toast('Primero genere el informe','err');return;}
-  var isLibroCaja=divId==='rc-prev';
-  var w=window.open('','_blank','width=800,height=900');
-  if(!w){toast('Permite ventanas emergentes','err');return;}
-  var css='body{font-family:Arial,sans-serif;margin:15px;color:#1a1a1a}'
+  var w=window.open('','_blank','width=950,height=720');
+  var css='body{font-family:Arial,sans-serif;margin:20px;color:#1a1a1a}'
     +'.rpt-hd{background:#0D1B2A;color:white;padding:16px 20px;display:flex;align-items:center;gap:14px;border-radius:4px;margin-bottom:14px}'
     +'.rpt-logo-circle{width:54px;height:54px;border:2px solid #C9A84C;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0}'
     +'.rpt-church{color:#C9A84C;font-size:12px;font-weight:bold}'
@@ -1570,11 +1593,7 @@ function prtRpt(divId){
     +'.rpt-sign{margin-top:36px;display:flex;gap:36px;justify-content:flex-end}'
     +'.rpt-sign-ln{border-top:1px solid #333;width:160px;text-align:center;padding-top:3px;font-size:10px;color:#555}'
     +'h3{color:#0D1B2A;margin:14px 0 7px;font-size:13px}'
-    +'@media print{'
-    +'body{margin:0}'
-    +(isLibroCaja?'@page{size:A4 portrait;margin:10mm}':'@page{size:A4 landscape;margin:10mm}')
-    +'button{display:none}'
-    +'}';
+    +'';
   var html='<!DOCTYPE html><html><head><meta charset="UTF-8">'
     +'<title>Informe - Iglesia La Roca de Horeb</title>'
     +'<style>'+css+'</style>'
@@ -2199,7 +2218,7 @@ function renderBanco(){
       +'<td style="color:rgba(247,243,233,.35);font-size:10px">'+(((bancoPg-1)*BANCO_PP)+i+1)+'</td>'
       +'<td>'+fd2(m.fec)+'</td>'
       +'<td>'+tipoCell+'</td>'
-      +'<td>'+m.desc+(m.cat==='Depósito Bancario'?'&nbsp;<span style="font-size:9px;background:rgba(46,134,171,.2);color:#5DADE2;padding:1px 5px;border-radius:3px;border:1px solid rgba(46,134,171,.3)">🏦 BANCO</span>':'')+'</td>'
+      +'<td>'+m.desc+(function(){var mts=['transferencia','yape','plin','deposito'];return(m.cat==='Depósito Bancario'||mts.indexOf(m.met)>-1)?'&nbsp;<span style="font-size:9px;background:rgba(46,134,171,.2);color:#5DADE2;padding:1px 5px;border-radius:3px;border:1px solid rgba(46,134,171,.3)">🏦</span>':'';}())+'</td>'
       +'<td style="font-size:10px">'+gfn(m.fil)+'</td>'
       +'<td>'+montoCell+'</td>'
       +(isAdmin?'<td>'+saldoCell+'</td>':'')
@@ -2801,7 +2820,7 @@ function renderBanco(){
       +'<td style="color:rgba(247,243,233,.35);font-size:10px">'+(((bancoPg-1)*BANCO_PP)+i+1)+'</td>'
       +'<td>'+fd2(m.fec)+'</td>'
       +'<td>'+tipoCell+'</td>'
-      +'<td>'+m.desc+(m.cat==='Depósito Bancario'?'&nbsp;<span style="font-size:9px;background:rgba(46,134,171,.2);color:#5DADE2;padding:1px 5px;border-radius:3px;border:1px solid rgba(46,134,171,.3)">🏦 BANCO</span>':'')+'</td>'
+      +'<td>'+m.desc+(function(){var mts=['transferencia','yape','plin','deposito'];return(m.cat==='Depósito Bancario'||mts.indexOf(m.met)>-1)?'&nbsp;<span style="font-size:9px;background:rgba(46,134,171,.2);color:#5DADE2;padding:1px 5px;border-radius:3px;border:1px solid rgba(46,134,171,.3)">🏦</span>':'';}())+'</td>'
       +'<td style="font-size:10px">'+gfn(m.fil)+'</td>'
       +'<td>'+montoCell+'</td>'
       +(isAdmin?'<td>'+saldoCell+'</td>':'')
@@ -3169,6 +3188,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     }
   }catch(e){console.warn('Session restore error:',e);}
 });
+
 </script>
 </body>
 </html>
