@@ -453,7 +453,7 @@ tbody td{padding:9px 11px;color:rgba(247,243,233,.8);vertical-align:middle}
         </div>
         <div class="card" style="margin-top:14px">
           <div class="card-title">Usuarios del Sistema</div>
-          <div class="tw"><table><thead><tr><th>Usuario</th><th>Nombre</th><th>Rol</th><th>Acceso</th></tr></thead><tbody id="usr-body"></tbody></table></div>
+          <div class="tw"><table><thead><tr><th>Usuario</th><th>Nombre</th><th>Contraseña</th><th>Rol</th><th>Acceso</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="usr-body"></tbody></table></div>
         </div>
       </div>
 
@@ -785,6 +785,39 @@ tbody td{padding:9px 11px;color:rgba(247,243,233,.8);vertical-align:middle}
     <div class="fr fr1"><div class="fld"><label>Estado</label><select id="u-act"><option value="1">Activo</option><option value="0">Inactivo</option></select></div></div>
     <div id="usr-err" style="color:#E74C3C;font-size:12px;margin-top:6px;display:none"></div>
     <div class="modal-ft"><button class="btn btn-s" onclick="cm('ov-usr')">Cancelar</button><button class="btn btn-p" onclick="savUsr()">Guardar</button></div>
+  </div>
+</div>
+
+<!-- MODAL CAMBIAR CLAVE -->
+<div class="ov" id="ov-chgpw">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-hd">
+      <div class="modal-tit">🔑 Cambiar Contraseña</div>
+      <button class="modal-x" onclick="cm('ov-chgpw')">✕</button>
+    </div>
+    <div style="padding:4px 0 12px;font-size:12px;color:rgba(247,243,233,.5)" id="chgpw-user-label">Usuario: —</div>
+    <div class="fr fr1">
+      <div class="fld">
+        <label>Nueva Contraseña</label>
+        <div style="position:relative">
+          <input type="password" id="chgpw-new" placeholder="Mínimo 6 caracteres" style="padding-right:36px">
+          <button onclick="toggleInput('chgpw-new')" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--gold-light)">👁️</button>
+        </div>
+      </div>
+    </div>
+    <div class="fr fr1">
+      <div class="fld">
+        <label>Confirmar Contraseña</label>
+        <div style="position:relative">
+          <input type="password" id="chgpw-confirm" placeholder="Repite la contraseña" style="padding-right:36px">
+          <button onclick="toggleInput('chgpw-confirm')" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--gold-light)">👁️</button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-ft">
+      <button class="btn btn-s" onclick="cm('ov-chgpw')">Cancelar</button>
+      <button class="btn btn-p" onclick="savChgPw()">🔑 Guardar Nueva Clave</button>
+    </div>
   </div>
 </div>
 
@@ -2016,7 +2049,18 @@ function renderUsrs(){
     var ok=u.act!==0;
     var btns='<button class="btn btn-sm btn-s" onclick="edUsr(this)" data-id="'+u.user+'">Editar</button>';
     if(u.user!=='pastor')btns+=' <button class="btn btn-sm btn-d" onclick="delUsr(this)" data-id="'+u.user+'">Eliminar</button>';
-    return '<tr><td style="font-family:monospace;color:var(--gold-light)">'+u.user+'</td><td><strong>'+u.nom+'</strong></td><td>'+rl+'</td><td style="font-size:11px">'+fl+'</td><td><span class="badge '+(ok?'b-act':'b-ven')+'">'+(ok?'Activo':'Inactivo')+'</span></td><td>'+btns+'</td></tr>';
+    var passCell='<span id="pw-'+u.user+'" style="font-family:monospace;letter-spacing:2px">&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;</span>'
+      +' <button onclick="togglePw(this)" data-uid="'+u.user+'" style="background:none;border:none;cursor:pointer;color:var(--gold-light);font-size:11px;padding:0 3px" title="Mostrar">&#128065;</button>'
+      +(CU&&CU.niv<=2?' <button onclick="openChgPw(this)" data-uid="'+u.user+'" style="background:none;border:none;cursor:pointer;color:var(--gold-light);font-size:10px;padding:0 3px" title="Cambiar clave">&#128273;</button>':'');
+    return '<tr>'
+      +'<td style="font-family:monospace;color:var(--gold-light)">'+u.user+'</td>'
+      +'<td><strong>'+u.nom+'</strong></td>'
+      +'<td>'+passCell+'</td>'
+      +'<td>'+rl+'</td>'
+      +'<td style="font-size:11px">'+fl+'</td>'
+      +'<td><span class="badge '+(ok?'b-act':'b-ven')+'">'+(ok?'Activo':'Inactivo')+'</span></td>'
+      +'<td>'+btns+'</td>'
+      +'</tr>';
   }).join('');
 }
 
@@ -2650,6 +2694,56 @@ function genRptBanco(){
 
   document.getElementById('rban-prev').innerHTML=html;
   toast('Informe bancario generado');
+}
+
+// ===================== PASSWORD FUNCTIONS =====================
+var PW_VISIBLE={};
+
+function togglePw(btn){
+  var userId=btn.getAttribute('data-uid');
+  var span=document.getElementById('pw-'+userId);
+  if(!span)return;
+  var u=DB.usuarios.find(function(x){return x.user===userId;});
+  if(!u)return;
+  PW_VISIBLE[userId]=!PW_VISIBLE[userId];
+  span.textContent=PW_VISIBLE[userId]?u.pass:'••••••••';
+  span.style.letterSpacing=PW_VISIBLE[userId]?'normal':'2px';
+  btn.title=PW_VISIBLE[userId]?'Ocultar':'Mostrar';
+}
+
+function toggleInput(inputId){
+  var el=document.getElementById(inputId);
+  if(!el)return;
+  el.type=el.type==='password'?'text':'password';
+}
+
+function openChgPw(btn){
+  var userId=btn.getAttribute('data-uid');
+  var lbl=document.getElementById('chgpw-user-label');
+  if(lbl)lbl.textContent='Usuario: '+userId;
+  document.getElementById('chgpw-new').value='';
+  document.getElementById('chgpw-confirm').value='';
+  document.getElementById('chgpw-new').type='password';
+  document.getElementById('chgpw-confirm').type='password';
+  document.getElementById('ov-chgpw').setAttribute('data-user',userId);
+  om('ov-chgpw');
+}
+
+function savChgPw(){
+  var userId=document.getElementById('ov-chgpw').getAttribute('data-user');
+  var np=document.getElementById('chgpw-new').value.trim();
+  var cp=document.getElementById('chgpw-confirm').value.trim();
+  if(!np||np.length<6){toast('La contraseña debe tener al menos 6 caracteres','err');return;}
+  if(np!==cp){toast('Las contraseñas no coinciden','err');return;}
+  var u=DB.usuarios.find(function(x){return x.user===userId;});
+  if(!u){toast('Usuario no encontrado','err');return;}
+  u.pass=np;
+  try{sd();}catch(e){}
+  fbSave('usuarios',userId,u);
+  cm('ov-chgpw');
+  PW_VISIBLE[userId]=false;
+  renderUsrs();
+  toast('Contraseña actualizada correctamente ✅');
 }
 
 // ===================== INIT =====================
@@ -3354,6 +3448,56 @@ function genRptBanco(){
 
   document.getElementById('rban-prev').innerHTML=html;
   toast('Informe bancario generado');
+}
+
+// ===================== PASSWORD FUNCTIONS =====================
+var PW_VISIBLE={};
+
+function togglePw(btn){
+  var userId=btn.getAttribute('data-uid');
+  var span=document.getElementById('pw-'+userId);
+  if(!span)return;
+  var u=DB.usuarios.find(function(x){return x.user===userId;});
+  if(!u)return;
+  PW_VISIBLE[userId]=!PW_VISIBLE[userId];
+  span.textContent=PW_VISIBLE[userId]?u.pass:'••••••••';
+  span.style.letterSpacing=PW_VISIBLE[userId]?'normal':'2px';
+  btn.title=PW_VISIBLE[userId]?'Ocultar':'Mostrar';
+}
+
+function toggleInput(inputId){
+  var el=document.getElementById(inputId);
+  if(!el)return;
+  el.type=el.type==='password'?'text':'password';
+}
+
+function openChgPw(btn){
+  var userId=btn.getAttribute('data-uid');
+  var lbl=document.getElementById('chgpw-user-label');
+  if(lbl)lbl.textContent='Usuario: '+userId;
+  document.getElementById('chgpw-new').value='';
+  document.getElementById('chgpw-confirm').value='';
+  document.getElementById('chgpw-new').type='password';
+  document.getElementById('chgpw-confirm').type='password';
+  document.getElementById('ov-chgpw').setAttribute('data-user',userId);
+  om('ov-chgpw');
+}
+
+function savChgPw(){
+  var userId=document.getElementById('ov-chgpw').getAttribute('data-user');
+  var np=document.getElementById('chgpw-new').value.trim();
+  var cp=document.getElementById('chgpw-confirm').value.trim();
+  if(!np||np.length<6){toast('La contraseña debe tener al menos 6 caracteres','err');return;}
+  if(np!==cp){toast('Las contraseñas no coinciden','err');return;}
+  var u=DB.usuarios.find(function(x){return x.user===userId;});
+  if(!u){toast('Usuario no encontrado','err');return;}
+  u.pass=np;
+  try{sd();}catch(e){}
+  fbSave('usuarios',userId,u);
+  cm('ov-chgpw');
+  PW_VISIBLE[userId]=false;
+  renderUsrs();
+  toast('Contraseña actualizada correctamente ✅');
 }
 
 // ===================== INIT =====================
