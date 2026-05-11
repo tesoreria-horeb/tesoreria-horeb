@@ -748,7 +748,7 @@ tbody td{padding:9px 11px;color:rgba(247,243,233,.8);vertical-align:middle}
       <button class="tab-btn" onclick="stab('miem','diezmos')">Historial Diezmos</button>
     </div>
     <div class="tab-cnt active" id="miem-tab-datos">
-      <div class="fr"><div class="fld"><label>Código RI</label><input type="text" id="mi-cod" readonly style="opacity:.6"></div><div class="fld"><label>Sede / Filial</label><select id="mi-fil"></select></div></div>
+      <div class="fr"><div class="fld"><label>Código RI</label><input type="text" id="mi-cod" placeholder="Ej: RI-001 o 12345"></div><div class="fld"><label>Sede / Filial</label><select id="mi-fil"></select></div></div>
       <div class="fr"><div class="fld"><label>Nombres</label><input type="text" id="mi-nom" placeholder="Nombres"></div><div class="fld"><label>Apellidos</label><input type="text" id="mi-ape" placeholder="Apellidos"></div></div>
       <div class="fr"><div class="fld"><label>DNI</label><input type="text" id="mi-dni" placeholder="DNI"></div><div class="fld"><label>Teléfono</label><input type="text" id="mi-tel" placeholder="Teléfono"></div></div>
       <div class="fr"><div class="fld"><label>Fecha Nacimiento</label><input type="date" id="mi-nac"></div><div class="fld"><label>Fecha Ingreso</label><input type="date" id="mi-ing"></div></div>
@@ -1515,7 +1515,9 @@ function openMiemModal(id=null){
   if(id){
     const m=DB.miembros.find(x=>x.id===id);
     document.getElementById('miem-tit').textContent='Editar Miembro';
-    document.getElementById('mi-cod').value=m.cod;document.getElementById('mi-fil').value=m.fil;
+    document.getElementById('mi-cod').value=m.cod;
+    document.getElementById('mi-cod').readOnly=false;
+    document.getElementById('mi-cod').style.opacity='1';document.getElementById('mi-fil').value=m.fil;
     document.getElementById('mi-nom').value=m.nom;document.getElementById('mi-ape').value=m.ape;
     document.getElementById('mi-dni').value=m.dni;document.getElementById('mi-tel').value=m.tel;
     document.getElementById('mi-nac').value=m.nac||'';document.getElementById('mi-ing').value=m.ing||'';
@@ -1524,6 +1526,8 @@ function openMiemModal(id=null){
     document.getElementById('miem-tit').textContent='Nuevo Miembro';
     const cnt=DB.miembros.length+1;
     document.getElementById('mi-cod').value='RI-'+String(cnt).padStart(3,'0');
+    document.getElementById('mi-cod').readOnly=false;
+    document.getElementById('mi-cod').style.opacity='1';
     ['mi-nom','mi-ape','mi-dni','mi-tel','mi-nac','mi-dir'].forEach(id=>document.getElementById(id).value='');
     document.getElementById('mi-ing').value=today();
   }
@@ -1532,7 +1536,11 @@ function openMiemModal(id=null){
 function savMiem(){
   const nom=document.getElementById('mi-nom').value.trim();const ape=document.getElementById('mi-ape').value.trim();
   if(!nom||!ape){toast('Complete nombres y apellidos','err');return;}
-  const cod=document.getElementById('mi-cod').value;
+  const cod=document.getElementById('mi-cod').value.trim();
+  if(!cod){toast('Ingrese el código RI del miembro','err');return;}
+  if(!EID&&DB.miembros.find(function(m){return m.cod===cod;})){
+    toast('Ya existe un miembro con ese código RI','err');return;
+  }
   const obj={id:EID||cod,cod,fil:document.getElementById('mi-fil').value,nom,ape,dni:document.getElementById('mi-dni').value,tel:document.getElementById('mi-tel').value,nac:document.getElementById('mi-nac').value,ing:document.getElementById('mi-ing').value,dir:document.getElementById('mi-dir').value};
   if(EID){const i=DB.miembros.findIndex(x=>x.id===EID);DB.miembros[i]=obj;}else DB.miembros.push(obj);
   sd();
