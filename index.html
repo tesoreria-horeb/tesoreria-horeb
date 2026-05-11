@@ -2046,7 +2046,7 @@ function renderUsrs(){
     var fl=u.fil==='all'?'Todo el sistema':gfn(u.fil);
     var ok=u.act!==0;
     var btns='<button class="btn btn-sm btn-s" onclick="edUsr(this)" data-id="'+u.user+'">Editar</button>';
-    if(u.user!=='pastor')btns+=' <button class="btn btn-sm btn-d" onclick="delUsr(this)" data-id="'+u.user+'">Eliminar</button>';
+    if(u.user!=='administrador')btns+=' <button class="btn btn-sm btn-d" onclick="delUsr(this)" data-id="'+u.user+'">Eliminar</button>';
     var passCell='<span id="pw-'+u.user+'" style="font-family:monospace;letter-spacing:2px">&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;</span>'
       +' <button onclick="togglePw(this)" data-uid="'+u.user+'" style="background:none;border:none;cursor:pointer;color:var(--gold-light);font-size:11px;padding:0 3px" title="Mostrar">&#128065;</button>'
       +(CU&&CU.niv<=2?' <button onclick="openChgPw(this)" data-uid="'+u.user+'" style="background:none;border:none;cursor:pointer;color:var(--gold-light);font-size:10px;padding:0 3px" title="Cambiar clave">&#128273;</button>':'');
