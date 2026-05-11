@@ -722,7 +722,15 @@ tbody td{padding:9px 11px;color:rgba(247,243,233,.8);vertical-align:middle}
     <div class="fr fr1"><div class="fld"><label>Descripción</label><input type="text" id="m-desc" placeholder="Descripción del movimiento"></div></div>
     <div class="fr"><div class="fld"><label>Método de Pago</label><select id="m-met"><option value="efectivo">Efectivo</option><option value="transferencia">Transferencia</option><option value="yape">Yape</option><option value="plin">Plin</option><option value="deposito">Depósito bancario</option><option value="cheque">Cheque</option></select></div><div class="fld"><label>N° Comprobante</label><input type="text" id="m-comp" placeholder="Opcional"></div></div>
     <div class="fr"><div class="fld"><label>Adjuntar Comprobante (JPG, PNG, PDF)</label><input type="file" id="m-comp-file" accept=".jpg,.jpeg,.png,.pdf" style="padding:6px;background:rgba(13,27,42,.7);border:1px solid rgba(201,168,76,.2);border-radius:6px;color:var(--cream);font-size:12px;width:100%"></div><div class="fld" id="m-comp-preview-box" style="display:flex;align-items:center"><div id="m-comp-preview" style="font-size:12px;color:var(--gold-light)"></div></div></div>
-    <div class="fr"><div class="fld"><label>Sede / Filial</label><select id="m-fil"></select></div><div class="fld"><label>Miembro (si aplica)</label><select id="m-miem"><option value="">— Sin miembro —</option></select></div></div>
+    <div class="fr"><div class="fld"><label>Sede / Filial</label><select id="m-fil"></select></div><div class="fld" style="position:relative">
+          <label>Miembro (si aplica)</label>
+          <input type="text" id="m-miem-search" placeholder="Buscar por nombre o RI..." 
+            oninput="searchMiem(this.value)" autocomplete="off"
+            style="width:100%">
+          <input type="hidden" id="m-miem" value="">
+          <div id="m-miem-results" style="display:none;position:absolute;top:100%;left:0;right:0;background:#0D1B2A;border:1px solid rgba(201,168,76,.3);border-radius:0 0 6px 6px;max-height:200px;overflow-y:auto;z-index:999;box-shadow:0 4px 12px rgba(0,0,0,.4)"></div>
+          <div id="m-miem-selected" style="font-size:11px;color:var(--gold-light);margin-top:4px;min-height:16px"></div>
+        </div></div>
     <div class="fr fr1"><div class="fld"><label>Observaciones</label><textarea id="m-obs" placeholder="Notas adicionales..."></textarea></div></div>
     <div class="modal-ft"><button class="btn btn-s" onclick="cm('ov-mov')">Cancelar</button><button class="btn btn-p" onclick="savMov()">💾 Guardar</button></div>
   </div>
@@ -1125,6 +1133,8 @@ function updCats(){
   const sel=document.getElementById('m-cat');sel.innerHTML='';
   const cats=tipo==='ingreso'?DB.cats.ing:DB.cats.eg;
   cats.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;sel.appendChild(o);});
+  sel.onchange=function(){checkBancoNote();autoFillDesc();};
+  checkBancoNote();
 }
 
 function popMiem(sid){
@@ -1256,6 +1266,16 @@ function openMovModal(id){
     document.getElementById('m-comp').value=m.comp||'';
     document.getElementById('m-fil').value=m.fil;
     document.getElementById('m-miem').value=m.miem||'';
+    if(m.miem){
+      var miemObj=DB.miembros.find(function(x){return x.id===m.miem;});
+      if(miemObj){
+        var miemNom=miemObj.nom+(miemObj.ape?' '+miemObj.ape:'');
+        document.getElementById('m-miem-search').value=miemNom+' ('+miemObj.cod+')';
+        document.getElementById('m-miem-selected').textContent='✅ '+miemNom;
+      }
+    } else {
+      clearMiemSearch();
+    }
     document.getElementById('m-obs').value=m.obs||'';
     var pp=document.getElementById('m-comp-preview');
     if(pp&&(m.compFile||m.hasFile)){
@@ -2740,6 +2760,106 @@ function importarMiembros(){
   toast('Importación completa: '+nuevos+' nuevos, '+actualizados+' actualizados'+(errores?' | '+errores+' errores':''));
 }
 
+// ===================== BUSCAR MIEMBRO =====================
+function searchMiem(q){
+  var res=document.getElementById('m-miem-results');
+  if(!q||q.length<2){res.style.display='none';return;}
+  var fil=document.getElementById('m-fil')?document.getElementById('m-fil').value:'';
+  var ms=DB.miembros.filter(function(m){
+    var txt=(m.nom+' '+m.ape+' '+m.cod).toLowerCase();
+    return txt.includes(q.toLowerCase())&&(!fil||fil===''||fil==='all'||m.fil===fil);
+  }).slice(0,10);
+  if(!ms.length){
+    res.innerHTML='<div style="padding:10px;color:rgba(247,243,233,.4);font-size:12px">No se encontraron miembros</div>';
+    res.style.display='block';return;
+  }
+  var html='';
+  ms.forEach(function(m){
+    var nombre=m.nom+(m.ape?' '+m.ape:'');
+    var div=document.createElement('div');
+    div.setAttribute('data-id',m.id);
+    div.setAttribute('data-nom',nombre);
+    div.setAttribute('data-cod',m.cod);
+    div.className='miem-result-item';
+    div.style.cssText='padding:8px 12px;cursor:pointer;border-bottom:1px solid rgba(201,168,76,.1);font-size:12px;display:flex;justify-content:space-between;align-items:center';
+    div.onclick=function(){selectMiem(this);};
+    div.innerHTML='<span>'+nombre+'</span><span style="font-size:10px;color:#C9A84C;font-family:monospace">'+m.cod+'</span>';
+    res.appendChild(div);
+  });
+  res.innerHTML='';
+  ms.forEach(function(m){
+    var nombre=m.nom+(m.ape?' '+m.ape:'');
+    var div=document.createElement('div');
+    div.setAttribute('data-id',m.id);
+    div.setAttribute('data-nom',nombre);
+    div.setAttribute('data-cod',m.cod);
+    div.style.cssText='padding:8px 12px;cursor:pointer;border-bottom:1px solid rgba(201,168,76,.1);font-size:12px;display:flex;justify-content:space-between;align-items:center';
+    div.onmouseover=function(){this.style.background='rgba(201,168,76,.1)';};
+    div.onmouseout=function(){this.style.background='';};
+    div.onclick=function(){selectMiem(this);};
+    div.innerHTML='<span>'+nombre+'</span><span style="font-size:10px;color:#C9A84C;font-family:monospace">'+m.cod+'</span>';
+    res.appendChild(div);
+  });
+  res.style.display='block';
+}
+
+
+function selectMiem(el){
+  var id=el.getAttribute('data-id');
+  var nombre=el.getAttribute('data-nom');
+  var cod=el.getAttribute('data-cod');
+  document.getElementById('m-miem').value=id;
+  document.getElementById('m-miem-search').value=nombre+' ('+cod+')';
+  document.getElementById('m-miem-results').style.display='none';
+  document.getElementById('m-miem-selected').textContent='✅ '+nombre;
+  // Auto-fill description for Diezmos
+  autoFillDesc();
+}
+
+function clearMiemSearch(){
+  var s=document.getElementById('m-miem-search');
+  var h=document.getElementById('m-miem');
+  var r=document.getElementById('m-miem-results');
+  var sel=document.getElementById('m-miem-selected');
+  if(s)s.value='';
+  if(h)h.value='';
+  if(r)r.style.display='none';
+  if(sel)sel.textContent='';
+}
+
+function autoFillDesc(){
+  var cat=document.getElementById('m-cat');
+  var desc=document.getElementById('m-desc');
+  var miemId=document.getElementById('m-miem');
+  if(!cat||!desc||!miemId)return;
+  // Only auto-fill if category contains "Diezmo"
+  if(cat.value.toLowerCase().indexOf('diezmo')===-1)return;
+  // If member selected from system
+  if(miemId.value){
+    var m=DB.miembros.find(function(x){return x.id===miemId.value;});
+    if(m){
+      var nombre=m.nom+(m.ape?' '+m.ape:'');
+      desc.value='Diezmo - '+nombre;
+      return;
+    }
+  }
+  // If no member selected, suggest prefix only if empty
+  if(!desc.value||desc.value==='Diezmo - '){
+    desc.value='Diezmo - ';
+    // Place cursor at end
+    try{desc.setSelectionRange(desc.value.length,desc.value.length);desc.focus();}catch(e){}
+  }
+}
+
+// Close results when clicking outside
+document.addEventListener('click',function(e){
+  var res=document.getElementById('m-miem-results');
+  var inp=document.getElementById('m-miem-search');
+  if(res&&inp&&!res.contains(e.target)&&e.target!==inp){
+    res.style.display='none';
+  }
+});
+
 // ===================== PASSWORD FUNCTIONS =====================
 var PW_VISIBLE={};
 
@@ -3531,6 +3651,64 @@ function importarMiembros(){
   renderMiem();
   toast('Importación completa: '+nuevos+' nuevos, '+actualizados+' actualizados'+(errores?' | '+errores+' errores':''));
 }
+
+// ===================== BUSCAR MIEMBRO =====================
+
+function selectMiem(el){
+  var id=el.getAttribute('data-id');
+  var nombre=el.getAttribute('data-nom');
+  var cod=el.getAttribute('data-cod');
+  document.getElementById('m-miem').value=id;
+  document.getElementById('m-miem-search').value=nombre+' ('+cod+')';
+  document.getElementById('m-miem-results').style.display='none';
+  document.getElementById('m-miem-selected').textContent='✅ '+nombre;
+  // Auto-fill description for Diezmos
+  autoFillDesc();
+}
+
+function clearMiemSearch(){
+  var s=document.getElementById('m-miem-search');
+  var h=document.getElementById('m-miem');
+  var r=document.getElementById('m-miem-results');
+  var sel=document.getElementById('m-miem-selected');
+  if(s)s.value='';
+  if(h)h.value='';
+  if(r)r.style.display='none';
+  if(sel)sel.textContent='';
+}
+
+function autoFillDesc(){
+  var cat=document.getElementById('m-cat');
+  var desc=document.getElementById('m-desc');
+  var miemId=document.getElementById('m-miem');
+  if(!cat||!desc||!miemId)return;
+  // Only auto-fill if category contains "Diezmo"
+  if(cat.value.toLowerCase().indexOf('diezmo')===-1)return;
+  // If member selected from system
+  if(miemId.value){
+    var m=DB.miembros.find(function(x){return x.id===miemId.value;});
+    if(m){
+      var nombre=m.nom+(m.ape?' '+m.ape:'');
+      desc.value='Diezmo - '+nombre;
+      return;
+    }
+  }
+  // If no member selected, suggest prefix only if empty
+  if(!desc.value||desc.value==='Diezmo - '){
+    desc.value='Diezmo - ';
+    // Place cursor at end
+    try{desc.setSelectionRange(desc.value.length,desc.value.length);desc.focus();}catch(e){}
+  }
+}
+
+// Close results when clicking outside
+document.addEventListener('click',function(e){
+  var res=document.getElementById('m-miem-results');
+  var inp=document.getElementById('m-miem-search');
+  if(res&&inp&&!res.contains(e.target)&&e.target!==inp){
+    res.style.display='none';
+  }
+});
 
 // ===================== PASSWORD FUNCTIONS =====================
 var PW_VISIBLE={};
