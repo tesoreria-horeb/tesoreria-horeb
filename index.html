@@ -317,7 +317,7 @@ tbody td{padding:9px 11px;color:rgba(247,243,233,.8);vertical-align:middle}
     </div>
     <nav class="sb-nav">
       <div class="nav-sec">Principal</div>
-      <div class="nav-item active" onclick="sm('dashboard')"><span class="ic">📊</span>Dashboard</div>
+      <div class="nav-item active" onclick="sm('dashboard')"><span class="ic">📊</span>Menú Principal</div>
       <div class="nav-sec">Gestión</div>
       <div class="nav-item" onclick="sm('movimientos')"><span class="ic">💰</span>Movimientos</div>
       <div class="nav-item nav-filiales" onclick="sm('filiales')"><span class="ic">🏛️</span>Filiales</div>
@@ -345,7 +345,7 @@ tbody td{padding:9px 11px;color:rgba(247,243,233,.8);vertical-align:middle}
     <div class="topbar">
       <div style="display:flex;align-items:center;gap:10px">
         <div id="menu-btn" onclick="toggleSidebar()">☰</div>
-        <div><div class="topbar-title" id="pt">Dashboard</div><div class="topbar-sub" id="ps">Resumen general</div></div>
+        <div><div class="topbar-title" id="pt">Menú Principal</div><div class="topbar-sub" id="ps">Resumen general</div></div>
       </div>
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         <span id="sync-msg" style="font-size:11px;color:var(--gold-light);display:none"></span>
@@ -841,9 +841,11 @@ function doLogin(){
 function doLogout(){CU=null;try{localStorage.removeItem('horeb_session');}catch(e){}document.getElementById('app').style.display='none';document.getElementById('login-screen').style.display='flex';document.getElementById('lu').value='';document.getElementById('lp').value='';}
 
 // ===================== NAV =====================
-const TITLES={dashboard:'Dashboard',usuarios:'Gestion de Usuarios',backup:'Sistema de Backup',movimientos:'Movimientos',filiales:'Filiales',miembros:'Miembros',votos:'Votos',categorias:'Categorías y Usuarios','rpt-caja':'Informe: Libro Caja Mensual','rpt-consolidado':'Informe: Consolidado General','rpt-comparativo':'Informe: Comparativo Anual','rpt-diezmos':'Informe: Diezmos por Filial','rpt-fidelidad':'Informe: Fidelidad Individual','rpt-votos':'Informe: Votos y Cumplimiento'};
+const TITLES={dashboard:'Menú Principal',usuarios:'Gestion de Usuarios',backup:'Sistema de Backup',movimientos:'Movimientos',filiales:'Filiales',miembros:'Miembros',votos:'Votos',categorias:'Categorías y Usuarios','rpt-caja':'Informe: Libro Caja Mensual','rpt-consolidado':'Informe: Consolidado General','rpt-comparativo':'Informe: Comparativo Anual','rpt-diezmos':'Informe: Diezmos por Filial','rpt-fidelidad':'Informe: Fidelidad Individual','rpt-votos':'Informe: Votos y Cumplimiento'};
 
 function sm(n){
+  // Save current module to restore after F5
+  try{localStorage.setItem('horeb_last_mod',n);}catch(e){}
   // Close sidebar on mobile when navigating
   if(window.innerWidth<=768)closeSidebar();
   document.querySelectorAll('.mod').forEach(m=>m.classList.remove('active'));
@@ -2338,7 +2340,10 @@ document.addEventListener('DOMContentLoaded',()=>{
         if(CU.niv>=4)document.querySelectorAll('.nav-admin').forEach(function(e){e.style.display='none';});
         document.getElementById('curdate').textContent=new Date().toLocaleDateString('es-PE',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
         popFil();popYrs();
-        sm('dashboard');
+        // Restore last visited module
+        var lastMod='dashboard';
+        try{lastMod=localStorage.getItem('horeb_last_mod')||'dashboard';}catch(e){}
+        sm(lastMod);
         if(window.FB_READY){
           startRealtimeSync();
         } else {
