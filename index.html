@@ -296,9 +296,6 @@ tbody td{padding:9px 11px;color:rgba(247,243,233,.8);vertical-align:middle}
       <div class="demo-tags">
         <span class="demo-tag" onclick="fd('pastor','pastor123')">Pastor Principal</span>
         <span class="demo-tag" onclick="fd('tesorero','tesoro123')">Tesorero Principal</span>
-        <span class="demo-tag" onclick="fd('tscentral','sede123')">Tesorero Sede</span>
-        <span class="demo-tag" onclick="fd('tsfilial1','filial123')">Tesorero Filial</span>
-        <span class="demo-tag" onclick="fd('contador','conta123')">Contador</span>
       </div>
     </div>
   </div>
@@ -892,10 +889,8 @@ function initDB(){
 
 // Usuarios fijos — siempre disponibles sin depender del localStorage
 const USUARIOS_FIJOS=[
-  {user:'pastor',    pass:'pastor123', nom:'Pastor Principal',        rol:'pastor',            niv:1, fil:'all'},
-  {user:'tesorero',  pass:'tesoro123', nom:'Tesorero Principal',      rol:'tesorero_principal',niv:2, fil:'all'},
-  {user:'tscentral', pass:'sede123',   nom:'Tesorero Sede Central',   rol:'tesorero_sede',     niv:3, fil:'sede'},
-  {user:'tsfilial1', pass:'filial123', nom:'Tesorero Los Jardines',   rol:'tesorero_filial',   niv:4, fil:'F001'},
+  {user:'pastor',   pass:'pastor123', nom:'Pastor Principal',   rol:'pastor',            niv:1, fil:'all'},
+  {user:'tesorero', pass:'tesoro123', nom:'Tesorero Principal', rol:'tesorero_principal',niv:2, fil:'all'},
 ];
 
 let DB;
