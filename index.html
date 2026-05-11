@@ -400,10 +400,11 @@ tbody td{padding:9px 11px;color:rgba(247,243,233,.8);vertical-align:middle}
         <div class="tb">
           <input class="sb" id="fil-s" placeholder="🔍 Buscar filial..." oninput="renderFil()">
           <button class="btn btn-p" onclick="openFilModal()">+ Nueva Filial</button>
+          <button class="btn btn-d" id="btn-del-fil" onclick="delSelected('fil')" style="display:none">🗑️ Eliminar</button>
         </div>
         <div class="card">
           <div class="card-title">Filiales y Sedes</div>
-          <div class="tw"><table><thead><tr><th>Código</th><th>Nombre</th><th>Pastor</th><th>Tesorero</th><th>Dirección</th><th>Miembros</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="fil-body"></tbody></table></div>
+          <div class="tw"><table><thead><tr><th><input type="checkbox" id="fil-chk-all" onchange="toggleAll('fil-chk',this)" style="cursor:pointer"></th><th>Código</th><th>Nombre</th><th>Pastor</th><th>Tesorero</th><th>Dirección</th><th>Miembros</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="fil-body"></tbody></table></div>
         </div>
       </div>
 
@@ -414,10 +415,11 @@ tbody td{padding:9px 11px;color:rgba(247,243,233,.8);vertical-align:middle}
           <select class="fs" id="miem-ff" onchange="renderMiem()"><option value="">Todas las sedes</option></select>
           <select class="fs" id="miem-fd" onchange="renderMiem()"><option value="">Toda fidelidad</option><option value="fiel">Fiel ≥90%</option><option value="regular">Regular 60-89%</option><option value="irregular">Irregular &lt;60%</option></select>
           <button class="btn btn-p" onclick="openMiemModal()">+ Nuevo Miembro</button>
+          <button class="btn btn-d" id="btn-del-miem" onclick="delSelected('miem')" style="display:none">🗑️ Eliminar</button>
         </div>
         <div class="card">
           <div class="card-title">Registro de Miembros</div>
-          <div class="tw"><table><thead><tr><th>Código RI</th><th>Nombre</th><th>Sede/Filial</th><th>Teléfono</th><th>Diezmos año</th><th>Fidelidad</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="miem-body"></tbody></table></div>
+          <div class="tw"><table><thead><tr><th><input type="checkbox" id="miem-chk-all" onchange="toggleAll('miem-chk',this)" style="cursor:pointer"></th><th>Código RI</th><th>Nombre</th><th>Sede/Filial</th><th>Teléfono</th><th>Diezmos año</th><th>Fidelidad</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="miem-body"></tbody></table></div>
           <div class="pag" id="miem-pag"></div>
         </div>
       </div>
@@ -429,10 +431,11 @@ tbody td{padding:9px 11px;color:rgba(247,243,233,.8);vertical-align:middle}
           <select class="fs" id="vot-fe" onchange="renderVot()"><option value="">Todos los estados</option><option value="pendiente">Pendiente</option><option value="cumplido">Cumplido</option><option value="vencido">Vencido</option></select>
           <select class="fs" id="vot-ff" onchange="renderVot()"><option value="">Todas las sedes</option></select>
           <button class="btn btn-p" onclick="openVotModal()">+ Nuevo Voto</button>
+          <button class="btn btn-d" id="btn-del-vot" onclick="delSelected('vot')" style="display:none">🗑️ Eliminar</button>
         </div>
         <div class="card">
           <div class="card-title">Registro de Votos</div>
-          <div class="tw"><table><thead><tr><th>#</th><th>Miembro</th><th>Descripción</th><th>Monto</th><th>Fecha Límite</th><th>Sede/Filial</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="vot-body"></tbody></table></div>
+          <div class="tw"><table><thead><tr><th><input type="checkbox" id="vot-chk-all" onchange="toggleAll('vot-chk',this)" style="cursor:pointer"></th><th>#</th><th>Miembro</th><th>Descripción</th><th>Monto</th><th>Fecha Límite</th><th>Sede/Filial</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="vot-body"></tbody></table></div>
         </div>
       </div>
 
@@ -1154,11 +1157,13 @@ function delMov(b){
 function renderFil(){
   const s=document.getElementById('fil-s').value.toLowerCase();
   let fils=DB.filiales.filter(f=>!s||f.nom.toLowerCase().includes(s)||f.cod.toLowerCase().includes(s)||f.pastor.toLowerCase().includes(s));
+  var filAllChk=document.getElementById('fil-chk-all');if(filAllChk)filAllChk.checked=false;
+  var filDelBtn=document.getElementById('btn-del-fil');if(filDelBtn)filDelBtn.style.display='none';
   const tb=document.getElementById('fil-body');
   if(!fils.length){tb.innerHTML='<tr><td colspan="8"><div class="empty"><span class="ic">🏛️</span><p>No hay filiales</p></div></td></tr>';return;}
   tb.innerHTML=fils.map(f=>{
     const nm=DB.miembros.filter(m=>m.fil===f.id).length;
-    return`<tr><td style="font-family:'Cinzel',serif;color:var(--gold-light);font-size:11px">${f.cod}</td><td><strong>${f.nom}</strong></td><td>${f.pastor}</td><td>${f.tes}</td><td style="font-size:11px">${f.dir}</td><td style="text-align:center">${nm}</td><td><span class="badge b-act">Activa</span></td><td><button class="btn btn-sm btn-s" onclick="edFil('${f.id}')">✏️</button>${f.id!=='sede'?` <button class="btn btn-sm btn-d" onclick="delFil('${f.id}')">🗑️</button>`:''}</td></tr>`;
+    return`<tr><td><input type="checkbox" class="fil-chk" data-id="${f.id}" onchange="updBulkBtn('fil')" style="cursor:pointer"></td><td style="font-family:'Cinzel',serif;color:var(--gold-light);font-size:11px">${f.cod}</td><td><strong>${f.nom}</strong></td><td>${f.pastor}</td><td>${f.tes}</td><td style="font-size:11px">${f.dir}</td><td style="text-align:center">${nm}</td><td><span class="badge b-act">Activa</span></td><td><button class="btn btn-sm btn-s" onclick="edFil('${f.id}')">✏️</button>${f.id!=='sede'?` <button class="btn btn-sm btn-d" onclick="delFil('${f.id}')">🗑️</button>`:''}</td></tr>`;
   }).join('');
 }
 
@@ -1238,6 +1243,8 @@ function renderMiem(){
   else if(fd3==='regular')ms=ms.filter(m=>m.fid>=60&&m.fid<90);
   else if(fd3==='irregular')ms=ms.filter(m=>m.fid<60);
   const pgs=Math.ceil(ms.length/MMP)||1;if(miemPg>pgs)miemPg=1;
+  var miemAllChk=document.getElementById('miem-chk-all');if(miemAllChk)miemAllChk.checked=false;
+  var miemDelBtn=document.getElementById('btn-del-miem');if(miemDelBtn)miemDelBtn.style.display='none';
   const sl=ms.slice((miemPg-1)*MMP,miemPg*MMP);
   const tb=document.getElementById('miem-body');
   if(!sl.length){tb.innerHTML='<tr><td colspan="8"><div class="empty"><span class="ic">👥</span><p>No hay miembros</p></div></td></tr>';return;}
@@ -1245,7 +1252,7 @@ function renderMiem(){
     const dz=DB.movimientos.filter(mv=>mv.tipo==='ingreso'&&mv.cat==='Diezmos'&&mv.miem===m.id&&mv.fec.startsWith(y+'-')).reduce((a,mv)=>a+Number(mv.mon),0);
     const fc=m.fid>=90?'#2ECC71':m.fid>=60?'#F39C12':'#E74C3C';
     const fb=m.fid>=90?'b-fiel':m.fid>=60?'b-pend':'b-ven';
-    return`<tr><td style="font-family:'Cinzel',serif;color:var(--gold-light);font-size:11px">${m.cod}</td><td><strong>${m.nom} ${m.ape}</strong></td><td style="font-size:10px">${gfn(m.fil)}</td><td style="font-size:10px">${m.tel||'—'}</td><td>${dz>0?'<span class="amt-i">'+fmt(dz)+'</span>':'<span style="color:rgba(247,243,233,.3)">S/. 0.00</span>'}</td><td><div style="display:flex;align-items:center;gap:6px"><span class="badge ${fb}">${m.fid}%</span><div class="fid-bar" style="width:55px"><div class="fid-fill" style="width:${m.fid}%;background:${fc}"></div></div></div></td><td><span class="badge b-act">Activo</span></td><td><button class="btn btn-sm btn-s" onclick="edMiem('${m.id}')">✏️</button> <button class="btn btn-sm btn-d" onclick="delMiem('${m.id}')">🗑️</button></td></tr>`;
+    return`<tr><td><input type="checkbox" class="miem-chk" data-id="${m.id}" onchange="updBulkBtn('miem')" style="cursor:pointer"></td><td style="font-family:'Cinzel',serif;color:var(--gold-light);font-size:11px">${m.cod}</td><td><strong>${m.nom} ${m.ape}</strong></td><td style="font-size:10px">${gfn(m.fil)}</td><td style="font-size:10px">${m.tel||'—'}</td><td>${dz>0?'<span class="amt-i">'+fmt(dz)+'</span>':'<span style="color:rgba(247,243,233,.3)">S/. 0.00</span>'}</td><td><div style="display:flex;align-items:center;gap:6px"><span class="badge ${fb}">${m.fid}%</span><div class="fid-bar" style="width:55px"><div class="fid-fill" style="width:${m.fid}%;background:${fc}"></div></div></div></td><td><span class="badge b-act">Activo</span></td><td><button class="btn btn-sm btn-s" onclick="edMiem('${m.id}')">✏️</button> <button class="btn btn-sm btn-d" onclick="delMiem('${m.id}')">🗑️</button></td></tr>`;
   }).join('');
   const pag=document.getElementById('miem-pag');pag.innerHTML='';
   if(pgs>1)for(let p=1;p<=pgs;p++){const b=document.createElement('button');b.className='pg-btn'+(p===miemPg?' active':'');b.textContent=p;b.onclick=()=>{miemPg=p;renderMiem();};pag.appendChild(b);}
@@ -1303,9 +1310,11 @@ function renderVot(){
   if(s)vs=vs.filter(v=>gmn(v.miem).toLowerCase().includes(s)||v.desc.toLowerCase().includes(s));
   if(fe)vs=vs.filter(v=>v.est===fe);
   if(ff&&ff!=='all')vs=vs.filter(v=>v.fil===ff);
+  var votAllChk=document.getElementById('vot-chk-all');if(votAllChk)votAllChk.checked=false;
+  var votDelBtn=document.getElementById('btn-del-vot');if(votDelBtn)votDelBtn.style.display='none';
   const tb=document.getElementById('vot-body');
   if(!vs.length){tb.innerHTML='<tr><td colspan="8"><div class="empty"><span class="ic">🙏</span><p>No hay votos</p></div></td></tr>';return;}
-  tb.innerHTML=vs.map((v,i)=>`<tr><td style="color:rgba(247,243,233,.35);font-size:10px">${i+1}</td><td>${gmn(v.miem)}</td><td>${v.desc}</td><td class="amt-i">${fmt(v.mon)}</td><td>${fd2(v.lim)}</td><td style="font-size:10px">${gfn(v.fil)}</td><td><span class="badge b-${v.est==='cumplido'?'cum':v.est==='vencido'?'ven':'pend'}">${v.est.charAt(0).toUpperCase()+v.est.slice(1)}</span></td><td><button class="btn btn-sm btn-s" onclick="edVot('${v.id}')">✏️</button> <button class="btn btn-sm btn-d" onclick="delVot('${v.id}')">🗑️</button></td></tr>`).join('');
+  tb.innerHTML=vs.map((v,i)=>`<tr><td><input type="checkbox" class="vot-chk" data-id="${v.id}" onchange="updBulkBtn('vot')" style="cursor:pointer"></td><td style="color:rgba(247,243,233,.35);font-size:10px">${i+1}</td><td>${gmn(v.miem)}</td><td>${v.desc}</td><td class="amt-i">${fmt(v.mon)}</td><td>${fd2(v.lim)}</td><td style="font-size:10px">${gfn(v.fil)}</td><td><span class="badge b-${v.est==='cumplido'?'cum':v.est==='vencido'?'ven':'pend'}">${v.est.charAt(0).toUpperCase()+v.est.slice(1)}</span></td><td><button class="btn btn-sm btn-s" onclick="edVot('${v.id}')">✏️</button> <button class="btn btn-sm btn-d" onclick="delVot('${v.id}')">🗑️</button></td></tr>`).join('');
 }
 function openVotModal(id=null){
   EID=id;popMiem('v-miem');
@@ -1760,36 +1769,64 @@ function delUsr(btn){
 }
 
 // ===================== BULK DELETE =====================
-function toggleAllMov(chk){
-  document.querySelectorAll('.mov-chk').forEach(function(c){c.checked=chk.checked;});
-  updBulkBtn();
+function toggleAll(cls,chk){
+  document.querySelectorAll('.'+cls).forEach(function(c){c.checked=chk.checked;});
+  updBulkBtn(cls.replace('-chk',''));
 }
 
-function updBulkBtn(){
-  var count=document.querySelectorAll('.mov-chk:checked').length;
-  var btn=document.getElementById('btn-del-selected');
+function updBulkBtn(mod){
+  var cls=mod+'-chk';
+  var count=document.querySelectorAll('.'+cls+':checked').length;
+  var btnId=mod==='mov'?'btn-del-selected':'btn-del-'+mod;
+  var btn=document.getElementById(btnId);
   if(btn){
     btn.style.display=count>0?'inline-flex':'none';
     btn.textContent='🗑️ Eliminar ('+count+')';
   }
 }
 
-function delSelectedMov(){
-  var checked=document.querySelectorAll('.mov-chk:checked');
-  if(!checked.length){toast('Selecciona al menos un movimiento','err');return;}
-  if(!confirm('¿Eliminar '+checked.length+' movimiento(s) seleccionado(s)?'))return;
+// Keep old toggleAllMov for backward compat
+function toggleAllMov(chk){toggleAll('mov-chk',chk);}
+
+function delSelected(mod){
+  var cls=mod+'-chk';
+  var checked=document.querySelectorAll('.'+cls+':checked');
+  if(!checked.length){toast('Selecciona al menos un registro','err');return;}
+  var names={mov:'movimiento',miem:'miembro',fil:'filial',vot:'voto'};
+  if(!confirm('¿Eliminar '+checked.length+' '+( names[mod]||mod)+'(s) seleccionado(s)?'))return;
   var ids=[];
   checked.forEach(function(c){ids.push(c.getAttribute('data-id'));});
+
+  var colMap={mov:'movimientos',miem:'miembros',fil:'filiales',vot:'votos'};
+  var col=colMap[mod];
+
   ids.forEach(function(id){
-    DB.movimientos=DB.movimientos.filter(function(m){return m.id!==id;});
-    fbDelete('movimientos',id);
+    if(mod==='mov') DB.movimientos=DB.movimientos.filter(function(m){return m.id!==id;});
+    else if(mod==='miem') DB.miembros=DB.miembros.filter(function(m){return m.id!==id;});
+    else if(mod==='fil'){
+      if(id==='sede'){toast('No se puede eliminar la Sede Central','err');return;}
+      DB.filiales=DB.filiales.filter(function(f){return f.id!==id;});
+    }
+    else if(mod==='vot') DB.votos=DB.votos.filter(function(v){return v.id!==id;});
+    fbDelete(col,id);
   });
+
   try{sd();}catch(e){}
-  var btn=document.getElementById('btn-del-selected');
+
+  var btnId=mod==='mov'?'btn-del-selected':'btn-del-'+mod;
+  var btn=document.getElementById(btnId);
   if(btn)btn.style.display='none';
-  renderMov();
-  toast('Se eliminaron '+ids.length+' movimientos','err');
+
+  if(mod==='mov'){renderMov();}
+  else if(mod==='miem'){renderMiem();}
+  else if(mod==='fil'){renderFil();popFil();}
+  else if(mod==='vot'){renderVot();}
+
+  toast('Se eliminaron '+ids.length+' registro(s)','err');
 }
+
+// Legacy for mov
+function delSelectedMov(){delSelected('mov');}
 
 // ===================== BACKUP =====================
 function renderBackup(){
@@ -1994,13 +2031,13 @@ function startRealtimeSync(){
         var items=[];
         snap.forEach(function(d){
           var item=d.data();
-          // Check localStorage for files saved there (large files)
           if(!item.compFile&&item.hasFile){
             try{var lf=localStorage.getItem('comp_'+item.id);if(lf)item.compFile=lf;}catch(e){}
           }
           items.push(item);
         });
-        if(items.length>0){DB.movimientos=items;try{sd();}catch(e){}}
+        // Always replace (respects deletions)
+        DB.movimientos=items;try{sd();}catch(e){}
       } else if(col === 'filiales'){
         var items=[];snap.forEach(function(d){items.push(d.data());});
         if(items.length>0){DB.filiales=items;try{sd();}catch(e){}}
@@ -2013,11 +2050,17 @@ function startRealtimeSync(){
       } else if(col === 'categorias'){
         snap.forEach(function(d){var c=d.data();if(c&&c.ing)DB.cats=c;try{sd();}catch(e){}});
       } else if(col === 'usuarios'){
-        var items=[];snap.forEach(function(d){items.push(d.data());});
-        items.forEach(function(u){
-          if(!DB.usuarios.find(function(x){return x.user===u.user;}))DB.usuarios.push(u);
-          else{var i=DB.usuarios.findIndex(function(x){return x.user===u.user;});if(i>-1)DB.usuarios[i]=u;}
-        });
+        var fbUsers=[];snap.forEach(function(d){fbUsers.push(d.data());});
+        if(fbUsers.length>0){
+          // Replace completely with Firebase data (this respects deletions)
+          DB.usuarios=fbUsers;
+          // Make sure fixed users are always present
+          USUARIOS_FIJOS.forEach(function(uf){
+            if(!DB.usuarios.find(function(u){return u.user===uf.user;})){
+              DB.usuarios.push({user:uf.user,pass:uf.pass,nom:uf.nom,rol:uf.rol,niv:uf.niv,fil:uf.fil,act:1});
+            }
+          });
+        }
         try{sd();}catch(e){}
       }
 
@@ -2062,9 +2105,12 @@ async function syncFromFirebase(){
     if(results[3]&&results[3].length>0)DB.votos=results[3];
     if(results[4]&&results[4].length>0){var c=results[4][0];if(c&&c.ing)DB.cats=c;}
     if(results[5]&&results[5].length>0){
-      results[5].forEach(function(u){
-        if(!DB.usuarios.find(function(x){return x.user===u.user;}))DB.usuarios.push(u);
-        else{var i=DB.usuarios.findIndex(function(x){return x.user===u.user;});if(i>-1)DB.usuarios[i]=u;}
+      // Replace completely to respect deletions
+      DB.usuarios=results[5];
+      USUARIOS_FIJOS.forEach(function(uf){
+        if(!DB.usuarios.find(function(u){return u.user===uf.user;})){
+          DB.usuarios.push({user:uf.user,pass:uf.pass,nom:uf.nom,rol:uf.rol,niv:uf.niv,fil:uf.fil,act:1});
+        }
       });
     }
     try{sd();}catch(e){}
@@ -2083,36 +2129,64 @@ function hideSyncMsg(){
 }
 
 // ===================== BULK DELETE =====================
-function toggleAllMov(chk){
-  document.querySelectorAll('.mov-chk').forEach(function(c){c.checked=chk.checked;});
-  updBulkBtn();
+function toggleAll(cls,chk){
+  document.querySelectorAll('.'+cls).forEach(function(c){c.checked=chk.checked;});
+  updBulkBtn(cls.replace('-chk',''));
 }
 
-function updBulkBtn(){
-  var count=document.querySelectorAll('.mov-chk:checked').length;
-  var btn=document.getElementById('btn-del-selected');
+function updBulkBtn(mod){
+  var cls=mod+'-chk';
+  var count=document.querySelectorAll('.'+cls+':checked').length;
+  var btnId=mod==='mov'?'btn-del-selected':'btn-del-'+mod;
+  var btn=document.getElementById(btnId);
   if(btn){
     btn.style.display=count>0?'inline-flex':'none';
     btn.textContent='🗑️ Eliminar ('+count+')';
   }
 }
 
-function delSelectedMov(){
-  var checked=document.querySelectorAll('.mov-chk:checked');
-  if(!checked.length){toast('Selecciona al menos un movimiento','err');return;}
-  if(!confirm('¿Eliminar '+checked.length+' movimiento(s) seleccionado(s)?'))return;
+// Keep old toggleAllMov for backward compat
+function toggleAllMov(chk){toggleAll('mov-chk',chk);}
+
+function delSelected(mod){
+  var cls=mod+'-chk';
+  var checked=document.querySelectorAll('.'+cls+':checked');
+  if(!checked.length){toast('Selecciona al menos un registro','err');return;}
+  var names={mov:'movimiento',miem:'miembro',fil:'filial',vot:'voto'};
+  if(!confirm('¿Eliminar '+checked.length+' '+( names[mod]||mod)+'(s) seleccionado(s)?'))return;
   var ids=[];
   checked.forEach(function(c){ids.push(c.getAttribute('data-id'));});
+
+  var colMap={mov:'movimientos',miem:'miembros',fil:'filiales',vot:'votos'};
+  var col=colMap[mod];
+
   ids.forEach(function(id){
-    DB.movimientos=DB.movimientos.filter(function(m){return m.id!==id;});
-    fbDelete('movimientos',id);
+    if(mod==='mov') DB.movimientos=DB.movimientos.filter(function(m){return m.id!==id;});
+    else if(mod==='miem') DB.miembros=DB.miembros.filter(function(m){return m.id!==id;});
+    else if(mod==='fil'){
+      if(id==='sede'){toast('No se puede eliminar la Sede Central','err');return;}
+      DB.filiales=DB.filiales.filter(function(f){return f.id!==id;});
+    }
+    else if(mod==='vot') DB.votos=DB.votos.filter(function(v){return v.id!==id;});
+    fbDelete(col,id);
   });
+
   try{sd();}catch(e){}
-  var btn=document.getElementById('btn-del-selected');
+
+  var btnId=mod==='mov'?'btn-del-selected':'btn-del-'+mod;
+  var btn=document.getElementById(btnId);
   if(btn)btn.style.display='none';
-  renderMov();
-  toast('Se eliminaron '+ids.length+' movimientos','err');
+
+  if(mod==='mov'){renderMov();}
+  else if(mod==='miem'){renderMiem();}
+  else if(mod==='fil'){renderFil();popFil();}
+  else if(mod==='vot'){renderVot();}
+
+  toast('Se eliminaron '+ids.length+' registro(s)','err');
 }
+
+// Legacy for mov
+function delSelectedMov(){delSelected('mov');}
 
 // ===================== BACKUP =====================
 function renderBackup(){
