@@ -692,6 +692,9 @@ tbody td{padding:9px 11px;color:rgba(247,243,233,.8);vertical-align:middle}
     <div class="modal-hd"><div class="modal-tit" id="mov-tit">Nuevo Movimiento</div><button class="modal-x" onclick="cm('ov-mov')">✕</button></div>
     <div class="fr"><div class="fld"><label>Tipo</label><select id="m-tipo" onchange="updCats()"><option value="ingreso">Ingreso</option><option value="egreso">Egreso</option></select></div><div class="fld"><label>Fecha</label><input type="date" id="m-fecha"></div></div>
     <div class="fr"><div class="fld"><label>Categoría</label><select id="m-cat"></select></div><div class="fld"><label>Monto (S/.)</label><input type="number" id="m-monto" placeholder="0.00" step="0.01" min="0"></div></div>
+    <div id="banco-auto-note" style="display:none;background:rgba(46,134,171,.1);border:1px solid rgba(46,134,171,.3);border-radius:6px;padding:8px 12px;font-size:12px;color:#5DADE2;align-items:center;gap:8px;margin-bottom:8px">
+      🏦 <strong>Este egreso creará automáticamente un depósito en el módulo Banco</strong>
+    </div>
     <div class="fr fr1"><div class="fld"><label>Descripción</label><input type="text" id="m-desc" placeholder="Descripción del movimiento"></div></div>
     <div class="fr"><div class="fld"><label>Método de Pago</label><select id="m-met"><option value="efectivo">Efectivo</option><option value="transferencia">Transferencia</option><option value="yape">Yape</option><option value="plin">Plin</option><option value="deposito">Depósito bancario</option><option value="cheque">Cheque</option></select></div><div class="fld"><label>N° Comprobante</label><input type="text" id="m-comp" placeholder="Opcional"></div></div>
     <div class="fr"><div class="fld"><label>Adjuntar Comprobante (JPG, PNG, PDF)</label><input type="file" id="m-comp-file" accept=".jpg,.jpeg,.png,.pdf" style="padding:6px;background:rgba(13,27,42,.7);border:1px solid rgba(201,168,76,.2);border-radius:6px;color:var(--cream);font-size:12px;width:100%"></div><div class="fld" id="m-comp-preview-box" style="display:flex;align-items:center"><div id="m-comp-preview" style="font-size:12px;color:var(--gold-light)"></div></div></div>
@@ -858,7 +861,7 @@ function initDB(){
       {id:'V003',miem:'RI-003',fil:'F001',desc:'Ofrenda por bendición en negocios',mon:200,lim:'2024-10-01',est:'vencido',cum:'',obs:'',fec:'2024-07-01'},
     ],
     cats:{ing:['Diezmos','Ofrendas','Primicias','Donativos','Ofrendas Especiales','Votos','Misiones'],
-          eg:['Servicios Básicos','Mantenimiento','Evangelismo','Material de Oficina','Transporte','Alimentación','Construcción','Donaciones','Gastos Administrativos']},
+          eg:['Depósito Bancario','Servicios Básicos','Mantenimiento','Evangelismo','Material de Oficina','Transporte','Alimentación','Construcción','Donaciones','Gastos Administrativos']},
     usuarios:[
       {user:'pastor',pass:'pastor123',nom:'Pastor Principal',rol:'pastor',niv:1,fil:'all'},
       {user:'tesorero',pass:'tesoro123',nom:'Tesorero Principal',rol:'tesorero_principal',niv:2,fil:'all'},
@@ -1113,7 +1116,7 @@ function renderMov(){
       +'<td><input type="checkbox" class="mov-chk" data-id="'+m.id+'" onchange="updBulkBtn()" style="cursor:pointer"></td>'
       +'<td style="color:rgba(247,243,233,.35);font-size:10px">'+(((movPg-1)*MPP)+i+1)+'</td>'
       +'<td>'+fd2(m.fec)+'</td>'
-      +'<td>'+m.desc+'</td>'
+      +'<td>'+m.desc+(m.cat==='Depósito Bancario'?'&nbsp;<span style="font-size:9px;background:rgba(46,134,171,.2);color:#5DADE2;padding:1px 5px;border-radius:3px;border:1px solid rgba(46,134,171,.3)">🏦 BANCO</span>':'')+'</td>'
       +'<td>'+m.cat+'</td>'
       +'<td class="hide-mobile" style="font-size:10px">'+gmn(m.miem)+'</td>'
       +'<td class="hide-mobile" style="font-size:10px">'+m.met+'</td>'
@@ -1233,6 +1236,31 @@ function savMov(){
     toast((EID?'Movimiento actualizado':'Movimiento registrado')+' (comprobante guardado localmente)');
   } else {
     fbSave('movimientos', obj.id, obj);
+  }
+
+  // Auto-link to Banco when category is Deposito Bancario
+  if(obj.cat==='Depósito Bancario'&&obj.tipo==='egreso'){
+    if(!DB.banco)DB.banco=[];
+    var existeBanco=DB.banco.find(function(b){return b.movId===obj.id;});
+    if(!existeBanco){
+      var bancObj={id:gid('BC'),tipo:'deposito',fec:obj.fec,mon:obj.mon,
+        desc:'Depósito desde '+gfn(obj.fil)+(obj.desc?' — '+obj.desc:''),
+        fil:obj.fil,comp:obj.comp||'',compFile:obj.compFile||'',
+        obs:'Generado automáticamente desde Movimientos',
+        movId:obj.id,reg:CU?CU.nom:'',regFec:today()};
+      DB.banco.push(bancObj);
+      try{sd();}catch(e){}
+      fbSave('banco',bancObj.id,bancObj);
+      toast('Egreso registrado y depósito bancario creado ✅');
+    } else {
+      existeBanco.mon=obj.mon;existeBanco.fec=obj.fec;
+      existeBanco.desc='Depósito desde '+gfn(obj.fil)+(obj.desc?' — '+obj.desc:'');
+      existeBanco.comp=obj.comp||'';existeBanco.compFile=obj.compFile||'';
+      try{sd();}catch(e){}
+      fbSave('banco',existeBanco.id,existeBanco);
+      toast('Movimiento y depósito bancario actualizados ✅');
+    }
+  } else {
     toast(EID?'Movimiento actualizado':'Movimiento registrado');
   }
   cm('ov-mov');
@@ -1262,6 +1290,13 @@ function edMov(b){openMovModal(b&&b.getAttribute?b.getAttribute('data-id'):b);}
 function delMov(b){
   var id=b&&b.getAttribute?b.getAttribute('data-id'):b;
   if(!confirm('¿Eliminar este movimiento?'))return;
+  // Check if this movimiento has a linked banco entry
+  var linkedBanco=DB.banco?DB.banco.find(function(bn){return bn.movId===id;}):null;
+  if(linkedBanco){
+    if(!confirm('Este movimiento tiene un depósito bancario vinculado. ¿Eliminar también el depósito bancario?'))return;
+    DB.banco=DB.banco.filter(function(b){return b.movId!==id;});
+    fbDelete('banco',linkedBanco.id);
+  }
   DB.movimientos=DB.movimientos.filter(function(m){return m.id!==id;});
   try{sd();}catch(e){}
   fbDelete('movimientos',id);
@@ -2145,7 +2180,7 @@ function renderBanco(){
       +'<td style="color:rgba(247,243,233,.35);font-size:10px">'+(((bancoPg-1)*BANCO_PP)+i+1)+'</td>'
       +'<td>'+fd2(m.fec)+'</td>'
       +'<td>'+tipoCell+'</td>'
-      +'<td>'+m.desc+'</td>'
+      +'<td>'+m.desc+(m.cat==='Depósito Bancario'?'&nbsp;<span style="font-size:9px;background:rgba(46,134,171,.2);color:#5DADE2;padding:1px 5px;border-radius:3px;border:1px solid rgba(46,134,171,.3)">🏦 BANCO</span>':'')+'</td>'
       +'<td style="font-size:10px">'+gfn(m.fil)+'</td>'
       +'<td>'+montoCell+'</td>'
       +(isAdmin?'<td>'+saldoCell+'</td>':'')
@@ -2717,7 +2752,7 @@ function renderBanco(){
       +'<td style="color:rgba(247,243,233,.35);font-size:10px">'+(((bancoPg-1)*BANCO_PP)+i+1)+'</td>'
       +'<td>'+fd2(m.fec)+'</td>'
       +'<td>'+tipoCell+'</td>'
-      +'<td>'+m.desc+'</td>'
+      +'<td>'+m.desc+(m.cat==='Depósito Bancario'?'&nbsp;<span style="font-size:9px;background:rgba(46,134,171,.2);color:#5DADE2;padding:1px 5px;border-radius:3px;border:1px solid rgba(46,134,171,.3)">🏦 BANCO</span>':'')+'</td>'
       +'<td style="font-size:10px">'+gfn(m.fil)+'</td>'
       +'<td>'+montoCell+'</td>'
       +(isAdmin?'<td>'+saldoCell+'</td>':'')
