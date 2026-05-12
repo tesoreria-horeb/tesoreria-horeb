@@ -743,7 +743,7 @@ tbody td{padding:9px 11px;color:rgba(247,243,233,.8);vertical-align:middle}
           <div id="m-miem-selected" style="font-size:11px;color:var(--gold-light);margin-top:4px;min-height:16px"></div>
         </div></div>
     <div class="fr fr1"><div class="fld"><label>Observaciones</label><textarea id="m-obs" placeholder="Notas adicionales..."></textarea></div></div>
-    <div class="modal-ft"><button class="btn btn-s" onclick="cm('ov-mov')">Cancelar</button><button class="btn btn-p" onclick="savMov()">💾 Guardar</button></div>
+    <div class="modal-ft"><button class="btn btn-s" onclick="cm('ov-mov')">Cancelar</button><button class="btn btn-g" onclick="savMov(true)">💾 Guardar y Continuar</button><button class="btn btn-p" onclick="savMov()">💾 Guardar</button></div>
   </div>
 </div>
 
@@ -1301,7 +1301,7 @@ function openMovModal(id){
   om('ov-mov');
 }
 
-function savMov(){
+function savMov(keepOpen){
   var tipo=document.getElementById('m-tipo').value;
   var fec=document.getElementById('m-fecha').value;
   var monStr=document.getElementById('m-monto').value;
@@ -1392,7 +1392,25 @@ function savMov(){
   } else {
     toast(EID?'Movimiento actualizado':'Movimiento registrado');
   }
-  cm('ov-mov');
+  if(!keepOpen){
+    cm('ov-mov');
+  } else {
+    // Keep open - reset form for next entry but keep tipo, cat and fil
+    var tipoVal=document.getElementById('m-tipo').value;
+    var catVal=document.getElementById('m-cat').value;
+    var filVal=document.getElementById('m-fil').value;
+    var metVal=document.getElementById('m-met').value;
+    openMovModal();
+    // Restore common fields
+    document.getElementById('m-tipo').value=tipoVal;
+    updCats();
+    document.getElementById('m-cat').value=catVal;
+    document.getElementById('m-fil').value=filVal;
+    document.getElementById('m-met').value=metVal;
+    // Set today's date
+    document.getElementById('m-fecha').value=today();
+    checkBancoNote();
+  }
   renderMov();
 }
 
