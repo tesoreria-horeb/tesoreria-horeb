@@ -731,7 +731,7 @@ tbody td{padding:9px 11px;color:rgba(247,243,233,.8);vertical-align:middle}
       🏦 <strong>Este egreso creará automáticamente un depósito en el módulo Banco</strong>
     </div>
     <div class="fr fr1"><div class="fld"><label>Descripción</label><input type="text" id="m-desc" placeholder="Descripción del movimiento"></div></div>
-    <div class="fr"><div class="fld"><label>Método de Pago</label><select id="m-met"><option value="efectivo">Efectivo</option><option value="transferencia">Transferencia</option><option value="yape">Yape</option><option value="plin">Plin</option><option value="deposito">Depósito bancario</option><option value="cheque">Cheque</option></select></div><div class="fld"><label>N° Comprobante</label><input type="text" id="m-comp" placeholder="Opcional"></div></div>
+    <div class="fr"><div class="fld"><label>Método de Pago</label><select id="m-met"><option value="efectivo">Efectivo</option><option value="transferencia">Transferencia</option><option value="yape">Yape</option><option value="plin">Plin</option><option value="deposito">Depósito bancario</option><option value="cheque">Cheque</option><option value="pos">Máquina POS</option><option value="lukita">Lukita</option><option value="tunki">Tunki</option></select></div><div class="fld"><label>N° Comprobante</label><input type="text" id="m-comp" placeholder="Opcional"></div></div>
     <div class="fr"><div class="fld"><label>Adjuntar Comprobante (JPG, PNG, PDF)</label><input type="file" id="m-comp-file" accept=".jpg,.jpeg,.png,.pdf" style="padding:6px;background:rgba(13,27,42,.7);border:1px solid rgba(201,168,76,.2);border-radius:6px;color:var(--cream);font-size:12px;width:100%"></div><div class="fld" id="m-comp-preview-box" style="display:flex;align-items:center"><div id="m-comp-preview" style="font-size:12px;color:var(--gold-light)"></div></div></div>
     <div class="fr"><div class="fld"><label>Sede / Filial</label><select id="m-fil"></select></div><div class="fld" style="position:relative">
           <label>Miembro (si aplica)</label>
@@ -1369,7 +1369,7 @@ function savMov(keepOpen){
   }
 
   // Auto-link to Banco: by category OR payment method
-  var metodosBanco=['transferencia','yape','plin','deposito'];
+  var metodosBanco=['transferencia','yape','plin','deposito','pos','lukita','tunki'];
   var esBanco=(obj.cat==='Depósito Bancario'&&obj.tipo==='egreso')
     ||(obj.tipo==='ingreso'&&metodosBanco.indexOf(obj.met)>-1)
     ||(obj.tipo==='egreso'&&metodosBanco.indexOf(obj.met)>-1&&obj.cat!=='Depósito Bancario');
