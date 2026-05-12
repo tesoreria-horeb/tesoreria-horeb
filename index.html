@@ -1238,7 +1238,7 @@ function renderMov(){
       +'<td class="hide-mobile" style="font-size:10px">'+gmn(m.miem)+'</td>'
       +'<td class="hide-mobile" style="font-size:10px">'+m.met+'</td>'
       +'<td><span class="badge b-'+(m.tipo==='ingreso'?'ing':'eg')+'">'+(m.tipo==='ingreso'?'Ingreso':'Egreso')+'</span></td>'
-      +'<td class="amt-'+(m.tipo==='ingreso'?'i':'e')+'">'+fmt(m.mon)+'</td>'
+      +'<td class="amt-'+(m.tipo==='ingreso'?'i':'e')+'">'+(m.moneda==='USD'?'$ ':'S/. ')+Number(m.mon).toFixed(2)+'</td>'
       +'<td class="hide-mobile">'+compCell+'</td>'
       +'<td class="hide-mobile" style="font-size:10px">'+gfn(m.fil)+'</td>'
       +'<td><button class="btn btn-sm btn-s" onclick="edMov(this)" data-id="'+m.id+'">✏️</button> <button class="btn btn-sm btn-d" onclick="delMov(this)" data-id="'+m.id+'">🗑️</button></td>'
