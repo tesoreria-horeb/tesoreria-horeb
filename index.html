@@ -357,6 +357,19 @@ tbody td{padding:9px 11px;color:rgba(247,243,233,.8);vertical-align:middle}
 
       <!-- DASHBOARD -->
       <div class="mod active" id="mod-dashboard">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+          <span style="font-size:12px;color:rgba(247,243,233,.5)">Resumen de:</span>
+          <select id="dash-mes" onchange="renderDash()" class="fs" style="width:140px">
+            <option value="0">Mes actual</option>
+            <option value="1">Enero</option><option value="2">Febrero</option>
+            <option value="3">Marzo</option><option value="4">Abril</option>
+            <option value="5">Mayo</option><option value="6">Junio</option>
+            <option value="7">Julio</option><option value="8">Agosto</option>
+            <option value="9">Septiembre</option><option value="10">Octubre</option>
+            <option value="11">Noviembre</option><option value="12">Diciembre</option>
+          </select>
+          <select id="dash-anio" onchange="renderDash()" class="fs" style="width:100px"></select>
+        </div>
         <div class="stat-grid" id="dash-stats"></div>
         <div class="charts-grid">
           <div class="card">
@@ -1106,7 +1119,7 @@ function popFil(){
 
 function popYrs(){
   const yrs=[];for(let y=2020;y<=new Date().getFullYear()+1;y++)yrs.push(y);
-  ['ch-year','rc-anio','rcon-anio','rcomp-a1','rcomp-a2','rdz-anio','rfid-anio','mov-fa','rban-anio'].forEach(sid=>{
+  ['ch-year','rc-anio','rcon-anio','rcomp-a1','rcomp-a2','rdz-anio','rfid-anio','mov-fa','rban-anio','dash-anio'].forEach(sid=>{
     const sel=document.getElementById(sid);if(!sel)return;
     sel.innerHTML='';yrs.forEach(y=>{const o=document.createElement('option');o.value=y;o.textContent=y;sel.appendChild(o);});
     sel.value=new Date().getFullYear();
@@ -1159,19 +1172,30 @@ function calcFid(mid,y){
 let chBar=null,chDona=null,cCompCharts=[];
 
 function renderDash(){
-  const movs=gAccMov();const now=new Date();const curM=now.getMonth()+1;const curY=now.getFullYear();
+  const movs=gAccMov();const now=new Date();
+  const selMes=parseInt((document.getElementById('dash-mes')||{value:'0'}).value)||0;
+  const selAnio=parseInt((document.getElementById('dash-anio')||{value:'0'}).value)||now.getFullYear();
+  const curM=selMes>0?selMes:now.getMonth()+1;
+  const curY=selAnio;
+  const mesLabel=selMes>0?['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'][selMes-1]+' '+curY:'Mes actual';
   const cm2=movs.filter(m=>{const[y,mo]=m.fec.split('-').map(Number);return y===curY&&mo===curM;});
   const ing=cm2.filter(m=>m.tipo==='ingreso'&&(m.moneda||'PEN')==='PEN').reduce((a,m)=>a+Number(m.mon),0);
   const eg=cm2.filter(m=>m.tipo==='egreso'&&(m.moneda||'PEN')==='PEN').reduce((a,m)=>a+Number(m.mon),0);
+  const ingUSD=cm2.filter(m=>m.tipo==='ingreso'&&m.moneda==='USD').reduce((a,m)=>a+Number(m.mon),0);
+  const egUSD=cm2.filter(m=>m.tipo==='egreso'&&m.moneda==='USD').reduce((a,m)=>a+Number(m.mon),0);
   document.getElementById('dash-stats').innerHTML=`
-    <div class="stat-card sc-ing"><div class="stat-lbl">Ingresos del Mes</div><div class="stat-val ing">${fmt(ing)}</div><div class="stat-sub">Mes actual</div></div>
-    <div class="stat-card sc-eg"><div class="stat-lbl">Egresos del Mes</div><div class="stat-val eg">${fmt(eg)}</div><div class="stat-sub">Mes actual</div></div>
-    <div class="stat-card sc-bal"><div class="stat-lbl">Balance del Mes</div><div class="stat-val bal">${fmt(ing-eg)}</div><div class="stat-sub">${ing-eg>=0?'Superávit':'Déficit'}</div></div>
+    <div class="stat-card sc-ing"><div class="stat-lbl">Ingresos del Mes</div><div class="stat-val ing">${fmt(ing)}</div><div class="stat-sub">${ingUSD>0?'$ '+ingUSD.toFixed(2)+' | ':''}${mesLabel}</div></div>
+    <div class="stat-card sc-eg"><div class="stat-lbl">Egresos del Mes</div><div class="stat-val eg">${fmt(eg)}</div><div class="stat-sub">${egUSD>0?'$ '+egUSD.toFixed(2)+' | ':''}${mesLabel}</div></div>
+    <div class="stat-card sc-bal"><div class="stat-lbl">Balance del Mes</div><div class="stat-val bal">${fmt(ing-eg)}</div><div class="stat-sub">${(ingUSD||egUSD)?'$ '+(ingUSD-egUSD).toFixed(2)+' | ':''}${ing-eg>=0?'Superávit':'Déficit'}</div></div>
     <div class="stat-card sc-mem"><div class="stat-lbl">Total Miembros</div><div class="stat-val" style="color:#5DADE2">${gAccMiem().length}</div><div class="stat-sub">Registrados</div></div>`;
   // bar chart
   const mn=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-  const lbls=[],ingD=[],egD=[];
-  for(let i=5;i>=0;i--){const d=new Date(curY,now.getMonth()-i,1);lbls.push(mn[d.getMonth()]+' '+d.getFullYear());const mm=movs.filter(m=>{const[y,mo]=m.fec.split('-').map(Number);return y===d.getFullYear()&&mo===d.getMonth()+1;});ingD.push(mm.filter(m=>m.tipo==='ingreso'&&(m.moneda||'PEN')==='PEN').reduce((a,m)=>a+Number(m.mon),0));egD.push(mm.filter(m=>m.tipo==='egreso'&&(m.moneda||'PEN')==='PEN').reduce((a,m)=>a+Number(m.mon),0));}
+  const lbls=[],ingD=[],egD=[],ingDUSD=[];
+  for(let i=5;i>=0;i--){const d=new Date(curY,now.getMonth()-i,1);lbls.push(mn[d.getMonth()]+' '+d.getFullYear());const mm=movs.filter(m=>{const[y,mo]=m.fec.split('-').map(Number);return y===d.getFullYear()&&mo===d.getMonth()+1;});var ingPEN=mm.filter(m=>m.tipo==='ingreso'&&(m.moneda||'PEN')==='PEN').reduce((a,m)=>a+Number(m.mon),0);
+    var ingUSDm=mm.filter(m=>m.tipo==='ingreso'&&m.moneda==='USD').reduce((a,m)=>a+Number(m.mon),0);
+    var egPEN=mm.filter(m=>m.tipo==='egreso'&&(m.moneda||'PEN')==='PEN').reduce((a,m)=>a+Number(m.mon),0);
+    ingD.push(ingPEN);egD.push(egPEN);
+    ingDUSD.push(ingUSDm);}
   if(chBar)chBar.destroy();
   chBar=new Chart(document.getElementById('ch-bar'),{type:'bar',data:{labels:lbls,datasets:[{label:'Ingresos',data:ingD,backgroundColor:'rgba(46,204,113,.6)',borderColor:'rgba(46,204,113,1)',borderWidth:1,borderRadius:3},{label:'Egresos',data:egD,backgroundColor:'rgba(231,76,60,.6)',borderColor:'rgba(231,76,60,1)',borderWidth:1,borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'rgba(247,243,233,.7)',font:{size:10}}}},scales:{x:{ticks:{color:'rgba(247,243,233,.45)',font:{size:9}},grid:{color:'rgba(255,255,255,.04)'}},y:{ticks:{color:'rgba(247,243,233,.45)',font:{size:9},callback:v=>'S/.'+v.toLocaleString()},grid:{color:'rgba(255,255,255,.04)'}}}}});
   // dona
