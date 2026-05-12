@@ -1204,6 +1204,12 @@ function renderMov(){
   const ti=movs.filter(m=>m.tipo==='ingreso').reduce((a,m)=>a+Number(m.mon),0);
   const te=movs.filter(m=>m.tipo==='egreso').reduce((a,m)=>a+Number(m.mon),0);
   document.getElementById('mov-tot').textContent=`Ingresos: ${fmt(ti)} | Egresos: ${fmt(te)} | Balance: ${fmt(ti-te)}`;
+  // Sort: by date DESC, then by timestamp DESC (last registered first)
+  movs.sort(function(a,b){
+    var dateDiff=b.fec.localeCompare(a.fec);
+    if(dateDiff!==0)return dateDiff;
+    return (b.ts||0)-(a.ts||0);
+  });
   const pgs=Math.ceil(movs.length/MPP)||1;if(movPg>pgs)movPg=1;
   const sl=movs.slice((movPg-1)*MPP,movPg*MPP);
   const tb=document.getElementById('mov-body');
@@ -1423,6 +1429,11 @@ function savMov(keepOpen){
     var md=document.getElementById('m-desc');
     if(md)md.value='';
     checkBancoNote();
+    // Focus on fecha field
+    setTimeout(function(){
+      var fec=document.getElementById('m-fecha');
+      if(fec)fec.focus();
+    },100);
   }
   renderMov();
 }
@@ -1902,11 +1913,7 @@ function genComp(){
   var a1=parseInt(document.getElementById('rcomp-a1').value);
   var a2=parseInt(document.getElementById('rcomp-a2').value);
   if(a1===a2){toast('Seleccione años diferentes','err');return;}
-  var movs=gAccMov().slice().sort(function(a,b){
-    var dateDiff=b.fec.localeCompare(a.fec);
-    if(dateDiff!==0)return dateDiff;
-    return (b.ts||0)-(a.ts||0);
-  });
+  var movs=gAccMov();
   function gd(y){
     return MESES.map(function(_,i){
       var mm=movs.filter(function(m){var yr=parseInt(m.fec.split('-')[0]),mo=parseInt(m.fec.split('-')[1]);return yr===y&&mo===i+1;});
