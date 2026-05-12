@@ -1410,6 +1410,18 @@ function savMov(keepOpen){
     document.getElementById('m-met').value=metVal;
     // Set today's date
     document.getElementById('m-fecha').value=today();
+    // Force clear member search fields
+    var ms=document.getElementById('m-miem-search');
+    var mh=document.getElementById('m-miem');
+    var mr=document.getElementById('m-miem-results');
+    var msel=document.getElementById('m-miem-selected');
+    if(ms)ms.value='';
+    if(mh)mh.value='';
+    if(mr)mr.style.display='none';
+    if(msel)msel.textContent='';
+    // Clear description
+    var md=document.getElementById('m-desc');
+    if(md)md.value='';
     checkBancoNote();
   }
   renderMov();
