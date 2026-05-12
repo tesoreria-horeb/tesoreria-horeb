@@ -1191,7 +1191,9 @@ function renderDash(){
   // bar chart
   const mn=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
   const lbls=[],ingD=[],egD=[],ingDUSD=[];
-  for(let i=5;i>=0;i--){const d=new Date(curY,now.getMonth()-i,1);lbls.push(mn[d.getMonth()]+' '+d.getFullYear());const mm=movs.filter(m=>{const[y,mo]=m.fec.split('-').map(Number);return y===d.getFullYear()&&mo===d.getMonth()+1;});var ingPEN=mm.filter(m=>m.tipo==='ingreso'&&(m.moneda||'PEN')==='PEN').reduce((a,m)=>a+Number(m.mon),0);
+  const chYear=parseInt((document.getElementById('ch-year')||{value:curY}).value)||curY;
+  const chStartMonth=chYear===now.getFullYear()?now.getMonth():11;
+  for(let i=5;i>=0;i--){const d=new Date(chYear,chStartMonth-i,1);lbls.push(mn[d.getMonth()]+' '+d.getFullYear());const mm=movs.filter(m=>{const[y,mo]=m.fec.split('-').map(Number);return y===d.getFullYear()&&mo===d.getMonth()+1;});var ingPEN=mm.filter(m=>m.tipo==='ingreso'&&(m.moneda||'PEN')==='PEN').reduce((a,m)=>a+Number(m.mon),0);
     var ingUSDm=mm.filter(m=>m.tipo==='ingreso'&&m.moneda==='USD').reduce((a,m)=>a+Number(m.mon),0);
     var egPEN=mm.filter(m=>m.tipo==='egreso'&&(m.moneda||'PEN')==='PEN').reduce((a,m)=>a+Number(m.mon),0);
     ingD.push(ingPEN);egD.push(egPEN);
