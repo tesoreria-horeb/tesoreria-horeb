@@ -1161,8 +1161,8 @@ let chBar=null,chDona=null,cCompCharts=[];
 function renderDash(){
   const movs=gAccMov();const now=new Date();const curM=now.getMonth()+1;const curY=now.getFullYear();
   const cm2=movs.filter(m=>{const[y,mo]=m.fec.split('-').map(Number);return y===curY&&mo===curM;});
-  const ing=cm2.filter(m=>m.tipo==='ingreso').reduce((a,m)=>a+Number(m.mon),0);
-  const eg=cm2.filter(m=>m.tipo==='egreso').reduce((a,m)=>a+Number(m.mon),0);
+  const ing=cm2.filter(m=>m.tipo==='ingreso'&&(m.moneda||'PEN')==='PEN').reduce((a,m)=>a+Number(m.mon),0);
+  const eg=cm2.filter(m=>m.tipo==='egreso'&&(m.moneda||'PEN')==='PEN').reduce((a,m)=>a+Number(m.mon),0);
   document.getElementById('dash-stats').innerHTML=`
     <div class="stat-card sc-ing"><div class="stat-lbl">Ingresos del Mes</div><div class="stat-val ing">${fmt(ing)}</div><div class="stat-sub">Mes actual</div></div>
     <div class="stat-card sc-eg"><div class="stat-lbl">Egresos del Mes</div><div class="stat-val eg">${fmt(eg)}</div><div class="stat-sub">Mes actual</div></div>
@@ -1171,7 +1171,7 @@ function renderDash(){
   // bar chart
   const mn=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
   const lbls=[],ingD=[],egD=[];
-  for(let i=5;i>=0;i--){const d=new Date(curY,now.getMonth()-i,1);lbls.push(mn[d.getMonth()]+' '+d.getFullYear());const mm=movs.filter(m=>{const[y,mo]=m.fec.split('-').map(Number);return y===d.getFullYear()&&mo===d.getMonth()+1;});ingD.push(mm.filter(m=>m.tipo==='ingreso').reduce((a,m)=>a+Number(m.mon),0));egD.push(mm.filter(m=>m.tipo==='egreso').reduce((a,m)=>a+Number(m.mon),0));}
+  for(let i=5;i>=0;i--){const d=new Date(curY,now.getMonth()-i,1);lbls.push(mn[d.getMonth()]+' '+d.getFullYear());const mm=movs.filter(m=>{const[y,mo]=m.fec.split('-').map(Number);return y===d.getFullYear()&&mo===d.getMonth()+1;});ingD.push(mm.filter(m=>m.tipo==='ingreso'&&(m.moneda||'PEN')==='PEN').reduce((a,m)=>a+Number(m.mon),0));egD.push(mm.filter(m=>m.tipo==='egreso'&&(m.moneda||'PEN')==='PEN').reduce((a,m)=>a+Number(m.mon),0));}
   if(chBar)chBar.destroy();
   chBar=new Chart(document.getElementById('ch-bar'),{type:'bar',data:{labels:lbls,datasets:[{label:'Ingresos',data:ingD,backgroundColor:'rgba(46,204,113,.6)',borderColor:'rgba(46,204,113,1)',borderWidth:1,borderRadius:3},{label:'Egresos',data:egD,backgroundColor:'rgba(231,76,60,.6)',borderColor:'rgba(231,76,60,1)',borderWidth:1,borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'rgba(247,243,233,.7)',font:{size:10}}}},scales:{x:{ticks:{color:'rgba(247,243,233,.45)',font:{size:9}},grid:{color:'rgba(255,255,255,.04)'}},y:{ticks:{color:'rgba(247,243,233,.45)',font:{size:9},callback:v=>'S/.'+v.toLocaleString()},grid:{color:'rgba(255,255,255,.04)'}}}}});
   // dona
@@ -1201,8 +1201,8 @@ function renderMov(){
   if(fc)movs=movs.filter(m=>m.cat===fc);
   if(ff&&ff!=='all')movs=movs.filter(m=>m.fil===ff);
   movs.sort((a,b)=>b.fec.localeCompare(a.fec));
-  const ti=movs.filter(m=>m.tipo==='ingreso').reduce((a,m)=>a+Number(m.mon),0);
-  const te=movs.filter(m=>m.tipo==='egreso').reduce((a,m)=>a+Number(m.mon),0);
+  const ti=movs.filter(m=>m.tipo==='ingreso'&&(m.moneda||'PEN')==='PEN').reduce((a,m)=>a+Number(m.mon),0);
+  const te=movs.filter(m=>m.tipo==='egreso'&&(m.moneda||'PEN')==='PEN').reduce((a,m)=>a+Number(m.mon),0);
   document.getElementById('mov-tot').textContent=`Ingresos: ${fmt(ti)} | Egresos: ${fmt(te)} | Balance: ${fmt(ti-te)}`;
   // Sort: by date DESC, then by timestamp DESC (last registered first)
   movs.sort(function(a,b){
@@ -1898,7 +1898,7 @@ function genCons(){
   let ti=0,te=0,rows='';
   if(per==='mensual'||per==='trimestral'){
     const gs=per==='mensual'?MESES.map((n,i)=>({n,ms:[i+1]})):[{n:'1er Trimestre',ms:[1,2,3]},{n:'2do Trimestre',ms:[4,5,6]},{n:'3er Trimestre',ms:[7,8,9]},{n:'4to Trimestre',ms:[10,11,12]}];
-    gs.forEach(g=>{const gm=movs.filter(m=>g.ms.includes(parseInt(m.fec.split('-')[1])));const i=gm.filter(m=>m.tipo==='ingreso').reduce((a,m)=>a+Number(m.mon),0);const e=gm.filter(m=>m.tipo==='egreso').reduce((a,m)=>a+Number(m.mon),0);ti+=i;te+=e;rows+=`<tr><td><strong>${g.n}</strong></td><td style="color:green">S/. ${i.toFixed(2)}</td><td style="color:red">S/. ${e.toFixed(2)}</td><td style="font-weight:bold;color:${i-e>=0?'green':'red'}">S/. ${(i-e).toFixed(2)}</td></tr>`;});
+    gs.forEach(g=>{const gm=movs.filter(m=>g.ms.includes(parseInt(m.fec.split('-')[1])));const i=gm.filter(m=>m.tipo==='ingreso'&&(m.moneda||'PEN')==='PEN').reduce((a,m)=>a+Number(m.mon),0);const e=gm.filter(m=>m.tipo==='egreso'&&(m.moneda||'PEN')==='PEN').reduce((a,m)=>a+Number(m.mon),0);ti+=i;te+=e;rows+=`<tr><td><strong>${g.n}</strong></td><td style="color:green">S/. ${i.toFixed(2)}</td><td style="color:red">S/. ${e.toFixed(2)}</td><td style="font-weight:bold;color:${i-e>=0?'green':'red'}">S/. ${(i-e).toFixed(2)}</td></tr>`;});
   }else{
     const ct={};movs.forEach(m=>{if(!ct[m.cat])ct[m.cat]={tipo:m.tipo,t:0};ct[m.cat].t+=Number(m.mon);});
     Object.entries(ct).sort((a,b)=>b[1].t-a[1].t).forEach(([c,d])=>{if(d.tipo==='ingreso')ti+=d.t;else te+=d.t;rows+=`<tr><td>${c}</td><td>${d.tipo==='ingreso'?'Ingreso':'Egreso'}</td><td style="color:${d.tipo==='ingreso'?'green':'red'};font-weight:bold">S/. ${d.t.toFixed(2)}</td></tr>`;});
