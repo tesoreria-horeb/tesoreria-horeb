@@ -1789,7 +1789,7 @@ function genCaja(){
     dataRows+='<tr>'
       +'<td style="border:1px solid #333;padding:3px 5px;font-size:11px">'+fd2(m.fec)+'</td>'
       +'<td style="border:1px solid #333;padding:3px 6px;font-size:11px">'+m.desc+(m.cat?' ('+m.cat+')':'')+'</td>'
-      +'<td style="border:1px solid #333;padding:3px 5px;font-size:11px;text-align:right">'+(m.tipo==='ingreso'?'S/. '+Number(m.mon).toFixed(2):'')+'</td>'
+      +'<td style="border:1px solid #333;padding:3px 5px;font-size:11px;text-align:right">'+(m.tipo==='ingreso'?(m.moneda==='USD'?'$ ':'S/. ')+Number(m.mon).toFixed(2):'')+'</td>'
       +'<td style="border:1px solid #333;padding:3px 5px;font-size:11px;text-align:right">'+(m.tipo==='egreso'?(m.moneda==='USD'?'$ ':'S/. ')+Number(m.mon).toFixed(2):'')+'</td>'
       +'</tr>';
   });
