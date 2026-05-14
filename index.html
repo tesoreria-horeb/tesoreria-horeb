@@ -2989,6 +2989,34 @@ function searchMiem(q){
 }
 
 
+
+var currentMiemIdx=-1;
+
+document.addEventListener('keydown',function(e){
+  var inp=document.getElementById('m-miem-search');
+  var res=document.getElementById('m-miem-results');
+  if(!inp||!res||res.style.display==='none')return;
+  if(document.activeElement!==inp)return;
+  var items=res.querySelectorAll('div[data-id]');
+  if(!items.length)return;
+  if(e.key==='ArrowDown'){
+    e.preventDefault();
+    currentMiemIdx=Math.min(currentMiemIdx+1,items.length-1);
+    items.forEach(function(it,i){it.style.background=i===currentMiemIdx?'rgba(201,168,76,.2)':'';});
+  } else if(e.key==='ArrowUp'){
+    e.preventDefault();
+    currentMiemIdx=Math.max(currentMiemIdx-1,0);
+    items.forEach(function(it,i){it.style.background=i===currentMiemIdx?'rgba(201,168,76,.2)':'';});
+  } else if(e.key==='Enter'&&currentMiemIdx>=0){
+    e.preventDefault();
+    selectMiem(items[currentMiemIdx]);
+    currentMiemIdx=-1;
+    setTimeout(function(){var m=document.getElementById('m-monto');if(m)m.focus();},50);
+  } else if(e.key==='Escape'){
+    res.style.display='none';currentMiemIdx=-1;
+  }
+});
+
 function selectMiem(el){
   var id=el.getAttribute('data-id');
   var nombre=el.getAttribute('data-nom');
@@ -2997,7 +3025,8 @@ function selectMiem(el){
   document.getElementById('m-miem-search').value=nombre+' ('+cod+')';
   document.getElementById('m-miem-results').style.display='none';
   document.getElementById('m-miem-selected').textContent='✅ '+nombre;
-  // Auto-fill description for Diezmos
+  currentMiemIdx=-1;
+  // Auto-fill description for Diezmos and focus monto
   autoFillDesc();
 }
 
@@ -3016,24 +3045,50 @@ function autoFillDesc(){
   var cat=document.getElementById('m-cat');
   var desc=document.getElementById('m-desc');
   var miemId=document.getElementById('m-miem');
+  var miemSearch=document.getElementById('m-miem-search');
+  var miemField=document.getElementById('m-miem-search');
   if(!cat||!desc||!miemId)return;
-  // Only auto-fill if category contains "Diezmo"
-  if(cat.value.toLowerCase().indexOf('diezmo')===-1)return;
-  // If member selected from system
+
+  var isDiezmo=cat.value.toLowerCase().indexOf('diezmo')>-1;
+
+  // Show/hide miembro field based on category
+  var miemContainer=miemSearch?miemSearch.closest('div.fld')||miemSearch.parentElement:null;
+  var miemRow=miemContainer?miemContainer.closest('.fr'):null;
+  if(miemRow){
+    miemRow.style.display=isDiezmo?'':'none';
+  }
+
+  if(!isDiezmo){
+    // Clear member and focus monto
+    clearMiemSearch();
+    setTimeout(function(){
+      var monto=document.getElementById('m-monto');
+      if(monto)monto.focus();
+    },50);
+    return;
+  }
+
+  // Category is Diezmos - fill description
   if(miemId.value){
     var m=DB.miembros.find(function(x){return x.id===miemId.value;});
     if(m){
       var nombre=m.nom+(m.ape?' '+m.ape:'');
       desc.value='Diezmo - '+nombre;
+      // Focus monto after selecting member
+      setTimeout(function(){
+        var monto=document.getElementById('m-monto');
+        if(monto)monto.focus();
+      },50);
       return;
     }
   }
-  // If no member selected, suggest prefix only if empty
+  // Focus miembro search
   if(!desc.value||desc.value==='Diezmo - '){
     desc.value='Diezmo - ';
-    // Place cursor at end
-    try{desc.setSelectionRange(desc.value.length,desc.value.length);desc.focus();}catch(e){}
   }
+  setTimeout(function(){
+    if(miemSearch)miemSearch.focus();
+  },50);
 }
 
 // Close results when clicking outside
@@ -3936,7 +3991,8 @@ function selectMiem(el){
   document.getElementById('m-miem-search').value=nombre+' ('+cod+')';
   document.getElementById('m-miem-results').style.display='none';
   document.getElementById('m-miem-selected').textContent='✅ '+nombre;
-  // Auto-fill description for Diezmos
+  currentMiemIdx=-1;
+  // Auto-fill description for Diezmos and focus monto
   autoFillDesc();
 }
 
@@ -3955,24 +4011,50 @@ function autoFillDesc(){
   var cat=document.getElementById('m-cat');
   var desc=document.getElementById('m-desc');
   var miemId=document.getElementById('m-miem');
+  var miemSearch=document.getElementById('m-miem-search');
+  var miemField=document.getElementById('m-miem-search');
   if(!cat||!desc||!miemId)return;
-  // Only auto-fill if category contains "Diezmo"
-  if(cat.value.toLowerCase().indexOf('diezmo')===-1)return;
-  // If member selected from system
+
+  var isDiezmo=cat.value.toLowerCase().indexOf('diezmo')>-1;
+
+  // Show/hide miembro field based on category
+  var miemContainer=miemSearch?miemSearch.closest('div.fld')||miemSearch.parentElement:null;
+  var miemRow=miemContainer?miemContainer.closest('.fr'):null;
+  if(miemRow){
+    miemRow.style.display=isDiezmo?'':'none';
+  }
+
+  if(!isDiezmo){
+    // Clear member and focus monto
+    clearMiemSearch();
+    setTimeout(function(){
+      var monto=document.getElementById('m-monto');
+      if(monto)monto.focus();
+    },50);
+    return;
+  }
+
+  // Category is Diezmos - fill description
   if(miemId.value){
     var m=DB.miembros.find(function(x){return x.id===miemId.value;});
     if(m){
       var nombre=m.nom+(m.ape?' '+m.ape:'');
       desc.value='Diezmo - '+nombre;
+      // Focus monto after selecting member
+      setTimeout(function(){
+        var monto=document.getElementById('m-monto');
+        if(monto)monto.focus();
+      },50);
       return;
     }
   }
-  // If no member selected, suggest prefix only if empty
+  // Focus miembro search
   if(!desc.value||desc.value==='Diezmo - '){
     desc.value='Diezmo - ';
-    // Place cursor at end
-    try{desc.setSelectionRange(desc.value.length,desc.value.length);desc.focus();}catch(e){}
   }
+  setTimeout(function(){
+    if(miemSearch)miemSearch.focus();
+  },50);
 }
 
 // Close results when clicking outside
