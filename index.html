@@ -740,8 +740,8 @@ tbody td{padding:9px 11px;color:rgba(247,243,233,.8);vertical-align:middle}
       <div class="fld"><label>Fecha</label><input type="date" id="m-fecha"></div>
       <div class="fld" style="position:relative">
         <label>Categoría</label>
-        <input type="text" id="m-cat-search" placeholder="Escribir o buscar..." autocomplete="off" style="width:100%"
-          oninput="filterCats(this.value)" onkeydown="catKeyNav(event)" onclick="showCatList()">
+        <input type="text" id="m-cat-search" placeholder="Clique aquí o escriba para buscar..." autocomplete="off" style="width:100%"
+          oninput="filterCats(this.value)" onkeydown="catKeyNav(event)" onclick="showCatList()" onfocus="showCatList()">
         <input type="hidden" id="m-cat" value="">
         <div id="m-cat-list" style="display:none;position:absolute;top:100%;left:0;right:0;background:#0D1B2A;border:1px solid rgba(201,168,76,.3);border-radius:0 0 6px 6px;max-height:200px;overflow-y:auto;z-index:999;box-shadow:0 4px 12px rgba(0,0,0,.4)"></div>
       </div>
@@ -1222,7 +1222,11 @@ function renderCatList(cats){
 
 function showCatList(){
   var list=document.getElementById('m-cat-list');
-  if(list)list.style.display='block';
+  var search=document.getElementById('m-cat-search');
+  if(!list)return;
+  // Re-render full list if search is empty
+  if(search&&!search.value)renderCatList(catList);
+  list.style.display='block';
   catIdx=-1;
 }
 
@@ -1259,15 +1263,23 @@ function catKeyNav(e){
   } else if(e.key==='Escape'){
     if(list)list.style.display='none';
   } else if(e.key==='Tab'){
-    // Close list and let Tab navigate normally
     if(list)list.style.display='none';
-    // If category has a value selected already, skip to monto
-    var hidden=document.getElementById('m-cat');
-    if(hidden&&hidden.value){
-      e.preventDefault();
-      var monto=document.getElementById('m-monto');
-      if(monto)monto.focus();
+    // If no item selected with arrows but list was open, select first item
+    if(catIdx<0&&items.length>0){
+      var hidden2=document.getElementById('m-cat');
+      if(hidden2&&!hidden2.value){
+        selectCat(items[0].getAttribute('data-cat'));
+        e.preventDefault();
+        setTimeout(function(){
+          var monto=document.getElementById('m-monto');
+          if(monto)monto.focus();
+        },50);
+        return;
+      }
     }
+    e.preventDefault();
+    var monto=document.getElementById('m-monto');
+    if(monto)monto.focus();
   }
 }
 
