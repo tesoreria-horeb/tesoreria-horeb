@@ -734,7 +734,7 @@ tbody td{padding:9px 11px;color:rgba(247,243,233,.8);vertical-align:middle}
     <div class="modal-hd"><div class="modal-tit" id="mov-tit">Nuevo Movimiento</div><button class="modal-x" onclick="cm('ov-mov')">✕</button></div>
         <div class="fr">
       <div class="fld"><label>Sede / Filial</label><select id="m-fil"></select></div>
-      <div class="fld"><label>Tipo</label><select id="m-tipo"><option value="ingreso">Ingreso</option><option value="egreso">Egreso</option></select></div>
+      <div class="fld"><label>Tipo</label><select id="m-tipo" onchange="onTipoChange()"><option value="ingreso">Ingreso</option><option value="egreso">Egreso</option></select></div>
     </div>
     <div class="fr">
       <div class="fld"><label>Fecha</label><input type="date" id="m-fecha"></div>
@@ -1173,13 +1173,32 @@ function checkBancoNote(){
 var catList=[];
 var catIdx=-1;
 
-function updCats(){
+function onTipoChange(){
+  // Clear form fields when switching tipo
+  var monto=document.getElementById('m-monto');if(monto)monto.value='';
+  var comp=document.getElementById('m-comp');if(comp)comp.value='';
+  var obs=document.getElementById('m-obs');if(obs)obs.value='';
+  var desc=document.getElementById('m-desc');if(desc)desc.value='';
+  var fecha=document.getElementById('m-fecha');
+  var fechaVal=fecha?fecha.value:'';
+  clearMiemSearch();
+  updCats(true);
+  // Restore fecha
+  if(fecha&&fechaVal)fecha.value=fechaVal;
+}
+
+function updCats(resetCat){
   const tipo=document.getElementById('m-tipo').value;
   catList=(tipo==='ingreso'?DB.cats.ing:DB.cats.eg).slice().sort(function(a,b){return a.localeCompare(b,'es');});
-  // Reset hidden input and search
   var hidden=document.getElementById('m-cat');
   var search=document.getElementById('m-cat-search');
-  if(hidden&&!hidden.value){if(search)search.value='';}
+  var list=document.getElementById('m-cat-list');
+  // Always reset when tipo changes
+  if(resetCat){
+    if(hidden)hidden.value='';
+    if(search)search.value='';
+    if(list)list.style.display='none';
+  }
   renderCatList(catList);
   checkBancoNote();
   autoFillDesc();
