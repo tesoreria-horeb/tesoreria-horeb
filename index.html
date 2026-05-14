@@ -738,7 +738,13 @@ tbody td{padding:9px 11px;color:rgba(247,243,233,.8);vertical-align:middle}
     </div>
     <div class="fr">
       <div class="fld"><label>Fecha</label><input type="date" id="m-fecha"></div>
-      <div class="fld"><label>Categoría</label><select id="m-cat"></select></div>
+      <div class="fld" style="position:relative">
+        <label>Categoría</label>
+        <input type="text" id="m-cat-search" placeholder="Escribir o buscar..." autocomplete="off" style="width:100%"
+          oninput="filterCats(this.value)" onkeydown="catKeyNav(event)" onfocus="showCatList()">
+        <input type="hidden" id="m-cat" value="">
+        <div id="m-cat-list" style="display:none;position:absolute;top:100%;left:0;right:0;background:#0D1B2A;border:1px solid rgba(201,168,76,.3);border-radius:0 0 6px 6px;max-height:200px;overflow-y:auto;z-index:999;box-shadow:0 4px 12px rgba(0,0,0,.4)"></div>
+      </div>
     </div>
     <div class="fr fr1">
       <div class="fld" style="position:relative">
@@ -1164,14 +1170,96 @@ function checkBancoNote(){
   var sp=note.querySelector('strong');if(sp)sp.textContent=msg;
 }
 
+var catList=[];
+var catIdx=-1;
+
 function updCats(){
   const tipo=document.getElementById('m-tipo').value;
-  const sel=document.getElementById('m-cat');sel.innerHTML='';
-  const cats=(tipo==='ingreso'?DB.cats.ing:DB.cats.eg).slice().sort(function(a,b){return a.localeCompare(b,'es');});
-  cats.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;sel.appendChild(o);});
-  sel.onchange=function(){checkBancoNote();autoFillDesc();};
+  catList=(tipo==='ingreso'?DB.cats.ing:DB.cats.eg).slice().sort(function(a,b){return a.localeCompare(b,'es');});
+  // Reset hidden input and search
+  var hidden=document.getElementById('m-cat');
+  var search=document.getElementById('m-cat-search');
+  if(hidden&&!hidden.value){if(search)search.value='';}
+  renderCatList(catList);
   checkBancoNote();
+  autoFillDesc();
 }
+
+function renderCatList(cats){
+  var list=document.getElementById('m-cat-list');
+  if(!list)return;
+  list.innerHTML='';
+  cats.forEach(function(c,i){
+    var div=document.createElement('div');
+    div.setAttribute('data-cat',c);
+    div.style.cssText='padding:8px 12px;cursor:pointer;border-bottom:1px solid rgba(201,168,76,.1);font-size:12px';
+    div.onmouseover=function(){this.style.background='rgba(201,168,76,.1)';};
+    div.onmouseout=function(){this.style.background=catIdx===i?'rgba(201,168,76,.2)':'';};
+    div.onclick=function(){selectCat(this.getAttribute('data-cat'));};
+    div.textContent=c;
+    list.appendChild(div);
+  });
+}
+
+function showCatList(){
+  var list=document.getElementById('m-cat-list');
+  if(list)list.style.display='block';
+  catIdx=-1;
+}
+
+function filterCats(q){
+  var filtered=q?catList.filter(function(c){return c.toLowerCase().includes(q.toLowerCase());}):catList;
+  renderCatList(filtered);
+  var list=document.getElementById('m-cat-list');
+  if(list)list.style.display='block';
+  catIdx=-1;
+}
+
+function catKeyNav(e){
+  var list=document.getElementById('m-cat-list');
+  if(!list||list.style.display==='none')return;
+  var items=list.querySelectorAll('div[data-cat]');
+  if(!items.length)return;
+  if(e.key==='ArrowDown'){
+    e.preventDefault();
+    catIdx=Math.min(catIdx+1,items.length-1);
+    items.forEach(function(it,i){it.style.background=i===catIdx?'rgba(201,168,76,.2)':'';});
+    items[catIdx].scrollIntoView({block:'nearest'});
+  } else if(e.key==='ArrowUp'){
+    e.preventDefault();
+    catIdx=Math.max(catIdx-1,0);
+    items.forEach(function(it,i){it.style.background=i===catIdx?'rgba(201,168,76,.2)':'';});
+    items[catIdx].scrollIntoView({block:'nearest'});
+  } else if(e.key==='Enter'){
+    e.preventDefault();
+    if(catIdx>=0&&items[catIdx]){
+      selectCat(items[catIdx].getAttribute('data-cat'));
+    } else if(items.length>0){
+      selectCat(items[0].getAttribute('data-cat'));
+    }
+  } else if(e.key==='Escape'){
+    if(list)list.style.display='none';
+  }
+}
+
+function selectCat(cat){
+  var hidden=document.getElementById('m-cat');
+  var search=document.getElementById('m-cat-search');
+  var list=document.getElementById('m-cat-list');
+  if(hidden)hidden.value=cat;
+  if(search)search.value=cat;
+  if(list)list.style.display='none';
+  catIdx=-1;
+  checkBancoNote();
+  autoFillDesc();
+}
+
+// Close cat list on outside click
+document.addEventListener('click',function(e){
+  var list=document.getElementById('m-cat-list');
+  var inp=document.getElementById('m-cat-search');
+  if(list&&inp&&!list.contains(e.target)&&e.target!==inp)list.style.display='none';
+});
 
 function popMiem(sid){
   const sel=document.getElementById(sid);if(!sel)return;
@@ -1454,6 +1542,7 @@ function savMov(keepOpen){
     document.getElementById('m-tipo').value=tipoVal;
     updCats();
     document.getElementById('m-cat').value=catVal;
+    var csEl=document.getElementById('m-cat-search');if(csEl)csEl.value=catVal;
     document.getElementById('m-fil').value=filVal;
     document.getElementById('m-met').value=metVal;
     // Set today's date
@@ -1467,10 +1556,11 @@ function savMov(keepOpen){
     if(mh)mh.value='';
     if(mr)mr.style.display='none';
     if(msel)msel.textContent='';
-    // Clear description
+    // Clear description then re-trigger autoFillDesc to set prefix if Diezmo
     var md=document.getElementById('m-desc');
     if(md)md.value='';
     checkBancoNote();
+    autoFillDesc();
     // Focus on fecha field
     setTimeout(function(){
       var fec=document.getElementById('m-fecha');
