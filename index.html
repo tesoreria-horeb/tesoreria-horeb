@@ -1183,8 +1183,12 @@ function onTipoChange(){
   var fechaVal=fecha?fecha.value:'';
   clearMiemSearch();
   updCats(true);
-  // Restore fecha
+  // Restore fecha and focus it
   if(fecha&&fechaVal)fecha.value=fechaVal;
+  setTimeout(function(){
+    var fec=document.getElementById('m-fecha');
+    if(fec)fec.focus();
+  },50);
 }
 
 function updCats(resetCat){
@@ -3187,13 +3191,9 @@ function autoFillDesc(){
   if(miemRow)miemRow.style.display=isDiezmo?'':'none';
 
   if(!isDiezmo){
-    // Clear member, clear description prefix and focus monto
+    // Clear member and description prefix - don't steal focus
     clearMiemSearch();
     if(desc.value==='Diezmo - '||desc.value.indexOf('Diezmo - ')===0)desc.value='';
-    setTimeout(function(){
-      var monto=document.getElementById('m-monto');
-      if(monto)monto.focus();
-    },50);
     return;
   }
 
@@ -4150,13 +4150,9 @@ function autoFillDesc(){
   if(miemRow)miemRow.style.display=isDiezmo?'':'none';
 
   if(!isDiezmo){
-    // Clear member, clear description prefix and focus monto
+    // Clear member and description prefix - don't steal focus
     clearMiemSearch();
     if(desc.value==='Diezmo - '||desc.value.indexOf('Diezmo - ')===0)desc.value='';
-    setTimeout(function(){
-      var monto=document.getElementById('m-monto');
-      if(monto)monto.focus();
-    },50);
     return;
   }
 
