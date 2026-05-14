@@ -3046,21 +3046,19 @@ function autoFillDesc(){
   var desc=document.getElementById('m-desc');
   var miemId=document.getElementById('m-miem');
   var miemSearch=document.getElementById('m-miem-search');
-  var miemField=document.getElementById('m-miem-search');
   if(!cat||!desc||!miemId)return;
 
   var isDiezmo=cat.value.toLowerCase().indexOf('diezmo')>-1;
 
-  // Show/hide miembro field based on category
-  var miemContainer=miemSearch?miemSearch.closest('div.fld')||miemSearch.parentElement:null;
-  var miemRow=miemContainer?miemContainer.closest('.fr'):null;
-  if(miemRow){
-    miemRow.style.display=isDiezmo?'':'none';
-  }
+  // Show/hide miembro row based on category
+  var miemRow=miemSearch?miemSearch.parentElement:null;
+  while(miemRow&&!miemRow.classList.contains('fr'))miemRow=miemRow.parentElement;
+  if(miemRow)miemRow.style.display=isDiezmo?'':'none';
 
   if(!isDiezmo){
-    // Clear member and focus monto
+    // Clear member, clear description prefix and focus monto
     clearMiemSearch();
+    if(desc.value==='Diezmo - '||desc.value.indexOf('Diezmo - ')===0)desc.value='';
     setTimeout(function(){
       var monto=document.getElementById('m-monto');
       if(monto)monto.focus();
@@ -3068,13 +3066,13 @@ function autoFillDesc(){
     return;
   }
 
-  // Category is Diezmos - fill description
+  // Category is Diezmos
   if(miemId.value){
+    // Member already selected - fill full description
     var m=DB.miembros.find(function(x){return x.id===miemId.value;});
     if(m){
       var nombre=m.nom+(m.ape?' '+m.ape:'');
       desc.value='Diezmo - '+nombre;
-      // Focus monto after selecting member
       setTimeout(function(){
         var monto=document.getElementById('m-monto');
         if(monto)monto.focus();
@@ -3082,10 +3080,9 @@ function autoFillDesc(){
       return;
     }
   }
-  // Focus miembro search
-  if(!desc.value||desc.value==='Diezmo - '){
-    desc.value='Diezmo - ';
-  }
+
+  // No member yet - pre-fill prefix and focus member search
+  desc.value='Diezmo - ';
   setTimeout(function(){
     if(miemSearch)miemSearch.focus();
   },50);
@@ -4012,21 +4009,19 @@ function autoFillDesc(){
   var desc=document.getElementById('m-desc');
   var miemId=document.getElementById('m-miem');
   var miemSearch=document.getElementById('m-miem-search');
-  var miemField=document.getElementById('m-miem-search');
   if(!cat||!desc||!miemId)return;
 
   var isDiezmo=cat.value.toLowerCase().indexOf('diezmo')>-1;
 
-  // Show/hide miembro field based on category
-  var miemContainer=miemSearch?miemSearch.closest('div.fld')||miemSearch.parentElement:null;
-  var miemRow=miemContainer?miemContainer.closest('.fr'):null;
-  if(miemRow){
-    miemRow.style.display=isDiezmo?'':'none';
-  }
+  // Show/hide miembro row based on category
+  var miemRow=miemSearch?miemSearch.parentElement:null;
+  while(miemRow&&!miemRow.classList.contains('fr'))miemRow=miemRow.parentElement;
+  if(miemRow)miemRow.style.display=isDiezmo?'':'none';
 
   if(!isDiezmo){
-    // Clear member and focus monto
+    // Clear member, clear description prefix and focus monto
     clearMiemSearch();
+    if(desc.value==='Diezmo - '||desc.value.indexOf('Diezmo - ')===0)desc.value='';
     setTimeout(function(){
       var monto=document.getElementById('m-monto');
       if(monto)monto.focus();
@@ -4034,13 +4029,13 @@ function autoFillDesc(){
     return;
   }
 
-  // Category is Diezmos - fill description
+  // Category is Diezmos
   if(miemId.value){
+    // Member already selected - fill full description
     var m=DB.miembros.find(function(x){return x.id===miemId.value;});
     if(m){
       var nombre=m.nom+(m.ape?' '+m.ape:'');
       desc.value='Diezmo - '+nombre;
-      // Focus monto after selecting member
       setTimeout(function(){
         var monto=document.getElementById('m-monto');
         if(monto)monto.focus();
@@ -4048,10 +4043,9 @@ function autoFillDesc(){
       return;
     }
   }
-  // Focus miembro search
-  if(!desc.value||desc.value==='Diezmo - '){
-    desc.value='Diezmo - ';
-  }
+
+  // No member yet - pre-fill prefix and focus member search
+  desc.value='Diezmo - ';
   setTimeout(function(){
     if(miemSearch)miemSearch.focus();
   },50);
