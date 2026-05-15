@@ -1274,14 +1274,17 @@ function catKeyNav(e){
       if(hidden2&&!hidden2.value){
         selectCat(items[0].getAttribute('data-cat'));
         e.preventDefault();
-        setTimeout(function(){
-          var monto=document.getElementById('m-monto');
-          if(monto)monto.focus();
-        },50);
         return;
       }
     }
     e.preventDefault();
+    // After category, go to miembro if Diezmos, otherwise monto
+    var catVal=document.getElementById('m-cat');
+    var isDiezmoTab=catVal&&catVal.value.toLowerCase().indexOf('diezmo')>-1;
+    if(isDiezmoTab){
+      var miemS=document.getElementById('m-miem-search');
+      if(miemS){miemS.focus();return;}
+    }
     var monto=document.getElementById('m-monto');
     if(monto)monto.focus();
   }
@@ -1297,6 +1300,18 @@ function selectCat(cat){
   catIdx=-1;
   checkBancoNote();
   autoFillDesc();
+  // After selecting category, focus miembro if Diezmos else monto
+  setTimeout(function(){
+    var hidden=document.getElementById('m-cat');
+    var isDiezmo=hidden&&hidden.value.toLowerCase().indexOf('diezmo')>-1;
+    if(isDiezmo){
+      var miemS=document.getElementById('m-miem-search');
+      if(miemS)miemS.focus();
+    } else {
+      var monto=document.getElementById('m-monto');
+      if(monto)monto.focus();
+    }
+  },50);
 }
 
 // Close cat list on outside click
