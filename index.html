@@ -1460,8 +1460,13 @@ function openMovModal(id){
   if(id){
     const m=DB.movimientos.find(x=>x.id===id);
     document.getElementById('mov-tit').textContent='Editar Movimiento';
-    document.getElementById('m-tipo').value=m.tipo;updCats();
+    document.getElementById('m-tipo').value=m.tipo;
+    // Load categories without resetting values
+    const tipoEdit=m.tipo;
+    catList=(tipoEdit==='ingreso'?DB.cats.ing:DB.cats.eg).slice().sort(function(a,b){return a.localeCompare(b,'es');});
+    renderCatList(catList);
     document.getElementById('m-cat').value=m.cat;
+    var csEdit=document.getElementById('m-cat-search');if(csEdit)csEdit.value=m.cat||'';
     document.getElementById('m-fecha').value=m.fec;
     document.getElementById('m-monto').value=m.mon;
     document.getElementById('m-desc').value=m.desc;
@@ -3192,6 +3197,8 @@ function clearMiemSearch(){
 }
 
 function autoFillDesc(){
+  // Don't auto-change anything when editing existing record
+  if(EID)return;
   var cat=document.getElementById('m-cat');
   var desc=document.getElementById('m-desc');
   var miemId=document.getElementById('m-miem');
@@ -4151,6 +4158,8 @@ function clearMiemSearch(){
 }
 
 function autoFillDesc(){
+  // Don't auto-change anything when editing existing record
+  if(EID)return;
   var cat=document.getElementById('m-cat');
   var desc=document.getElementById('m-desc');
   var miemId=document.getElementById('m-miem');
