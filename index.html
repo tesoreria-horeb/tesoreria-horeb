@@ -1420,12 +1420,12 @@ function renderDash(){
     </div>`:'';
 
   
-  // Calculate banco saldo
+  // Calculate banco saldo (total acumulado)
   var saldoBanco=(DB.banco||[]).reduce(function(s,m){
     return s+(m.tipo==='deposito'?Number(m.mon):-Number(m.mon));
   },0);
 
-  // Saldo anterior calculations
+  // Saldo anterior = Saldo Caja del mes anterior
   var siFiliales=Number((DB.saldos_iniciales||{}).filiales)||0;
   var siDeptos=Number((DB.saldos_iniciales||{}).departamentos)||0;
   var selectedYM=curY+'-'+String(curM).padStart(2,'0');
@@ -1439,96 +1439,72 @@ function renderDash(){
     return filObj&&filObj.tipo==='departamento';
   });
 
+  // All movements before selected month
   var prevMovsFil=allMovsFil.filter(function(m){return m.fec.substring(0,7)<selectedYM&&(m.moneda||'PEN')==='PEN';});
-  var saldoAntFil=siFiliales
+  var prevSaldoTotalFil=siFiliales
     +prevMovsFil.filter(function(m){return m.tipo==='ingreso';}).reduce(function(a,m){return a+Number(m.mon);},0)
     -prevMovsFil.filter(function(m){return m.tipo==='egreso';}).reduce(function(a,m){return a+Number(m.mon);},0);
-  var saldoTotalFil=saldoAntFil+(ing-eg);
 
+  // Banco hasta fin del mes anterior
+  var prevBanco=(DB.banco||[]).filter(function(m){return m.fec.substring(0,7)<selectedYM;})
+    .reduce(function(s,m){return s+(m.tipo==='deposito'?Number(m.mon):-Number(m.mon));},0);
+
+  // Saldo anterior = Saldo Caja mes anterior (Total - Banco anterior)
+  var saldoAntFil=prevSaldoTotalFil-prevBanco;
+
+  // Current month saldo total and caja
+  var saldoTotalFil=saldoAntFil+(ing-eg);
+  var saldoCajaFil=saldoTotalFil-saldoBanco;
+
+  // Departamentos
   var prevMovsDept=allMovsDept.filter(function(m){return m.fec.substring(0,7)<selectedYM&&(m.moneda||'PEN')==='PEN';});
   var saldoAntDept=siDeptos
     +prevMovsDept.filter(function(m){return m.tipo==='ingreso';}).reduce(function(a,m){return a+Number(m.mon);},0)
     -prevMovsDept.filter(function(m){return m.tipo==='egreso';}).reduce(function(a,m){return a+Number(m.mon);},0);
   var saldoTotalDept=saldoAntDept+(ingDept-egDept);
 
-  document.getElementById('dash-stats').innerHTML=`
+document.getElementById('dash-stats').innerHTML=CU&&CU.niv<=2?`
     <div class="stat-card" style="border-color:rgba(201,168,76,.3);grid-column:1/-1;padding:14px 18px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-        <div class="stat-lbl" style="color:var(--gold-light)">🏛️ FILIALES Y SEDE CENTRAL — ${mesLabel}</div>
+        <div class="stat-lbl" style="color:var(--gold-light)">🏛️ FILIALES Y SEDE CENTRAL — \${mesLabel}</div>
         <div style="text-align:center;background:rgba(52,152,219,.1);border:1px solid rgba(52,152,219,.3);border-radius:8px;padding:4px 14px">
           <div style="font-size:10px;color:rgba(247,243,233,.45)">Total Miembros</div>
-          <div style="font-size:20px;font-weight:bold;color:#3498DB">${DB.miembros.length}</div>
+          <div style="font-size:20px;font-weight:bold;color:#3498DB">\${DB.miembros.length}</div>
         </div>
       </div>
-      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:10px;text-align:center">
-        <div><div style="font-size:10px;color:rgba(247,243,233,.45);margin-bottom:4px">Saldo Anterior</div><div style="font-size:15px;font-weight:bold;color:#F0C040">${fmt(saldoAntFil)}</div></div>
-        <div><div style="font-size:10px;color:rgba(247,243,233,.45);margin-bottom:4px">Entradas</div><div style="font-size:15px;font-weight:bold;color:#2ECC71">${fmt(ing)}</div></div>
-        <div><div style="font-size:10px;color:rgba(247,243,233,.45);margin-bottom:4px">Salidas</div><div style="font-size:15px;font-weight:bold;color:#E74C3C">${fmt(eg)}</div></div>
-        <div><div style="font-size:10px;color:rgba(247,243,233,.45);margin-bottom:4px">Balance Mes</div><div style="font-size:15px;font-weight:bold;color:${ing-eg>=0?'#2ECC71':'#E74C3C'}">${fmt(ing-eg)}</div></div>
-        <div style="background:rgba(201,168,76,.1);border-radius:6px;padding:6px"><div style="font-size:10px;color:var(--gold-light);margin-bottom:4px">Saldo Total</div><div style="font-size:16px;font-weight:bold;color:var(--gold-light)">${fmt(saldoTotalFil)}</div></div>
-        <div style="background:rgba(46,134,171,.1);border-radius:6px;padding:6px"><div style="font-size:10px;color:#5DADE2;margin-bottom:4px">🏦 Saldo Banco</div><div style="font-size:16px;font-weight:bold;color:#5DADE2">${fmt(saldoBanco)}</div></div>
-        <div style="background:rgba(46,204,113,.1);border-radius:6px;padding:6px"><div style="font-size:10px;color:#2ECC71;margin-bottom:4px">💵 Saldo Caja</div><div style="font-size:16px;font-weight:bold;color:#2ECC71">${fmt(saldoTotalFil-saldoBanco)}</div></div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;text-align:center;margin-bottom:10px">
+        <div><div style="font-size:10px;color:rgba(247,243,233,.45);margin-bottom:4px">Saldo Anterior</div><div style="font-size:15px;font-weight:bold;color:#F0C040">\${fmt(saldoAntFil)}</div></div>
+        <div><div style="font-size:10px;color:rgba(247,243,233,.45);margin-bottom:4px">Entradas</div><div style="font-size:15px;font-weight:bold;color:#2ECC71">\${fmt(ing)}</div></div>
+        <div><div style="font-size:10px;color:rgba(247,243,233,.45);margin-bottom:4px">Salidas</div><div style="font-size:15px;font-weight:bold;color:#E74C3C">\${fmt(eg)}</div></div>
+        <div><div style="font-size:10px;color:rgba(247,243,233,.45);margin-bottom:4px">Balance Mes</div><div style="font-size:15px;font-weight:bold;color:\${ing-eg>=0?'#2ECC71':'#E74C3C'}">\${fmt(ing-eg)}</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;text-align:center">
+        <div style="background:rgba(201,168,76,.1);border-radius:6px;padding:8px"><div style="font-size:10px;color:var(--gold-light);margin-bottom:4px">Saldo Total</div><div style="font-size:17px;font-weight:bold;color:var(--gold-light)">\${fmt(saldoTotalFil)}</div></div>
+        <div style="background:rgba(46,134,171,.1);border-radius:6px;padding:8px"><div style="font-size:10px;color:#5DADE2;margin-bottom:4px">🏦 Saldo Banco</div><div style="font-size:17px;font-weight:bold;color:#5DADE2">\${fmt(saldoBanco)}</div></div>
+        <div style="background:rgba(46,204,113,.1);border-radius:6px;padding:8px"><div style="font-size:10px;color:#2ECC71;margin-bottom:4px">💵 Saldo Caja</div><div style="font-size:17px;font-weight:bold;color:#2ECC71">\${fmt(saldoCajaFil)}</div></div>
       </div>
     </div>
-    ${deptIds.length>0?`
+    \${deptIds.length>0?\`
     <div class="stat-card" style="border-color:rgba(155,89,182,.4);grid-column:1/-1;padding:14px 18px;background:rgba(155,89,182,.05)">
-      <div class="stat-lbl" style="color:#A569BD;margin-bottom:10px">⛪ DEPARTAMENTOS — ${mesLabel}</div>
+      <div class="stat-lbl" style="color:#A569BD;margin-bottom:10px">⛪ DEPARTAMENTOS — \${mesLabel}</div>
       <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;text-align:center">
-        <div><div style="font-size:10px;color:rgba(247,243,233,.45);margin-bottom:4px">Saldo Anterior</div><div style="font-size:16px;font-weight:bold;color:#F0C040">${fmt(saldoAntDept)}</div></div>
-        <div><div style="font-size:10px;color:rgba(247,243,233,.45);margin-bottom:4px">Entradas</div><div style="font-size:16px;font-weight:bold;color:#2ECC71">${fmt(ingDept)}</div></div>
-        <div><div style="font-size:10px;color:rgba(247,243,233,.45);margin-bottom:4px">Salidas</div><div style="font-size:16px;font-weight:bold;color:#E74C3C">${fmt(egDept)}</div></div>
-        <div><div style="font-size:10px;color:rgba(247,243,233,.45);margin-bottom:4px">Balance Mes</div><div style="font-size:16px;font-weight:bold;color:${ingDept-egDept>=0?'#2ECC71':'#E74C3C'}">${fmt(ingDept-egDept)}</div></div>
-        <div style="background:rgba(155,89,182,.15);border-radius:6px;padding:6px"><div style="font-size:10px;color:#A569BD;margin-bottom:4px">Saldo Total</div><div style="font-size:18px;font-weight:bold;color:#A569BD">${fmt(saldoTotalDept)}</div></div>
+        <div><div style="font-size:10px;color:rgba(247,243,233,.45);margin-bottom:4px">Saldo Anterior</div><div style="font-size:15px;font-weight:bold;color:#F0C040">\${fmt(saldoAntDept)}</div></div>
+        <div><div style="font-size:10px;color:rgba(247,243,233,.45);margin-bottom:4px">Entradas</div><div style="font-size:15px;font-weight:bold;color:#2ECC71">\${fmt(ingDept)}</div></div>
+        <div><div style="font-size:10px;color:rgba(247,243,233,.45);margin-bottom:4px">Salidas</div><div style="font-size:15px;font-weight:bold;color:#E74C3C">\${fmt(egDept)}</div></div>
+        <div><div style="font-size:10px;color:rgba(247,243,233,.45);margin-bottom:4px">Balance Mes</div><div style="font-size:15px;font-weight:bold;color:\${ingDept-egDept>=0?'#2ECC71':'#E74C3C'}">\${fmt(ingDept-egDept)}</div></div>
+        <div style="background:rgba(155,89,182,.15);border-radius:6px;padding:8px"><div style="font-size:10px;color:#A569BD;margin-bottom:4px">Saldo Total</div><div style="font-size:17px;font-weight:bold;color:#A569BD">\${fmt(saldoTotalDept)}</div></div>
       </div>
-    </div>`:''}
+    </div>\`:''}
+`:`
+    <div class="stat-card" style="border-color:rgba(201,168,76,.3);grid-column:1/-1;padding:14px 18px">
+      <div class="stat-lbl" style="color:var(--gold-light);margin-bottom:10px">📊 MI FILIAL — \${mesLabel}</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;text-align:center">
+        <div><div style="font-size:10px;color:rgba(247,243,233,.45);margin-bottom:4px">Entradas</div><div style="font-size:18px;font-weight:bold;color:#2ECC71">\${fmt(ing)}</div></div>
+        <div><div style="font-size:10px;color:rgba(247,243,233,.45);margin-bottom:4px">Salidas</div><div style="font-size:18px;font-weight:bold;color:#E74C3C">\${fmt(eg)}</div></div>
+        <div><div style="font-size:10px;color:rgba(247,243,233,.45);margin-bottom:4px">Balance Mes</div><div style="font-size:18px;font-weight:bold;color:\${ing-eg>=0?'#2ECC71':'#E74C3C'}">\${fmt(ing-eg)}</div></div>
+      </div>
+    </div>
 `
-  // bar chart
-  const mn=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-  const lbls=[],ingD=[],egD=[],ingDUSD=[];
-  const chYear=parseInt((document.getElementById('ch-year')||{value:curY}).value)||curY;
-  const chStartMonth=chYear===now.getFullYear()?now.getMonth():11;
-  for(let i=5;i>=0;i--){const d=new Date(chYear,chStartMonth-i,1);lbls.push(mn[d.getMonth()]+' '+d.getFullYear());const mm=movs.filter(m=>{const[y,mo]=m.fec.split('-').map(Number);return y===d.getFullYear()&&mo===d.getMonth()+1;});var ingPEN=mm.filter(m=>m.tipo==='ingreso'&&(m.moneda||'PEN')==='PEN').reduce((a,m)=>a+Number(m.mon),0);
-    var ingUSDm=mm.filter(m=>m.tipo==='ingreso'&&m.moneda==='USD').reduce((a,m)=>a+Number(m.mon),0);
-    var egPEN=mm.filter(m=>m.tipo==='egreso'&&(m.moneda||'PEN')==='PEN').reduce((a,m)=>a+Number(m.mon),0);
-    ingD.push(ingPEN);egD.push(egPEN);
-    ingDUSD.push(ingUSDm);}
-  if(chBar)chBar.destroy();
-  chBar=new Chart(document.getElementById('ch-bar'),{type:'bar',data:{labels:lbls,datasets:[{label:'Ingresos',data:ingD,backgroundColor:'rgba(46,204,113,.6)',borderColor:'rgba(46,204,113,1)',borderWidth:1,borderRadius:3},{label:'Egresos',data:egD,backgroundColor:'rgba(231,76,60,.6)',borderColor:'rgba(231,76,60,1)',borderWidth:1,borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'rgba(247,243,233,.7)',font:{size:10}}}},scales:{x:{ticks:{color:'rgba(247,243,233,.45)',font:{size:9}},grid:{color:'rgba(255,255,255,.04)'}},y:{ticks:{color:'rgba(247,243,233,.45)',font:{size:9},callback:v=>'S/.'+v.toLocaleString()},grid:{color:'rgba(255,255,255,.04)'}}}}});
-  // dona
-  const ct={};movs.filter(m=>m.tipo==='ingreso').forEach(m=>{ct[m.cat]=(ct[m.cat]||0)+Number(m.mon);});
-  if(chDona)chDona.destroy();
-  chDona=new Chart(document.getElementById('ch-dona'),{type:'doughnut',data:{labels:Object.keys(ct),datasets:[{data:Object.values(ct),backgroundColor:['rgba(201,168,76,.8)','rgba(46,204,113,.8)','rgba(52,152,219,.8)','rgba(243,156,18,.8)','rgba(155,89,182,.8)','rgba(26,188,156,.8)'],borderWidth:2,borderColor:'rgba(13,27,42,.8)'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:'rgba(247,243,233,.7)',font:{size:9},boxWidth:10}}}}});
-  // recent
-  const rec=[...movs].sort((a,b)=>b.fec.localeCompare(a.fec)).slice(0,8);
-  document.getElementById('dash-rec').innerHTML=rec.map(m=>`<tr><td>${fd2(m.fec)}</td><td>${m.desc}</td><td>${m.cat}</td><td><span class="badge b-${m.tipo==='ingreso'?'ing':'eg'}">${m.tipo==='ingreso'?'Ingreso':'Egreso'}</span></td><td class="amt-${m.tipo==='ingreso'?'i':'e'}">${fmt(m.mon)}</td><td style="font-size:11px">${gfn(m.fil)}</td></tr>`).join('');
-}
-
-// ===================== MOVIMIENTOS =====================
-let movPg=1;const MPP=15;
-
-function renderMov(){
-  let movs=gAccMov();
-  const s=document.getElementById('mov-s').value.toLowerCase();
-  const ft=document.getElementById('mov-ft').value;
-  const fm=document.getElementById('mov-fm').value;
-  const fc=document.getElementById('mov-fc').value;
-  const ff=document.getElementById('mov-ff').value;
-  const fa=document.getElementById('mov-fa')?document.getElementById('mov-fa').value:'';
-  if(s)movs=movs.filter(m=>m.desc.toLowerCase().includes(s)||m.cat.toLowerCase().includes(s)||(m.comp||'').toLowerCase().includes(s));
-  if(ft)movs=movs.filter(m=>m.tipo===ft);
-  if(fa)movs=movs.filter(m=>m.fec.split('-')[0]===fa);
-  var ftipo=document.getElementById('mov-ftipo')?document.getElementById('mov-ftipo').value:'';
-  if(ftipo){
-    var tipoFilIds=DB.filiales.filter(function(f){return (f.tipo||'filial')===ftipo;}).map(function(f){return f.id;});
-    movs=movs.filter(function(m){return tipoFilIds.indexOf(m.fil)>-1;});
-  }
-  if(fm)movs=movs.filter(m=>m.fec.split('-')[1]===fm);
-  if(fc)movs=movs.filter(m=>m.cat===fc);
-  if(ff&&ff!=='all')movs=movs.filter(m=>m.fil===ff);
-  movs.sort((a,b)=>b.fec.localeCompare(a.fec));
-  const ti=movs.filter(m=>m.tipo==='ingreso'&&(m.moneda||'PEN')==='PEN').reduce((a,m)=>a+Number(m.mon),0);
-  const te=movs.filter(m=>m.tipo==='egreso'&&(m.moneda||'PEN')==='PEN').reduce((a,m)=>a+Number(m.mon),0);
-  document.getElementById('mov-tot').textContent=`Ingresos: ${fmt(ti)} | Egresos: ${fmt(te)} | Balance: ${fmt(ti-te)}`;
   // Sort: by date DESC, then by timestamp DESC (last registered first)
   movs.sort(function(a,b){
     var dateDiff=b.fec.localeCompare(a.fec);
