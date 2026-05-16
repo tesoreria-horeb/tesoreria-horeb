@@ -397,6 +397,11 @@ tbody td{padding:9px 11px;color:rgba(247,243,233,.8);vertical-align:middle}
           <select class="fs" id="mov-fa" onchange="renderMov()"></select>
           <select class="fs" id="mov-fm" onchange="renderMov()"><option value="">Todos los meses</option></select>
           <select class="fs" id="mov-fc" onchange="renderMov()"><option value="">Todas las categorías</option></select>
+          <select class="fs" id="mov-ftipo" onchange="renderMov()">
+            <option value="">Filiales y Depts.</option>
+            <option value="filial">Solo Filiales</option>
+            <option value="departamento">Solo Departamentos</option>
+          </select>
           <select class="fs" id="mov-ff" onchange="renderMov()"><option value="">Todas las sedes</option></select>
           <button class="btn btn-p" onclick="openMovModal()">+ Nuevo</button>
           <button class="btn btn-d" id="btn-del-selected" onclick="delSelectedMov()" style="display:none">🗑️ Eliminar seleccionados</button>
@@ -631,7 +636,7 @@ tbody td{padding:9px 11px;color:rgba(247,243,233,.8);vertical-align:middle}
         <div class="tb">
           <select class="fs" id="rc-mes"><option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option><option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option><option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option><option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option></select>
           <select class="fs" id="rc-anio"></select>
-          <select class="fs" id="rc-fil"><option value="all">Todas las sedes</option></select>
+          <select class="fs" id="rc-fil"><option value="all">Todas las sedes y Depts.</option></select>
           <button class="btn btn-p" onclick="genCaja()">📋 Generar</button>
           <button class="btn btn-pr" onclick="prtRpt('rc-prev')">🖨️ Imprimir/PDF</button>
         </div>
@@ -786,8 +791,9 @@ tbody td{padding:9px 11px;color:rgba(247,243,233,.8);vertical-align:middle}
 <div class="ov" id="ov-fil">
   <div class="modal">
     <div class="modal-hd"><div class="modal-tit" id="fil-tit">Nueva Filial</div><button class="modal-x" onclick="cm('ov-fil')">✕</button></div>
-    <div class="fr"><div class="fld"><label>Código</label><input type="text" id="f-cod" placeholder="Ej: F001, S001, LIMA"></div><div class="fld"><label>Nombre</label><input type="text" id="f-nom" placeholder="Nombre de la filial"></div></div>
-    <div class="fr"><div class="fld"><label>Pastor</label><input type="text" id="f-pas" placeholder="Nombre del pastor"></div><div class="fld"><label>Tesorero</label><input type="text" id="f-tes" placeholder="Nombre del tesorero"></div></div>
+    <div class="fr"><div class="fld"><label>Código</label><input type="text" id="f-cod" placeholder="Ej: F001, S001, LIMA"></div><div class="fld"><label>Tipo</label><select id="f-tipo"><option value="filial">Filial / Sede</option><option value="departamento">Departamento</option></select></div></div>
+    <div class="fr"><div class="fld"><label>Nombre</label><input type="text" id="f-nom" placeholder="Nombre de la filial o departamento"></div><div class="fld"><label>Pastor / Responsable</label><input type="text" id="f-pas" placeholder="Nombre del responsable"></div></div>
+    <div class="fr"><div class="fld"><label>Tesorero</label><input type="text" id="f-tes" placeholder="Nombre del tesorero"></div></div>
     <div class="fr fr1"><div class="fld"><label>Dirección</label><input type="text" id="f-dir" placeholder="Dirección completa"></div></div>
     <div class="fr"><div class="fld"><label>Teléfono</label><input type="text" id="f-tel" placeholder="Teléfono"></div><div class="fld"><label>Fecha de Fundación</label><input type="date" id="f-fun"></div></div>
     <div class="modal-ft"><button class="btn btn-s" onclick="cm('ov-fil')">Cancelar</button><button class="btn btn-p" onclick="savFil()">💾 Guardar</button></div>
@@ -1130,12 +1136,23 @@ function stab(p,t){document.querySelectorAll('#'+p+'-tabs .tab-btn').forEach(b=>
 
 function popFil(){
   const fils=DB.filiales;
-  const sids=['m-fil','mi-fil','v-fil','mov-ff','vot-ff','miem-ff','rc-fil','rcon-fil','rfid-fil','rvot-fil'];
+  const sids=['m-fil','mi-fil','v-fil','mov-ff','vot-ff','miem-ff','rc-fil','rcon-fil','rfid-fil','rvot-fil','banco-filter-fil','banco-filial'];
   sids.forEach(sid=>{
     const sel=document.getElementById(sid);if(!sel)return;
     sel.querySelectorAll('[data-dyn]').forEach(o=>o.remove());
     const accFils=CU&&CU.niv<=2?fils:fils.filter(f=>f.id===(CU&&CU.fil));
-    accFils.forEach(f=>{const o=document.createElement('option');o.value=f.id;o.textContent=f.nom;o.setAttribute('data-dyn','1');sel.appendChild(o);});
+    const filiales=accFils.filter(f=>(f.tipo||'filial')!=='departamento');
+    const deptos=accFils.filter(f=>f.tipo==='departamento');
+    if(filiales.length>0){
+      const grpF=document.createElement('optgroup');grpF.label='Filiales';grpF.setAttribute('data-dyn','1');
+      filiales.forEach(f=>{const o=document.createElement('option');o.value=f.id;o.textContent=f.nom;o.setAttribute('data-dyn','1');grpF.appendChild(o);});
+      sel.appendChild(grpF);
+    }
+    if(deptos.length>0){
+      const grpD=document.createElement('optgroup');grpD.label='Departamentos';grpD.setAttribute('data-dyn','1');
+      deptos.forEach(f=>{const o=document.createElement('option');o.value=f.id;o.textContent=f.nom;o.setAttribute('data-dyn','1');grpD.appendChild(o);});
+      sel.appendChild(grpD);
+    }
   });
 }
 
@@ -1343,14 +1360,38 @@ function renderDash(){
   const curY=selAnio;
   const mesLabel=selMes>0?['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'][selMes-1]+' '+curY:'Mes actual';
   const cm2=movs.filter(m=>{const[y,mo]=m.fec.split('-').map(Number);return y===curY&&mo===curM;});
-  const ing=cm2.filter(m=>m.tipo==='ingreso'&&(m.moneda||'PEN')==='PEN').reduce((a,m)=>a+Number(m.mon),0);
-  const eg=cm2.filter(m=>m.tipo==='egreso'&&(m.moneda||'PEN')==='PEN').reduce((a,m)=>a+Number(m.mon),0);
-  const ingUSD=cm2.filter(m=>m.tipo==='ingreso'&&m.moneda==='USD').reduce((a,m)=>a+Number(m.mon),0);
-  const egUSD=cm2.filter(m=>m.tipo==='egreso'&&m.moneda==='USD').reduce((a,m)=>a+Number(m.mon),0);
+  // Get filial and departamento IDs
+  var filIds=DB.filiales.filter(function(f){return (f.tipo||'filial')!=='departamento';}).map(function(f){return f.id;});
+  var deptIds=DB.filiales.filter(function(f){return f.tipo==='departamento';}).map(function(f){return f.id;});
+
+  // Filiales totals
+  var cm2fil=cm2.filter(function(m){return filIds.indexOf(m.fil)>-1;});
+  var cm2dept=cm2.filter(function(m){return deptIds.indexOf(m.fil)>-1;});
+
+  const ing=cm2fil.filter(m=>m.tipo==='ingreso'&&(m.moneda||'PEN')==='PEN').reduce((a,m)=>a+Number(m.mon),0);
+  const eg=cm2fil.filter(m=>m.tipo==='egreso'&&(m.moneda||'PEN')==='PEN').reduce((a,m)=>a+Number(m.mon),0);
+  const ingUSD=cm2fil.filter(m=>m.tipo==='ingreso'&&m.moneda==='USD').reduce((a,m)=>a+Number(m.mon),0);
+  const egUSD=cm2fil.filter(m=>m.tipo==='egreso'&&m.moneda==='USD').reduce((a,m)=>a+Number(m.mon),0);
+
+  // Departamentos totals
+  const ingDept=cm2dept.filter(m=>m.tipo==='ingreso'&&(m.moneda||'PEN')==='PEN').reduce((a,m)=>a+Number(m.mon),0);
+  const egDept=cm2dept.filter(m=>m.tipo==='egreso'&&(m.moneda||'PEN')==='PEN').reduce((a,m)=>a+Number(m.mon),0);
+
+  var deptSection=deptIds.length>0?`
+    <div class="stat-card" style="border-color:rgba(155,89,182,.4);grid-column:1/-1;background:rgba(155,89,182,.05)">
+      <div class="stat-lbl" style="color:#A569BD">⛪ DEPARTAMENTOS — ${mesLabel}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:8px">
+        <div><div style="font-size:11px;color:rgba(247,243,233,.5)">Ingresos</div><div class="stat-val ing" style="font-size:18px">${fmt(ingDept)}</div></div>
+        <div><div style="font-size:11px;color:rgba(247,243,233,.5)">Egresos</div><div class="stat-val eg" style="font-size:18px">${fmt(egDept)}</div></div>
+        <div><div style="font-size:11px;color:rgba(247,243,233,.5)">Balance</div><div class="stat-val bal" style="font-size:18px">${fmt(ingDept-egDept)}</div></div>
+      </div>
+    </div>`:'';
+
   document.getElementById('dash-stats').innerHTML=`
     <div class="stat-card sc-ing"><div class="stat-lbl">Ingresos del Mes</div><div class="stat-val ing">${fmt(ing)}</div><div class="stat-sub">${ingUSD>0?'$ '+ingUSD.toFixed(2)+' | ':''}${mesLabel}</div></div>
     <div class="stat-card sc-eg"><div class="stat-lbl">Egresos del Mes</div><div class="stat-val eg">${fmt(eg)}</div><div class="stat-sub">${egUSD>0?'$ '+egUSD.toFixed(2)+' | ':''}${mesLabel}</div></div>
     <div class="stat-card sc-bal"><div class="stat-lbl">Balance del Mes</div><div class="stat-val bal">${fmt(ing-eg)}</div><div class="stat-sub">${(ingUSD||egUSD)?'$ '+(ingUSD-egUSD).toFixed(2)+' | ':''}${ing-eg>=0?'Superávit':'Déficit'}</div></div>
+    ${deptSection}
     <div class="stat-card sc-mem"><div class="stat-lbl">Total Miembros</div><div class="stat-val" style="color:#5DADE2">${gAccMiem().length}</div><div class="stat-sub">Registrados</div></div>`;
   // bar chart
   const mn=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
@@ -1387,6 +1428,11 @@ function renderMov(){
   if(s)movs=movs.filter(m=>m.desc.toLowerCase().includes(s)||m.cat.toLowerCase().includes(s)||(m.comp||'').toLowerCase().includes(s));
   if(ft)movs=movs.filter(m=>m.tipo===ft);
   if(fa)movs=movs.filter(m=>m.fec.split('-')[0]===fa);
+  var ftipo=document.getElementById('mov-ftipo')?document.getElementById('mov-ftipo').value:'';
+  if(ftipo){
+    var tipoFilIds=DB.filiales.filter(function(f){return (f.tipo||'filial')===ftipo;}).map(function(f){return f.id;});
+    movs=movs.filter(function(m){return tipoFilIds.indexOf(m.fil)>-1;});
+  }
   if(fm)movs=movs.filter(m=>m.fec.split('-')[1]===fm);
   if(fc)movs=movs.filter(m=>m.cat===fc);
   if(ff&&ff!=='all')movs=movs.filter(m=>m.fil===ff);
@@ -1681,7 +1727,8 @@ function renderFil(){
   if(!fils.length){tb.innerHTML='<tr><td colspan="8"><div class="empty"><span class="ic">🏛️</span><p>No hay filiales</p></div></td></tr>';return;}
   tb.innerHTML=fils.map(f=>{
     const nm=DB.miembros.filter(m=>m.fil===f.id).length;
-    return`<tr><td><input type="checkbox" class="fil-chk" data-id="${f.id}" onchange="updBulkBtn('fil')" style="cursor:pointer"></td><td style="font-family:'Cinzel',serif;color:var(--gold-light);font-size:11px">${f.cod}</td><td><strong>${f.nom}</strong></td><td>${f.pastor}</td><td>${f.tes}</td><td style="font-size:11px">${f.dir}</td><td style="text-align:center">${nm}</td><td><span class="badge b-act">Activa</span></td><td><button class="btn btn-sm btn-s" onclick="edFil('${f.id}')">✏️</button>${f.id!=='sede'?` <button class="btn btn-sm btn-d" onclick="delFil('${f.id}')">🗑️</button>`:''}</td></tr>`;
+    var tipoBadge=f.tipo==='departamento'?'<span style="font-size:9px;background:rgba(155,89,182,.2);color:#A569BD;padding:1px 5px;border-radius:3px;border:1px solid rgba(155,89,182,.3)">DEPT</span>':'<span style="font-size:9px;background:rgba(46,134,171,.2);color:#5DADE2;padding:1px 5px;border-radius:3px;border:1px solid rgba(46,134,171,.3)">FILIAL</span>';
+    return`<tr><td><input type="checkbox" class="fil-chk" data-id="${f.id}" onchange="updBulkBtn('fil')" style="cursor:pointer"></td><td style="font-family:'Cinzel',serif;color:var(--gold-light);font-size:11px">${f.cod} ${tipoBadge}</td><td><strong>${f.nom}</strong></td><td>${f.pastor}</td><td>${f.tes}</td><td style="font-size:11px">${f.dir}</td><td style="text-align:center">${nm}</td><td><span class="badge b-act">Activa</span></td><td><button class="btn btn-sm btn-s" onclick="edFil('${f.id}')">✏️</button>${f.id!=='sede'?` <button class="btn btn-sm btn-d" onclick="delFil('${f.id}')">🗑️</button>`:''}</td></tr>`;
   }).join('');
 }
 
@@ -1691,6 +1738,7 @@ function openFilModal(id=null){
     const f=DB.filiales.find(x=>x.id===id);
     document.getElementById('fil-tit').textContent='Editar Filial';
     document.getElementById('f-cod').value=f.cod;document.getElementById('f-nom').value=f.nom;
+    var ftEl=document.getElementById('f-tipo');if(ftEl)ftEl.value=f.tipo||'filial';
     document.getElementById('f-pas').value=f.pastor;document.getElementById('f-tes').value=f.tes;
     document.getElementById('f-dir').value=f.dir;document.getElementById('f-tel').value=f.tel;
     document.getElementById('f-fun').value=f.fun||'';
@@ -1716,6 +1764,7 @@ function savFil(){
   }
   var obj={
     id:EID||cod, cod:cod, nom:nom, pastor:pas,
+    tipo:document.getElementById('f-tipo')?document.getElementById('f-tipo').value:'filial',
     tes:document.getElementById('f-tes').value||'',
     dir:document.getElementById('f-dir').value||'',
     tel:document.getElementById('f-tel').value||'',
