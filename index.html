@@ -1391,89 +1391,63 @@ function renderDash(){
   const curM=selMes>0?selMes:now.getMonth()+1;
   const curY=selAnio;
   const mesLabel=selMes>0?['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'][selMes-1]+' '+curY:'Mes actual';
-  const cm2=movs.filter(m=>{const[y,mo]=m.fec.split('-').map(Number);return y===curY&&mo===curM;});
-  // Get filial and departamento IDs
+
+  // Separate filiales and departamentos
   var filIds=DB.filiales.filter(function(f){return (f.tipo||'filial')!=='departamento';}).map(function(f){return f.id;});
   var deptIds=DB.filiales.filter(function(f){return f.tipo==='departamento';}).map(function(f){return f.id;});
 
-  // Filiales totals
+  // Filter movements by month
+  var cm2=movs.filter(function(m){var p=m.fec.split('-').map(Number);return p[0]===curY&&p[1]===curM;});
   var cm2fil=cm2.filter(function(m){return filIds.indexOf(m.fil)>-1;});
   var cm2dept=cm2.filter(function(m){return deptIds.indexOf(m.fil)>-1;});
 
-  const ing=cm2fil.filter(m=>m.tipo==='ingreso'&&(m.moneda||'PEN')==='PEN').reduce((a,m)=>a+Number(m.mon),0);
-  const eg=cm2fil.filter(m=>m.tipo==='egreso'&&(m.moneda||'PEN')==='PEN').reduce((a,m)=>a+Number(m.mon),0);
-  const ingUSD=cm2fil.filter(m=>m.tipo==='ingreso'&&m.moneda==='USD').reduce((a,m)=>a+Number(m.mon),0);
-  const egUSD=cm2fil.filter(m=>m.tipo==='egreso'&&m.moneda==='USD').reduce((a,m)=>a+Number(m.mon),0);
+  // Filiales totals current month
+  var ing=cm2fil.filter(function(m){return m.tipo==='ingreso'&&(m.moneda||'PEN')==='PEN';}).reduce(function(a,m){return a+Number(m.mon);},0);
+  var eg=cm2fil.filter(function(m){return m.tipo==='egreso'&&(m.moneda||'PEN')==='PEN';}).reduce(function(a,m){return a+Number(m.mon);},0);
+  var ingUSD=cm2fil.filter(function(m){return m.tipo==='ingreso'&&m.moneda==='USD';}).reduce(function(a,m){return a+Number(m.mon);},0);
+  var egUSD=cm2fil.filter(function(m){return m.tipo==='egreso'&&m.moneda==='USD';}).reduce(function(a,m){return a+Number(m.mon);},0);
 
-  // Departamentos totals
-  const ingDept=cm2dept.filter(m=>m.tipo==='ingreso'&&(m.moneda||'PEN')==='PEN').reduce((a,m)=>a+Number(m.mon),0);
-  const egDept=cm2dept.filter(m=>m.tipo==='egreso'&&(m.moneda||'PEN')==='PEN').reduce((a,m)=>a+Number(m.mon),0);
+  // Departamentos totals current month
+  var ingDept=cm2dept.filter(function(m){return m.tipo==='ingreso'&&(m.moneda||'PEN')==='PEN';}).reduce(function(a,m){return a+Number(m.mon);},0);
+  var egDept=cm2dept.filter(function(m){return m.tipo==='egreso'&&(m.moneda||'PEN')==='PEN';}).reduce(function(a,m){return a+Number(m.mon);},0);
 
-  var deptSection=deptIds.length>0?`
-    <div class="stat-card" style="border-color:rgba(155,89,182,.4);grid-column:1/-1;background:rgba(155,89,182,.05)">
-      <div class="stat-lbl" style="color:#A569BD">⛪ DEPARTAMENTOS — ${mesLabel}</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:8px">
-        <div><div style="font-size:11px;color:rgba(247,243,233,.5)">Ingresos</div><div class="stat-val ing" style="font-size:18px">${fmt(ingDept)}</div></div>
-        <div><div style="font-size:11px;color:rgba(247,243,233,.5)">Egresos</div><div class="stat-val eg" style="font-size:18px">${fmt(egDept)}</div></div>
-        <div><div style="font-size:11px;color:rgba(247,243,233,.5)">Balance</div><div class="stat-val bal" style="font-size:18px">${fmt(ingDept-egDept)}</div></div>
-      </div>
-    </div>`:'';
-
-  
-  // Calculate banco saldo (total acumulado)
-  var saldoBanco=(DB.banco||[]).reduce(function(s,m){
-    return s+(m.tipo==='deposito'?Number(m.mon):-Number(m.mon));
-  },0);
+  // Banco saldo filtered by selected month
+  var selectedYM=curY+'-'+String(curM).padStart(2,'0');
+  var saldoBanco=(DB.banco||[]).filter(function(m){return m.fec.substring(0,7)<=selectedYM;})
+    .reduce(function(s,m){return s+(m.tipo==='deposito'?Number(m.mon):-Number(m.mon));},0);
 
   // Saldo anterior = Saldo Caja del mes anterior
   var siFiliales=Number((DB.saldos_iniciales||{}).filiales)||0;
   var siDeptos=Number((DB.saldos_iniciales||{}).departamentos)||0;
-  var selectedYM=curY+'-'+String(curM).padStart(2,'0');
 
-  var allMovsFil=gAccMov().filter(function(m){
-    var filObj=DB.filiales.find(function(f){return f.id===m.fil;});
-    return !filObj||(filObj.tipo||'filial')!=='departamento';
-  });
-  var allMovsDept=gAccMov().filter(function(m){
-    var filObj=DB.filiales.find(function(f){return f.id===m.fil;});
-    return filObj&&filObj.tipo==='departamento';
-  });
+  var allMovsFil=gAccMov().filter(function(m){var f=DB.filiales.find(function(x){return x.id===m.fil;});return !f||(f.tipo||'filial')!=='departamento';});
+  var allMovsDept=gAccMov().filter(function(m){var f=DB.filiales.find(function(x){return x.id===m.fil;});return f&&f.tipo==='departamento';});
 
-  // All movements before selected month
   var prevMovsFil=allMovsFil.filter(function(m){return m.fec.substring(0,7)<selectedYM&&(m.moneda||'PEN')==='PEN';});
   var prevSaldoTotalFil=siFiliales
     +prevMovsFil.filter(function(m){return m.tipo==='ingreso';}).reduce(function(a,m){return a+Number(m.mon);},0)
     -prevMovsFil.filter(function(m){return m.tipo==='egreso';}).reduce(function(a,m){return a+Number(m.mon);},0);
-
-  // Banco hasta fin del mes anterior
   var prevBanco=(DB.banco||[]).filter(function(m){return m.fec.substring(0,7)<selectedYM;})
     .reduce(function(s,m){return s+(m.tipo==='deposito'?Number(m.mon):-Number(m.mon));},0);
-
-  // Saldo anterior = Saldo Caja mes anterior (Total - Banco anterior)
   var saldoAntFil=prevSaldoTotalFil-prevBanco;
-
-  // Current month saldo total and caja
   var saldoTotalFil=saldoAntFil+(ing-eg);
   var saldoCajaFil=saldoTotalFil-saldoBanco;
 
-  // Departamentos
   var prevMovsDept=allMovsDept.filter(function(m){return m.fec.substring(0,7)<selectedYM&&(m.moneda||'PEN')==='PEN';});
   var saldoAntDept=siDeptos
     +prevMovsDept.filter(function(m){return m.tipo==='ingreso';}).reduce(function(a,m){return a+Number(m.mon);},0)
     -prevMovsDept.filter(function(m){return m.tipo==='egreso';}).reduce(function(a,m){return a+Number(m.mon);},0);
   var saldoTotalDept=saldoAntDept+(ingDept-egDept);
 
-// Build dashboard HTML using string concatenation
-  function dashCard(lbl,val,color,bg){
+  // Helper card builder
+  function dc(lbl,val,color,bg){
     return '<div style="text-align:center'+(bg?';background:'+bg+';border-radius:6px;padding:8px':'')+'">'
       +'<div style="font-size:10px;color:rgba(247,243,233,.45);margin-bottom:4px">'+lbl+'</div>'
       +'<div style="font-size:'+(bg?'17':'15')+'px;font-weight:bold;color:'+color+'">'+fmt(val)+'</div>'
       +'</div>';
   }
 
-  var balColorFil=ing-eg>=0?'#2ECC71':'#E74C3C';
-  var balColorDept=ingDept-egDept>=0?'#2ECC71':'#E74C3C';
-
+  // Admin HTML
   var adminHtml=''
     +'<div class="stat-card" style="border-color:rgba(201,168,76,.3);grid-column:1/-1;padding:14px 18px">'
       +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'
@@ -1484,64 +1458,68 @@ function renderDash(){
         +'</div>'
       +'</div>'
       +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:10px">'
-        +dashCard('Saldo Anterior',saldoAntFil,'#F0C040','')
-        +dashCard('Entradas',ing,'#2ECC71','')
-        +dashCard('Salidas',eg,'#E74C3C','')
-        +dashCard('Balance Mes',ing-eg,balColorFil,'')
+        +dc('Saldo Anterior',saldoAntFil,'#F0C040','')
+        +dc('Entradas',ing,'#2ECC71','')
+        +dc('Salidas',eg,'#E74C3C','')
+        +dc('Balance Mes',ing-eg,ing-eg>=0?'#2ECC71':'#E74C3C','')
       +'</div>'
       +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">'
-        +dashCard('Saldo Total',saldoTotalFil,'var(--gold-light)','rgba(201,168,76,.1)')
-        +dashCard('🏦 Saldo Banco',saldoBanco,'#5DADE2','rgba(46,134,171,.1)')
-        +dashCard('💵 Saldo Caja',saldoCajaFil,'#2ECC71','rgba(46,204,113,.1)')
+        +dc('Saldo Total',saldoTotalFil,'var(--gold-light)','rgba(201,168,76,.1)')
+        +dc('🏦 Saldo Banco',saldoBanco,'#5DADE2','rgba(46,134,171,.1)')
+        +dc('💵 Saldo Caja',saldoCajaFil,'#2ECC71','rgba(46,204,113,.1)')
       +'</div>'
     +'</div>';
 
   if(deptIds.length>0){
-    adminHtml+='<div class="stat-card" style="border-color:rgba(155,89,182,.4);grid-column:1/-1;padding:14px 18px;background:rgba(155,89,182,.05)">'
-      +'<div class="stat-lbl" style="color:#A569BD;margin-bottom:10px">⛪ DEPARTAMENTOS — '+mesLabel+'</div>'
-      +'<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px">'
-        +dashCard('Saldo Anterior',saldoAntDept,'#F0C040','')
-        +dashCard('Entradas',ingDept,'#2ECC71','')
-        +dashCard('Salidas',egDept,'#E74C3C','')
-        +dashCard('Balance Mes',ingDept-egDept,balColorDept,'')
-        +dashCard('Saldo Total',saldoTotalDept,'#A569BD','rgba(155,89,182,.15)')
-      +'</div>'
-    +'</div>';
+    adminHtml+=''
+      +'<div class="stat-card" style="border-color:rgba(155,89,182,.4);grid-column:1/-1;padding:14px 18px;background:rgba(155,89,182,.05)">'
+        +'<div class="stat-lbl" style="color:#A569BD;margin-bottom:10px">⛪ DEPARTAMENTOS — '+mesLabel+'</div>'
+        +'<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px">'
+          +dc('Saldo Anterior',saldoAntDept,'#F0C040','')
+          +dc('Entradas',ingDept,'#2ECC71','')
+          +dc('Salidas',egDept,'#E74C3C','')
+          +dc('Balance Mes',ingDept-egDept,ingDept-egDept>=0?'#2ECC71':'#E74C3C','')
+          +dc('Saldo Total',saldoTotalDept,'#A569BD','rgba(155,89,182,.15)')
+        +'</div>'
+      +'</div>';
   }
 
+  // Filial view (nivel 3+)
   var filialHtml=''
     +'<div class="stat-card" style="border-color:rgba(201,168,76,.3);grid-column:1/-1;padding:14px 18px">'
       +'<div class="stat-lbl" style="color:var(--gold-light);margin-bottom:10px">📊 MI FILIAL — '+mesLabel+'</div>'
       +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">'
-        +dashCard('Entradas',ing,'#2ECC71','')
-        +dashCard('Salidas',eg,'#E74C3C','')
-        +dashCard('Balance Mes',ing-eg,balColorFil,'')
+        +dc('Entradas',ing,'#2ECC71','')
+        +dc('Salidas',eg,'#E74C3C','')
+        +dc('Balance Mes',ing-eg,ing-eg>=0?'#2ECC71':'#E74C3C','')
       +'</div>'
     +'</div>';
 
   document.getElementById('dash-stats').innerHTML=CU&&CU.niv<=2?adminHtml:filialHtml;
 
   // ===== CHARTS =====
+  var mn=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
   var chYear=parseInt((document.getElementById('ch-year')||{value:curY}).value)||curY;
   var chStartMonth=chYear===now.getFullYear()?now.getMonth():11;
-  var mn=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-  var lbls=[],ingD=[],egD=[],ingDUSD=[];
-  // Only filiales for charts (no departamentos)
+  var lbls=[],ingD=[],egD=[];
+
+  // Only filiales for charts
   var movsFilChart=movs.filter(function(m){
-    var filObj=DB.filiales.find(function(f){return f.id===m.fil;});
-    return !filObj||(filObj.tipo||'filial')!=='departamento';
+    var f=DB.filiales.find(function(x){return x.id===m.fil;});
+    return !f||(f.tipo||'filial')!=='departamento';
   });
+
   for(var i=5;i>=0;i--){
     var d=new Date(chYear,chStartMonth-i,1);
     lbls.push(mn[d.getMonth()]+' '+d.getFullYear());
     var mm=movsFilChart.filter(function(m){
-      var parts=m.fec.split('-').map(Number);
-      return parts[0]===d.getFullYear()&&parts[1]===d.getMonth()+1;
+      var p=m.fec.split('-').map(Number);
+      return p[0]===d.getFullYear()&&p[1]===d.getMonth()+1;
     });
-    var ingPEN=mm.filter(function(m){return m.tipo==='ingreso'&&(m.moneda||'PEN')==='PEN';}).reduce(function(a,m){return a+Number(m.mon);},0);
-    var egPEN=mm.filter(function(m){return m.tipo==='egreso'&&(m.moneda||'PEN')==='PEN';}).reduce(function(a,m){return a+Number(m.mon);},0);
-    ingD.push(ingPEN);egD.push(egPEN);
+    ingD.push(mm.filter(function(m){return m.tipo==='ingreso'&&(m.moneda||'PEN')==='PEN';}).reduce(function(a,m){return a+Number(m.mon);},0));
+    egD.push(mm.filter(function(m){return m.tipo==='egreso'&&(m.moneda||'PEN')==='PEN';}).reduce(function(a,m){return a+Number(m.mon);},0));
   }
+
   if(chBar)chBar.destroy();
   var ctxBar=document.getElementById('ch-bar');
   if(ctxBar){
@@ -1551,7 +1529,7 @@ function renderDash(){
     ]},options:{responsive:true,plugins:{legend:{labels:{color:'rgba(247,243,233,.7)'}}},scales:{x:{ticks:{color:'rgba(247,243,233,.5)'},grid:{color:'rgba(247,243,233,.05)'}},y:{ticks:{color:'rgba(247,243,233,.5)',callback:function(v){return'S/.'+v.toLocaleString();}},grid:{color:'rgba(247,243,233,.05)'}}}}});
   }
 
-  // Pie chart - distribution by category (filiales only)
+  // Pie chart
   var catTotals={};
   movsFilChart.filter(function(m){return m.tipo==='ingreso'&&(m.moneda||'PEN')==='PEN';}).forEach(function(m){
     catTotals[m.cat]=(catTotals[m.cat]||0)+Number(m.mon);
@@ -1565,7 +1543,7 @@ function renderDash(){
     chPie=new Chart(ctxPie,{type:'doughnut',data:{labels:pieLabels,datasets:[{data:pieData,backgroundColor:pieColors.slice(0,pieLabels.length),borderWidth:2,borderColor:'#0D1B2A'}]},options:{responsive:true,plugins:{legend:{position:'bottom',labels:{color:'rgba(247,243,233,.7)',font:{size:10}}}}}});
   }
 
-  // Last movements table
+  // Last movements
   var ltb=document.getElementById('dash-rec');
   if(ltb){
     var last5=gAccMov().sort(function(a,b){var dd=b.fec.localeCompare(a.fec);return dd!==0?dd:(b.ts||0)-(a.ts||0);}).slice(0,5);
@@ -1577,7 +1555,6 @@ function renderDash(){
     }).join('');
   }
 }
-
 
 function openMovModal(id){
   EID=id||null;updCats();popMiem('m-miem');
