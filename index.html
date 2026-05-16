@@ -792,9 +792,16 @@ tbody td{padding:9px 11px;color:rgba(247,243,233,.8);vertical-align:middle}
 <div class="ov" id="ov-fil">
   <div class="modal">
     <div class="modal-hd"><div class="modal-tit" id="fil-tit">Nueva Filial</div><button class="modal-x" onclick="cm('ov-fil')">✕</button></div>
-    <div class="fr"><div class="fld"><label>Código</label><input type="text" id="f-cod" placeholder="Ej: F001, S001, LIMA"></div><div class="fld"><label>Tipo</label><select id="f-tipo"><option value="filial">Filial / Sede</option><option value="departamento">Departamento</option></select></div></div>
+    <div class="fr"><div class="fld"><label>Código</label><input type="text" id="f-cod" placeholder="Ej: F001, S001, LIMA"></div><div class="fld"><label>Tipo</label><select id="f-tipo" onchange="toggleSaldoInicial()"><option value="filial">Filial / Sede</option><option value="departamento">Departamento</option></select></div></div>
     <div class="fr"><div class="fld"><label>Nombre</label><input type="text" id="f-nom" placeholder="Nombre de la filial o departamento"></div><div class="fld"><label>Pastor / Responsable</label><input type="text" id="f-pas" placeholder="Nombre del responsable"></div></div>
     <div class="fr"><div class="fld"><label>Tesorero</label><input type="text" id="f-tes" placeholder="Nombre del tesorero"></div></div>
+    <div class="fr" id="f-saldo-row" style="display:none">
+      <div class="fld">
+        <label>💰 Saldo Inicial (S/.)</label>
+        <input type="number" id="f-saldo-inicial" placeholder="0.00" step="0.01" min="0">
+        <div style="font-size:10px;color:rgba(247,243,233,.4);margin-top:3px">Saldo que tenía este departamento antes de usar el sistema</div>
+      </div>
+    </div>
     <div class="fr fr1"><div class="fld"><label>Dirección</label><input type="text" id="f-dir" placeholder="Dirección completa"></div></div>
     <div class="fr"><div class="fld"><label>Teléfono</label><input type="text" id="f-tel" placeholder="Teléfono"></div><div class="fld"><label>Fecha de Fundación</label><input type="date" id="f-fun"></div></div>
     <div class="modal-ft"><button class="btn btn-s" onclick="cm('ov-fil')">Cancelar</button><button class="btn btn-p" onclick="savFil()">💾 Guardar</button></div>
@@ -1443,8 +1450,11 @@ function renderDash(){
   var saldoTotalFil=saldoAntFil+(ing-eg);
   var saldoCajaFil=saldoTotalFil-saldoBanco;
 
+  // Departamentos - calculate per individual dept saldo_inicial
   var prevMovsDept=allMovsDept.filter(function(m){return m.fec.substring(0,7)<selectedYM&&(m.moneda||'PEN')==='PEN';});
-  var saldoAntDept=siDeptos
+  var siDeptTotal=DB.filiales.filter(function(f){return f.tipo==='departamento';})
+    .reduce(function(s,f){return s+(Number(f.saldo_inicial)||0);},0);
+  var saldoAntDept=siDeptTotal
     +prevMovsDept.filter(function(m){return m.tipo==='ingreso';}).reduce(function(a,m){return a+Number(m.mon);},0)
     -prevMovsDept.filter(function(m){return m.tipo==='egreso';}).reduce(function(a,m){return a+Number(m.mon);},0);
   var saldoTotalDept=saldoAntDept+(ingDept-egDept);
@@ -1821,11 +1831,15 @@ function openFilModal(id=null){
     document.getElementById('fil-tit').textContent='Editar Filial';
     document.getElementById('f-cod').value=f.cod;document.getElementById('f-nom').value=f.nom;
     var ftEl=document.getElementById('f-tipo');if(ftEl)ftEl.value=f.tipo||'filial';
+    var fsiEl=document.getElementById('f-saldo-inicial');if(fsiEl)fsiEl.value=f.saldo_inicial||0;
+    toggleSaldoInicial();
     document.getElementById('f-pas').value=f.pastor;document.getElementById('f-tes').value=f.tes;
     document.getElementById('f-dir').value=f.dir;document.getElementById('f-tel').value=f.tel;
     document.getElementById('f-fun').value=f.fun||'';
   }else{
     document.getElementById('fil-tit').textContent='Nueva Filial';
+    var fsiNew=document.getElementById('f-saldo-inicial');if(fsiNew)fsiNew.value='0';
+    var fsiRow=document.getElementById('f-saldo-row');if(fsiRow)fsiRow.style.display='none';
     var cnt=DB.filiales.filter(function(f){return f.id!=='sede';}).length+1;
     document.getElementById('f-cod').value='F'+String(cnt).padStart(3,'0');
     document.getElementById('f-cod').style.opacity='1';
@@ -1847,6 +1861,7 @@ function savFil(){
   var obj={
     id:EID||cod, cod:cod, nom:nom, pastor:pas,
     tipo:document.getElementById('f-tipo')?document.getElementById('f-tipo').value:'filial',
+    saldo_inicial:document.getElementById('f-tipo')&&document.getElementById('f-tipo').value==='departamento'?parseFloat(document.getElementById('f-saldo-inicial').value)||0:0,
     tes:document.getElementById('f-tes').value||'',
     dir:document.getElementById('f-dir').value||'',
     tel:document.getElementById('f-tel').value||'',
@@ -3432,6 +3447,14 @@ function savChgPw(){
   toast('Contraseña actualizada correctamente ✅');
 }
 
+// ===================== TOGGLE SALDO INICIAL DEPT =====================
+function toggleSaldoInicial(){
+  var tipo=document.getElementById('f-tipo');
+  var row=document.getElementById('f-saldo-row');
+  if(!tipo||!row)return;
+  row.style.display=tipo.value==='departamento'?'':'none';
+}
+
 // ===================== SALDO INICIAL =====================
 function openSaldoInicial(){
   if(!CU||CU.niv>1){toast('Solo el Administrador puede configurar el saldo inicial','err');return;}
@@ -4425,6 +4448,14 @@ function savChgPw(){
   PW_VISIBLE[userId]=false;
   renderUsrs();
   toast('Contraseña actualizada correctamente ✅');
+}
+
+// ===================== TOGGLE SALDO INICIAL DEPT =====================
+function toggleSaldoInicial(){
+  var tipo=document.getElementById('f-tipo');
+  var row=document.getElementById('f-saldo-row');
+  if(!tipo||!row)return;
+  row.style.display=tipo.value==='departamento'?'':'none';
 }
 
 // ===================== SALDO INICIAL =====================
