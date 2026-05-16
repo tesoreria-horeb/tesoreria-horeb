@@ -1520,6 +1520,57 @@ function renderDash(){
     +'</div>';
 
   document.getElementById('dash-stats').innerHTML=CU&&CU.niv<=2?adminHtml:filialHtml;
+
+  // ===== CHARTS =====
+  var chYear=parseInt((document.getElementById('ch-year')||{value:curY}).value)||curY;
+  var chStartMonth=chYear===now.getFullYear()?now.getMonth():11;
+  var mn=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  var lbls=[],ingD=[],egD=[],ingDUSD=[];
+  for(var i=5;i>=0;i--){
+    var d=new Date(chYear,chStartMonth-i,1);
+    lbls.push(mn[d.getMonth()]+' '+d.getFullYear());
+    var mm=movs.filter(function(m){
+      var parts=m.fec.split('-').map(Number);
+      return parts[0]===d.getFullYear()&&parts[1]===d.getMonth()+1;
+    });
+    var ingPEN=mm.filter(function(m){return m.tipo==='ingreso'&&(m.moneda||'PEN')==='PEN';}).reduce(function(a,m){return a+Number(m.mon);},0);
+    var egPEN=mm.filter(function(m){return m.tipo==='egreso'&&(m.moneda||'PEN')==='PEN';}).reduce(function(a,m){return a+Number(m.mon);},0);
+    ingD.push(ingPEN);egD.push(egPEN);
+  }
+  if(chBar)chBar.destroy();
+  var ctxBar=document.getElementById('ch-bar');
+  if(ctxBar){
+    chBar=new Chart(ctxBar,{type:'bar',data:{labels:lbls,datasets:[
+      {label:'Ingresos',data:ingD,backgroundColor:'rgba(46,204,113,.7)',borderColor:'#2ECC71',borderWidth:1},
+      {label:'Egresos',data:egD,backgroundColor:'rgba(231,76,60,.7)',borderColor:'#E74C3C',borderWidth:1}
+    ]},options:{responsive:true,plugins:{legend:{labels:{color:'rgba(247,243,233,.7)'}}},scales:{x:{ticks:{color:'rgba(247,243,233,.5)'},grid:{color:'rgba(247,243,233,.05)'}},y:{ticks:{color:'rgba(247,243,233,.5)',callback:function(v){return'S/.'+v.toLocaleString();}},grid:{color:'rgba(247,243,233,.05)'}}}}});
+  }
+
+  // Pie chart - distribution by category
+  var catTotals={};
+  movs.filter(function(m){return m.tipo==='ingreso'&&(m.moneda||'PEN')==='PEN';}).forEach(function(m){
+    catTotals[m.cat]=(catTotals[m.cat]||0)+Number(m.mon);
+  });
+  var pieLabels=Object.keys(catTotals);
+  var pieData=pieLabels.map(function(k){return catTotals[k];});
+  var pieColors=['#2ECC71','#C9A84C','#3498DB','#E74C3C','#9B59B6','#1ABC9C','#E67E22','#F39C12','#D35400','#27AE60','#2980B9','#8E44AD'];
+  if(chPie)chPie.destroy();
+  var ctxPie=document.getElementById('ch-pie');
+  if(ctxPie&&pieLabels.length>0){
+    chPie=new Chart(ctxPie,{type:'doughnut',data:{labels:pieLabels,datasets:[{data:pieData,backgroundColor:pieColors.slice(0,pieLabels.length),borderWidth:2,borderColor:'#0D1B2A'}]},options:{responsive:true,plugins:{legend:{position:'bottom',labels:{color:'rgba(247,243,233,.7)',font:{size:10}}}}}});
+  }
+
+  // Last movements table
+  var ltb=document.getElementById('last-movs');
+  if(ltb){
+    var last5=gAccMov().sort(function(a,b){var dd=b.fec.localeCompare(a.fec);return dd!==0?dd:(b.ts||0)-(a.ts||0);}).slice(0,5);
+    ltb.innerHTML=last5.map(function(m){
+      var cur=(m.moneda==='USD')?'$ ':'S/. ';
+      return '<tr><td>'+fd2(m.fec)+'</td><td>'+m.desc+'</td><td>'+m.cat+'</td>'
+        +'<td class="'+(m.tipo==='ingreso'?'amt-i':'amt-e')+'">'+cur+Number(m.mon).toFixed(2)+'</td>'
+        +'<td style="font-size:10px">'+gfn(m.fil)+'</td></tr>';
+    }).join('');
+  }
 }
 
 
