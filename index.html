@@ -1159,6 +1159,7 @@ function sm(n){
 }
 
 // ===================== HELPERS =====================
+var movPg=1;
 function gAccMov(){if(!CU)return[];return CU.niv<=2?DB.movimientos:DB.movimientos.filter(m=>m.fil===CU.fil);}
 function gAccFil(){if(!CU)return[];return CU.niv<=2?DB.filiales:DB.filiales.filter(f=>f.id===CU.fil);}
 function gAccMiem(){if(!CU)return[];return CU.niv<=2?DB.miembros:DB.miembros.filter(m=>m.fil===CU.fil);}
@@ -1851,7 +1852,7 @@ function renderMov(){
   var MPP=20;
   var pgs=Math.ceil(movs.length/MPP)||1;if(movPg>pgs)movPg=1;
   var sl=movs.slice((movPg-1)*MPP,movPg*MPP);
-  var tb=document.getElementById('mov-list');
+  var tb=document.getElementById('mov-body');
   if(!tb)return;
   if(!sl.length){tb.innerHTML='<tr><td colspan="10"><div class="empty"><span class="ic">📋</span><p>No hay movimientos</p></div></td></tr>';return;}
 
