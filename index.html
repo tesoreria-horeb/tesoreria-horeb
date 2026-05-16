@@ -1463,96 +1463,65 @@ function renderDash(){
     -prevMovsDept.filter(function(m){return m.tipo==='egreso';}).reduce(function(a,m){return a+Number(m.mon);},0);
   var saldoTotalDept=saldoAntDept+(ingDept-egDept);
 
-document.getElementById('dash-stats').innerHTML=CU&&CU.niv<=2?`
-    <div class="stat-card" style="border-color:rgba(201,168,76,.3);grid-column:1/-1;padding:14px 18px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-        <div class="stat-lbl" style="color:var(--gold-light)">🏛️ FILIALES Y SEDE CENTRAL — \${mesLabel}</div>
-        <div style="text-align:center;background:rgba(52,152,219,.1);border:1px solid rgba(52,152,219,.3);border-radius:8px;padding:4px 14px">
-          <div style="font-size:10px;color:rgba(247,243,233,.45)">Total Miembros</div>
-          <div style="font-size:20px;font-weight:bold;color:#3498DB">\${DB.miembros.length}</div>
-        </div>
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;text-align:center;margin-bottom:10px">
-        <div><div style="font-size:10px;color:rgba(247,243,233,.45);margin-bottom:4px">Saldo Anterior</div><div style="font-size:15px;font-weight:bold;color:#F0C040">\${fmt(saldoAntFil)}</div></div>
-        <div><div style="font-size:10px;color:rgba(247,243,233,.45);margin-bottom:4px">Entradas</div><div style="font-size:15px;font-weight:bold;color:#2ECC71">\${fmt(ing)}</div></div>
-        <div><div style="font-size:10px;color:rgba(247,243,233,.45);margin-bottom:4px">Salidas</div><div style="font-size:15px;font-weight:bold;color:#E74C3C">\${fmt(eg)}</div></div>
-        <div><div style="font-size:10px;color:rgba(247,243,233,.45);margin-bottom:4px">Balance Mes</div><div style="font-size:15px;font-weight:bold;color:\${ing-eg>=0?'#2ECC71':'#E74C3C'}">\${fmt(ing-eg)}</div></div>
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;text-align:center">
-        <div style="background:rgba(201,168,76,.1);border-radius:6px;padding:8px"><div style="font-size:10px;color:var(--gold-light);margin-bottom:4px">Saldo Total</div><div style="font-size:17px;font-weight:bold;color:var(--gold-light)">\${fmt(saldoTotalFil)}</div></div>
-        <div style="background:rgba(46,134,171,.1);border-radius:6px;padding:8px"><div style="font-size:10px;color:#5DADE2;margin-bottom:4px">🏦 Saldo Banco</div><div style="font-size:17px;font-weight:bold;color:#5DADE2">\${fmt(saldoBanco)}</div></div>
-        <div style="background:rgba(46,204,113,.1);border-radius:6px;padding:8px"><div style="font-size:10px;color:#2ECC71;margin-bottom:4px">💵 Saldo Caja</div><div style="font-size:17px;font-weight:bold;color:#2ECC71">\${fmt(saldoCajaFil)}</div></div>
-      </div>
-    </div>
-    \${deptIds.length>0?\`
-    <div class="stat-card" style="border-color:rgba(155,89,182,.4);grid-column:1/-1;padding:14px 18px;background:rgba(155,89,182,.05)">
-      <div class="stat-lbl" style="color:#A569BD;margin-bottom:10px">⛪ DEPARTAMENTOS — \${mesLabel}</div>
-      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;text-align:center">
-        <div><div style="font-size:10px;color:rgba(247,243,233,.45);margin-bottom:4px">Saldo Anterior</div><div style="font-size:15px;font-weight:bold;color:#F0C040">\${fmt(saldoAntDept)}</div></div>
-        <div><div style="font-size:10px;color:rgba(247,243,233,.45);margin-bottom:4px">Entradas</div><div style="font-size:15px;font-weight:bold;color:#2ECC71">\${fmt(ingDept)}</div></div>
-        <div><div style="font-size:10px;color:rgba(247,243,233,.45);margin-bottom:4px">Salidas</div><div style="font-size:15px;font-weight:bold;color:#E74C3C">\${fmt(egDept)}</div></div>
-        <div><div style="font-size:10px;color:rgba(247,243,233,.45);margin-bottom:4px">Balance Mes</div><div style="font-size:15px;font-weight:bold;color:\${ingDept-egDept>=0?'#2ECC71':'#E74C3C'}">\${fmt(ingDept-egDept)}</div></div>
-        <div style="background:rgba(155,89,182,.15);border-radius:6px;padding:8px"><div style="font-size:10px;color:#A569BD;margin-bottom:4px">Saldo Total</div><div style="font-size:17px;font-weight:bold;color:#A569BD">\${fmt(saldoTotalDept)}</div></div>
-      </div>
-    </div>\`:''}
-`:`
-    <div class="stat-card" style="border-color:rgba(201,168,76,.3);grid-column:1/-1;padding:14px 18px">
-      <div class="stat-lbl" style="color:var(--gold-light);margin-bottom:10px">📊 MI FILIAL — \${mesLabel}</div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;text-align:center">
-        <div><div style="font-size:10px;color:rgba(247,243,233,.45);margin-bottom:4px">Entradas</div><div style="font-size:18px;font-weight:bold;color:#2ECC71">\${fmt(ing)}</div></div>
-        <div><div style="font-size:10px;color:rgba(247,243,233,.45);margin-bottom:4px">Salidas</div><div style="font-size:18px;font-weight:bold;color:#E74C3C">\${fmt(eg)}</div></div>
-        <div><div style="font-size:10px;color:rgba(247,243,233,.45);margin-bottom:4px">Balance Mes</div><div style="font-size:18px;font-weight:bold;color:\${ing-eg>=0?'#2ECC71':'#E74C3C'}">\${fmt(ing-eg)}</div></div>
-      </div>
-    </div>
-`
-  // Sort: by date DESC, then by timestamp DESC (last registered first)
-  movs.sort(function(a,b){
-    var dateDiff=b.fec.localeCompare(a.fec);
-    if(dateDiff!==0)return dateDiff;
-    return (b.ts||0)-(a.ts||0);
-  });
-  const pgs=Math.ceil(movs.length/MPP)||1;if(movPg>pgs)movPg=1;
-  const sl=movs.slice((movPg-1)*MPP,movPg*MPP);
-  const tb=document.getElementById('mov-body');
-  if(!sl.length){tb.innerHTML='<tr><td colspan="10"><div class="empty"><span class="ic">💰</span><p>No hay movimientos</p></div></td></tr>';return;}
-  // Update bulk delete button visibility
-  var selCount=document.querySelectorAll('.mov-chk:checked').length;
-  var delBtn=document.getElementById('btn-del-selected');
-  if(delBtn)delBtn.style.display='none';
-  var allChk=document.getElementById('mov-chk-all');
-  if(allChk)allChk.checked=false;
-  tb.innerHTML=sl.map(function(m,i){
-    var compCell='';
-    if(m.compFile||m.hasFile){
-      compCell='<button class="btn btn-sm btn-s" onclick="verComprobante(this)" data-id="'+m.id+'" style="font-size:10px;padding:3px 8px">&#128206; Ver</button>';
-    } else if(m.comp){
-      compCell='<span style="font-size:10px;color:rgba(247,243,233,.4)">'+m.comp+'</span>';
-    } else {
-      compCell='<span style="color:rgba(247,243,233,.2)">—</span>';
-    }
-    return '<tr>'
-      +'<td><input type="checkbox" class="mov-chk" data-id="'+m.id+'" onchange="updBulkBtn()" style="cursor:pointer"></td>'
-      +'<td style="color:rgba(247,243,233,.35);font-size:10px">'+(((movPg-1)*MPP)+i+1)+'</td>'
-      +'<td>'+fd2(m.fec)+'</td>'
-      +'<td>'+m.desc+(function(){var mts=['transferencia','yape','plin','deposito'];return(m.cat==='Depósito Bancario'||mts.indexOf(m.met)>-1)?'&nbsp;<span style="font-size:9px;background:rgba(46,134,171,.2);color:#5DADE2;padding:1px 5px;border-radius:3px;border:1px solid rgba(46,134,171,.3)">🏦</span>':'';}())+'</td>'
-      +'<td>'+m.cat+'</td>'
-      +'<td class="hide-mobile" style="font-size:10px">'+gmn(m.miem)+'</td>'
-      +'<td class="hide-mobile" style="font-size:10px">'+m.met+'</td>'
-      +'<td><span class="badge b-'+(m.tipo==='ingreso'?'ing':'eg')+'">'+(m.tipo==='ingreso'?'Ingreso':'Egreso')+'</span></td>'
-      +'<td class="amt-'+(m.tipo==='ingreso'?'i':'e')+'">'+(m.moneda==='USD'?'$ ':'S/. ')+Number(m.mon).toFixed(2)+'</td>'
-      +'<td class="hide-mobile">'+compCell+'</td>'
-      +'<td class="hide-mobile" style="font-size:10px">'+gfn(m.fil)+'</td>'
-      +'<td><button class="btn btn-sm btn-s" onclick="edMov(this)" data-id="'+m.id+'">✏️</button> <button class="btn btn-sm btn-d" onclick="delMov(this)" data-id="'+m.id+'">🗑️</button></td>'
-      +'</tr>';
-  }).join('');
-  // pagination
-  const pag=document.getElementById('mov-pag');pag.innerHTML='';
-  if(pgs>1)for(let p=1;p<=pgs;p++){const b=document.createElement('button');b.className='pg-btn'+(p===movPg?' active':'');b.textContent=p;b.onclick=()=>{movPg=p;renderMov();};pag.appendChild(b);}
-  // cat filter
-  const csel=document.getElementById('mov-fc');const cv=csel.value;
-  csel.innerHTML='<option value="">Todas las categorías</option>';
-  [...DB.cats.ing,...DB.cats.eg].forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;csel.appendChild(o);});csel.value=cv;
+// Build dashboard HTML using string concatenation
+  function dashCard(lbl,val,color,bg){
+    return '<div style="text-align:center'+(bg?';background:'+bg+';border-radius:6px;padding:8px':'')+'">'
+      +'<div style="font-size:10px;color:rgba(247,243,233,.45);margin-bottom:4px">'+lbl+'</div>'
+      +'<div style="font-size:'+(bg?'17':'15')+'px;font-weight:bold;color:'+color+'">'+fmt(val)+'</div>'
+      +'</div>';
+  }
+
+  var balColorFil=ing-eg>=0?'#2ECC71':'#E74C3C';
+  var balColorDept=ingDept-egDept>=0?'#2ECC71':'#E74C3C';
+
+  var adminHtml=''
+    +'<div class="stat-card" style="border-color:rgba(201,168,76,.3);grid-column:1/-1;padding:14px 18px">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'
+        +'<div class="stat-lbl" style="color:var(--gold-light)">🏛️ FILIALES Y SEDE CENTRAL — '+mesLabel+'</div>'
+        +'<div style="text-align:center;background:rgba(52,152,219,.1);border:1px solid rgba(52,152,219,.3);border-radius:8px;padding:4px 14px">'
+          +'<div style="font-size:10px;color:rgba(247,243,233,.45)">Total Miembros</div>'
+          +'<div style="font-size:20px;font-weight:bold;color:#3498DB">'+DB.miembros.length+'</div>'
+        +'</div>'
+      +'</div>'
+      +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:10px">'
+        +dashCard('Saldo Anterior',saldoAntFil,'#F0C040','')
+        +dashCard('Entradas',ing,'#2ECC71','')
+        +dashCard('Salidas',eg,'#E74C3C','')
+        +dashCard('Balance Mes',ing-eg,balColorFil,'')
+      +'</div>'
+      +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">'
+        +dashCard('Saldo Total',saldoTotalFil,'var(--gold-light)','rgba(201,168,76,.1)')
+        +dashCard('🏦 Saldo Banco',saldoBanco,'#5DADE2','rgba(46,134,171,.1)')
+        +dashCard('💵 Saldo Caja',saldoCajaFil,'#2ECC71','rgba(46,204,113,.1)')
+      +'</div>'
+    +'</div>';
+
+  if(deptIds.length>0){
+    adminHtml+='<div class="stat-card" style="border-color:rgba(155,89,182,.4);grid-column:1/-1;padding:14px 18px;background:rgba(155,89,182,.05)">'
+      +'<div class="stat-lbl" style="color:#A569BD;margin-bottom:10px">⛪ DEPARTAMENTOS — '+mesLabel+'</div>'
+      +'<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px">'
+        +dashCard('Saldo Anterior',saldoAntDept,'#F0C040','')
+        +dashCard('Entradas',ingDept,'#2ECC71','')
+        +dashCard('Salidas',egDept,'#E74C3C','')
+        +dashCard('Balance Mes',ingDept-egDept,balColorDept,'')
+        +dashCard('Saldo Total',saldoTotalDept,'#A569BD','rgba(155,89,182,.15)')
+      +'</div>'
+    +'</div>';
+  }
+
+  var filialHtml=''
+    +'<div class="stat-card" style="border-color:rgba(201,168,76,.3);grid-column:1/-1;padding:14px 18px">'
+      +'<div class="stat-lbl" style="color:var(--gold-light);margin-bottom:10px">📊 MI FILIAL — '+mesLabel+'</div>'
+      +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">'
+        +dashCard('Entradas',ing,'#2ECC71','')
+        +dashCard('Salidas',eg,'#E74C3C','')
+        +dashCard('Balance Mes',ing-eg,balColorFil,'')
+      +'</div>'
+    +'</div>';
+
+  document.getElementById('dash-stats').innerHTML=CU&&CU.niv<=2?adminHtml:filialHtml;
 }
+
 
 function openMovModal(id){
   EID=id||null;updCats();popMiem('m-miem');
