@@ -1448,7 +1448,13 @@ function renderDash(){
 
   document.getElementById('dash-stats').innerHTML=`
     <div class="stat-card" style="border-color:rgba(201,168,76,.3);grid-column:1/-1;padding:14px 18px">
-      <div class="stat-lbl" style="color:var(--gold-light);margin-bottom:10px">🏛️ FILIALES Y SEDE CENTRAL — ${mesLabel}</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div class="stat-lbl" style="color:var(--gold-light)">🏛️ FILIALES Y SEDE CENTRAL — ${mesLabel}</div>
+        <div style="text-align:center;background:rgba(52,152,219,.1);border:1px solid rgba(52,152,219,.3);border-radius:8px;padding:4px 14px">
+          <div style="font-size:10px;color:rgba(247,243,233,.45)">Total Miembros</div>
+          <div style="font-size:20px;font-weight:bold;color:#3498DB">${DB.miembros.length}</div>
+        </div>
+      </div>
       <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;text-align:center">
         <div><div style="font-size:10px;color:rgba(247,243,233,.45);margin-bottom:4px">Saldo Anterior</div><div style="font-size:16px;font-weight:bold;color:#F0C040">${fmt(saldoAntFil)}</div></div>
         <div><div style="font-size:10px;color:rgba(247,243,233,.45);margin-bottom:4px">Entradas</div><div style="font-size:16px;font-weight:bold;color:#2ECC71">${fmt(ing)}</div></div>
@@ -1468,7 +1474,7 @@ function renderDash(){
         <div style="background:rgba(155,89,182,.15);border-radius:6px;padding:6px"><div style="font-size:10px;color:#A569BD;margin-bottom:4px">Saldo Total</div><div style="font-size:18px;font-weight:bold;color:#A569BD">${fmt(saldoTotalDept)}</div></div>
       </div>
     </div>`:''}
-    <div class="stat-card sc-miem"><div class="stat-lbl">Total Miembros</div><div class="stat-val" style="color:#3498DB;font-size:2rem">${DB.miembros.length}</div><div class="stat-sub">Registrados</div></div>`
+`
   // bar chart
   const mn=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
   const lbls=[],ingD=[],egD=[],ingDUSD=[];
