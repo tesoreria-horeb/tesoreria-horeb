@@ -1418,7 +1418,7 @@ function renderDash(){
 
   // Banco saldo filtered by selected month
   var selectedYM=curY+'-'+String(curM).padStart(2,'0');
-  var saldoBanco=(DB.banco||[]).filter(function(m){return m.fec.substring(0,7)<=selectedYM;})
+  var saldoBanco=(DB.banco||[]).filter(function(m){return m.fec.substring(0,7)===selectedYM;})
     .reduce(function(s,m){return s+(m.tipo==='deposito'?Number(m.mon):-Number(m.mon));},0);
 
   // Saldo anterior = Saldo Caja del mes anterior
@@ -1432,9 +1432,8 @@ function renderDash(){
   var prevSaldoTotalFil=siFiliales
     +prevMovsFil.filter(function(m){return m.tipo==='ingreso';}).reduce(function(a,m){return a+Number(m.mon);},0)
     -prevMovsFil.filter(function(m){return m.tipo==='egreso';}).reduce(function(a,m){return a+Number(m.mon);},0);
-  var prevBanco=(DB.banco||[]).filter(function(m){return m.fec.substring(0,7)<selectedYM;})
-    .reduce(function(s,m){return s+(m.tipo==='deposito'?Number(m.mon):-Number(m.mon));},0);
-  var saldoAntFil=prevSaldoTotalFil-prevBanco;
+  // prevBanco = 0 since banco is monthly-only (not accumulated)
+  var saldoAntFil=prevSaldoTotalFil;
   var saldoTotalFil=saldoAntFil+(ing-eg);
   var saldoCajaFil=saldoTotalFil-saldoBanco;
 
