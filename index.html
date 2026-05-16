@@ -1420,6 +1420,11 @@ function renderDash(){
     </div>`:'';
 
   
+  // Calculate banco saldo
+  var saldoBanco=(DB.banco||[]).reduce(function(s,m){
+    return s+(m.tipo==='deposito'?Number(m.mon):-Number(m.mon));
+  },0);
+
   // Saldo anterior calculations
   var siFiliales=Number((DB.saldos_iniciales||{}).filiales)||0;
   var siDeptos=Number((DB.saldos_iniciales||{}).departamentos)||0;
@@ -1455,12 +1460,14 @@ function renderDash(){
           <div style="font-size:20px;font-weight:bold;color:#3498DB">${DB.miembros.length}</div>
         </div>
       </div>
-      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;text-align:center">
-        <div><div style="font-size:10px;color:rgba(247,243,233,.45);margin-bottom:4px">Saldo Anterior</div><div style="font-size:16px;font-weight:bold;color:#F0C040">${fmt(saldoAntFil)}</div></div>
-        <div><div style="font-size:10px;color:rgba(247,243,233,.45);margin-bottom:4px">Entradas</div><div style="font-size:16px;font-weight:bold;color:#2ECC71">${fmt(ing)}</div></div>
-        <div><div style="font-size:10px;color:rgba(247,243,233,.45);margin-bottom:4px">Salidas</div><div style="font-size:16px;font-weight:bold;color:#E74C3C">${fmt(eg)}</div></div>
-        <div><div style="font-size:10px;color:rgba(247,243,233,.45);margin-bottom:4px">Balance Mes</div><div style="font-size:16px;font-weight:bold;color:${ing-eg>=0?'#2ECC71':'#E74C3C'}">${fmt(ing-eg)}</div></div>
-        <div style="background:rgba(201,168,76,.1);border-radius:6px;padding:6px"><div style="font-size:10px;color:var(--gold-light);margin-bottom:4px">Saldo Total</div><div style="font-size:18px;font-weight:bold;color:var(--gold-light)">${fmt(saldoTotalFil)}</div></div>
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:10px;text-align:center">
+        <div><div style="font-size:10px;color:rgba(247,243,233,.45);margin-bottom:4px">Saldo Anterior</div><div style="font-size:15px;font-weight:bold;color:#F0C040">${fmt(saldoAntFil)}</div></div>
+        <div><div style="font-size:10px;color:rgba(247,243,233,.45);margin-bottom:4px">Entradas</div><div style="font-size:15px;font-weight:bold;color:#2ECC71">${fmt(ing)}</div></div>
+        <div><div style="font-size:10px;color:rgba(247,243,233,.45);margin-bottom:4px">Salidas</div><div style="font-size:15px;font-weight:bold;color:#E74C3C">${fmt(eg)}</div></div>
+        <div><div style="font-size:10px;color:rgba(247,243,233,.45);margin-bottom:4px">Balance Mes</div><div style="font-size:15px;font-weight:bold;color:${ing-eg>=0?'#2ECC71':'#E74C3C'}">${fmt(ing-eg)}</div></div>
+        <div style="background:rgba(201,168,76,.1);border-radius:6px;padding:6px"><div style="font-size:10px;color:var(--gold-light);margin-bottom:4px">Saldo Total</div><div style="font-size:16px;font-weight:bold;color:var(--gold-light)">${fmt(saldoTotalFil)}</div></div>
+        <div style="background:rgba(46,134,171,.1);border-radius:6px;padding:6px"><div style="font-size:10px;color:#5DADE2;margin-bottom:4px">🏦 Saldo Banco</div><div style="font-size:16px;font-weight:bold;color:#5DADE2">${fmt(saldoBanco)}</div></div>
+        <div style="background:rgba(46,204,113,.1);border-radius:6px;padding:6px"><div style="font-size:10px;color:#2ECC71;margin-bottom:4px">💵 Saldo Caja</div><div style="font-size:16px;font-weight:bold;color:#2ECC71">${fmt(saldoTotalFil-saldoBanco)}</div></div>
       </div>
     </div>
     ${deptIds.length>0?`
