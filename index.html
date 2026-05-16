@@ -326,6 +326,7 @@ tbody td{padding:9px 11px;color:rgba(247,243,233,.8);vertical-align:middle}
       <div class="nav-item" onclick="sm('categorias')"><span class="ic">🏷️</span>Categorías</div>
       <div class="nav-item nav-super" onclick="sm('usuarios')"><span class="ic">👤</span>Usuarios</div>
       <div class="nav-item nav-super" onclick="sm('backup')"><span class="ic">💾</span>Backup</div>
+      <div class="nav-item nav-super" onclick="openSaldoInicial()"><span class="ic">💰</span>Saldo Inicial</div>
       <div class="nav-sec">Informes</div>
       <div class="nav-item" onclick="sm('rpt-caja')"><span class="ic">📋</span>Libro Caja</div>
       <div class="nav-item" onclick="sm('rpt-consolidado')"><span class="ic">📈</span>Consolidado</div>
@@ -849,6 +850,35 @@ tbody td{padding:9px 11px;color:rgba(247,243,233,.8);vertical-align:middle}
   </div>
 </div>
 
+<!-- MODAL SALDO INICIAL -->
+<div class="ov" id="ov-saldo-inicial">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-hd">
+      <div class="modal-tit">💰 Saldo Inicial</div>
+      <button class="modal-x" onclick="cm('ov-saldo-inicial')">✕</button>
+    </div>
+    <p style="font-size:12px;color:rgba(247,243,233,.5);margin-bottom:16px">
+      Ingrese el saldo que tenían las cajas antes de comenzar a usar el sistema. Este valor se suma a todos los movimientos registrados.
+    </p>
+    <div class="fld">
+      <label>Saldo Inicial — Filiales y Sede Central (S/.)</label>
+      <input type="number" id="si-filiales" placeholder="0.00" step="0.01" min="0">
+    </div>
+    <div class="fld">
+      <label>Saldo Inicial — Departamentos (S/.)</label>
+      <input type="number" id="si-departamentos" placeholder="0.00" step="0.01" min="0">
+    </div>
+    <div class="fld">
+      <label>Fecha de referencia</label>
+      <input type="date" id="si-fecha">
+    </div>
+    <div class="modal-ft">
+      <button class="btn btn-s" onclick="cm('ov-saldo-inicial')">Cancelar</button>
+      <button class="btn btn-p" onclick="savSaldoInicial()">💾 Guardar</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL TRANSFERIR MIEMBRO -->
 <div class="ov" id="ov-transfer">
   <div class="modal" style="max-width:400px">
@@ -992,6 +1022,7 @@ function initDB(){
     miembros:[],
     movimientos:[],
     banco:[],
+    saldos_iniciales:{filiales:0,departamentos:0,fecha:''},
     votos:[],
     cats:{
       ing:['Diezmos','Ofrendas','Primicias','Donaciones','Otros Ingresos'],
@@ -1013,6 +1044,7 @@ try{
   DB=ld();
   if(!DB||!DB.filiales||!DB.miembros||!DB.movimientos||!DB.cats||!DB.usuarios){DB=initDB();}
   if(!DB.banco)DB.banco=[];
+  if(!DB.saldos_iniciales)DB.saldos_iniciales={filiales:0,departamentos:0,fecha:''};
   if(DB.movimientos.length===0){const tmp=initDB();DB.movimientos=tmp.movimientos;}
 }catch(e){DB=initDB();}
 try{sd();}catch(e){console.warn('localStorage no disponible.');}
@@ -1387,12 +1419,56 @@ function renderDash(){
       </div>
     </div>`:'';
 
+  
+  // Saldo anterior calculations
+  var siFiliales=Number((DB.saldos_iniciales||{}).filiales)||0;
+  var siDeptos=Number((DB.saldos_iniciales||{}).departamentos)||0;
+  var selectedYM=curY+'-'+String(curM).padStart(2,'0');
+
+  var allMovsFil=gAccMov().filter(function(m){
+    var filObj=DB.filiales.find(function(f){return f.id===m.fil;});
+    return !filObj||(filObj.tipo||'filial')!=='departamento';
+  });
+  var allMovsDept=gAccMov().filter(function(m){
+    var filObj=DB.filiales.find(function(f){return f.id===m.fil;});
+    return filObj&&filObj.tipo==='departamento';
+  });
+
+  var prevMovsFil=allMovsFil.filter(function(m){return m.fec.substring(0,7)<selectedYM&&(m.moneda||'PEN')==='PEN';});
+  var saldoAntFil=siFiliales
+    +prevMovsFil.filter(function(m){return m.tipo==='ingreso';}).reduce(function(a,m){return a+Number(m.mon);},0)
+    -prevMovsFil.filter(function(m){return m.tipo==='egreso';}).reduce(function(a,m){return a+Number(m.mon);},0);
+  var saldoTotalFil=saldoAntFil+(ing-eg);
+
+  var prevMovsDept=allMovsDept.filter(function(m){return m.fec.substring(0,7)<selectedYM&&(m.moneda||'PEN')==='PEN';});
+  var saldoAntDept=siDeptos
+    +prevMovsDept.filter(function(m){return m.tipo==='ingreso';}).reduce(function(a,m){return a+Number(m.mon);},0)
+    -prevMovsDept.filter(function(m){return m.tipo==='egreso';}).reduce(function(a,m){return a+Number(m.mon);},0);
+  var saldoTotalDept=saldoAntDept+(ingDept-egDept);
+
   document.getElementById('dash-stats').innerHTML=`
-    <div class="stat-card sc-ing"><div class="stat-lbl">Ingresos del Mes</div><div class="stat-val ing">${fmt(ing)}</div><div class="stat-sub">${ingUSD>0?'$ '+ingUSD.toFixed(2)+' | ':''}${mesLabel}</div></div>
-    <div class="stat-card sc-eg"><div class="stat-lbl">Egresos del Mes</div><div class="stat-val eg">${fmt(eg)}</div><div class="stat-sub">${egUSD>0?'$ '+egUSD.toFixed(2)+' | ':''}${mesLabel}</div></div>
-    <div class="stat-card sc-bal"><div class="stat-lbl">Balance del Mes</div><div class="stat-val bal">${fmt(ing-eg)}</div><div class="stat-sub">${(ingUSD||egUSD)?'$ '+(ingUSD-egUSD).toFixed(2)+' | ':''}${ing-eg>=0?'Superávit':'Déficit'}</div></div>
-    ${deptSection}
-    <div class="stat-card sc-mem"><div class="stat-lbl">Total Miembros</div><div class="stat-val" style="color:#5DADE2">${gAccMiem().length}</div><div class="stat-sub">Registrados</div></div>`;
+    <div class="stat-card" style="border-color:rgba(201,168,76,.3);grid-column:1/-1;padding:14px 18px">
+      <div class="stat-lbl" style="color:var(--gold-light);margin-bottom:10px">🏛️ FILIALES Y SEDE CENTRAL — ${mesLabel}</div>
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;text-align:center">
+        <div><div style="font-size:10px;color:rgba(247,243,233,.45);margin-bottom:4px">Saldo Anterior</div><div style="font-size:16px;font-weight:bold;color:#F0C040">${fmt(saldoAntFil)}</div></div>
+        <div><div style="font-size:10px;color:rgba(247,243,233,.45);margin-bottom:4px">Entradas</div><div style="font-size:16px;font-weight:bold;color:#2ECC71">${fmt(ing)}</div></div>
+        <div><div style="font-size:10px;color:rgba(247,243,233,.45);margin-bottom:4px">Salidas</div><div style="font-size:16px;font-weight:bold;color:#E74C3C">${fmt(eg)}</div></div>
+        <div><div style="font-size:10px;color:rgba(247,243,233,.45);margin-bottom:4px">Balance Mes</div><div style="font-size:16px;font-weight:bold;color:${ing-eg>=0?'#2ECC71':'#E74C3C'}">${fmt(ing-eg)}</div></div>
+        <div style="background:rgba(201,168,76,.1);border-radius:6px;padding:6px"><div style="font-size:10px;color:var(--gold-light);margin-bottom:4px">Saldo Total</div><div style="font-size:18px;font-weight:bold;color:var(--gold-light)">${fmt(saldoTotalFil)}</div></div>
+      </div>
+    </div>
+    ${deptIds.length>0?`
+    <div class="stat-card" style="border-color:rgba(155,89,182,.4);grid-column:1/-1;padding:14px 18px;background:rgba(155,89,182,.05)">
+      <div class="stat-lbl" style="color:#A569BD;margin-bottom:10px">⛪ DEPARTAMENTOS — ${mesLabel}</div>
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;text-align:center">
+        <div><div style="font-size:10px;color:rgba(247,243,233,.45);margin-bottom:4px">Saldo Anterior</div><div style="font-size:16px;font-weight:bold;color:#F0C040">${fmt(saldoAntDept)}</div></div>
+        <div><div style="font-size:10px;color:rgba(247,243,233,.45);margin-bottom:4px">Entradas</div><div style="font-size:16px;font-weight:bold;color:#2ECC71">${fmt(ingDept)}</div></div>
+        <div><div style="font-size:10px;color:rgba(247,243,233,.45);margin-bottom:4px">Salidas</div><div style="font-size:16px;font-weight:bold;color:#E74C3C">${fmt(egDept)}</div></div>
+        <div><div style="font-size:10px;color:rgba(247,243,233,.45);margin-bottom:4px">Balance Mes</div><div style="font-size:16px;font-weight:bold;color:${ingDept-egDept>=0?'#2ECC71':'#E74C3C'}">${fmt(ingDept-egDept)}</div></div>
+        <div style="background:rgba(155,89,182,.15);border-radius:6px;padding:6px"><div style="font-size:10px;color:#A569BD;margin-bottom:4px">Saldo Total</div><div style="font-size:18px;font-weight:bold;color:#A569BD">${fmt(saldoTotalDept)}</div></div>
+      </div>
+    </div>`:''}
+    <div class="stat-card sc-miem"><div class="stat-lbl">Total Miembros</div><div class="stat-val" style="color:#3498DB;font-size:2rem">${DB.miembros.length}</div><div class="stat-sub">Registrados</div></div>`
   // bar chart
   const mn=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
   const lbls=[],ingD=[],egD=[],ingDUSD=[];
@@ -1616,6 +1692,7 @@ function savMov(keepOpen){
     ||(obj.tipo==='egreso'&&metodosBanco.indexOf(obj.met)>-1&&obj.cat!=='Depósito Bancario');
   if(esBanco){
     if(!DB.banco)DB.banco=[];
+  if(!DB.saldos_iniciales)DB.saldos_iniciales={filiales:0,departamentos:0,fecha:''};
     var existeBanco=DB.banco.find(function(b){return b.movId===obj.id;});
     var tipoBanco=obj.tipo==='ingreso'?'deposito':(obj.cat==='Depósito Bancario'?'deposito':'retiro');
     var descBanco=obj.tipo==='ingreso'
@@ -2551,6 +2628,7 @@ var bancoPg=1; var BANCO_PP=15;
 
 function renderBanco(){
   if(!DB.banco)DB.banco=[];
+  if(!DB.saldos_iniciales)DB.saldos_iniciales={filiales:0,departamentos:0,fecha:''};
   var movs=[...DB.banco].sort(function(a,b){return b.fec.localeCompare(a.fec);});
   var s=(document.getElementById('banco-search')||{}).value||'';
   var ft=(document.getElementById('banco-filter-tipo')||{}).value||'';
@@ -3349,6 +3427,32 @@ function savChgPw(){
   toast('Contraseña actualizada correctamente ✅');
 }
 
+// ===================== SALDO INICIAL =====================
+function openSaldoInicial(){
+  if(!CU||CU.niv>1){toast('Solo el Administrador puede configurar el saldo inicial','err');return;}
+  var si=DB.saldos_iniciales||{};
+  var fil=document.getElementById('si-filiales');
+  var dept=document.getElementById('si-departamentos');
+  var fecha=document.getElementById('si-fecha');
+  if(fil)fil.value=si.filiales||0;
+  if(dept)dept.value=si.departamentos||0;
+  if(fecha)fecha.value=si.fecha||'';
+  om('ov-saldo-inicial');
+}
+
+function savSaldoInicial(){
+  var fil=parseFloat(document.getElementById('si-filiales').value)||0;
+  var dept=parseFloat(document.getElementById('si-departamentos').value)||0;
+  var fecha=document.getElementById('si-fecha').value||'';
+  DB.saldos_iniciales={filiales:fil,departamentos:dept,fecha:fecha};
+  try{sd();}catch(e){}
+  // Save to Firebase config collection
+  fbSave('config','saldos_iniciales',DB.saldos_iniciales);
+  cm('ov-saldo-inicial');
+  renderDash();
+  toast('Saldo inicial guardado ✅');
+}
+
 // ===================== INIT =====================
 // ===================== FIREBASE SYNC =====================
 var _fbListeners = []; // store unsubscribe functions
@@ -3409,7 +3513,7 @@ function startRealtimeSync(){
   _fbListeners.forEach(function(unsub){try{unsub();}catch(e){}});
   _fbListeners = [];
 
-  var collections = ['movimientos','filiales','miembros','votos','banco','categorias','usuarios'];
+  var collections = ['movimientos','filiales','miembros','votos','banco','categorias','usuarios','config'];
 
   collections.forEach(function(col){
     var unsub = window.FB_DB.collection(col).onSnapshot(function(snap){
@@ -3435,6 +3539,13 @@ function startRealtimeSync(){
       } else if(col === 'banco'){
         var items=[];snap.forEach(function(d){items.push(d.data());});
         DB.banco=items;try{sd();}catch(e){}
+      } else if(col === 'config'){
+        snap.forEach(function(d){
+          if(d.id==='saldos_iniciales'){
+            DB.saldos_iniciales=d.data();
+            try{sd();}catch(e){}
+          }
+        });
       } else if(col === 'votos'){
         var items=[];snap.forEach(function(d){items.push(d.data());});
         if(items.length>0){DB.votos=items;try{sd();}catch(e){}}
@@ -3576,6 +3687,7 @@ var bancoPg=1; var BANCO_PP=15;
 
 function renderBanco(){
   if(!DB.banco)DB.banco=[];
+  if(!DB.saldos_iniciales)DB.saldos_iniciales={filiales:0,departamentos:0,fecha:''};
   var movs=[...DB.banco].sort(function(a,b){return b.fec.localeCompare(a.fec);});
   var s=(document.getElementById('banco-search')||{}).value||'';
   var ft=(document.getElementById('banco-filter-tipo')||{}).value||'';
@@ -4308,6 +4420,32 @@ function savChgPw(){
   PW_VISIBLE[userId]=false;
   renderUsrs();
   toast('Contraseña actualizada correctamente ✅');
+}
+
+// ===================== SALDO INICIAL =====================
+function openSaldoInicial(){
+  if(!CU||CU.niv>1){toast('Solo el Administrador puede configurar el saldo inicial','err');return;}
+  var si=DB.saldos_iniciales||{};
+  var fil=document.getElementById('si-filiales');
+  var dept=document.getElementById('si-departamentos');
+  var fecha=document.getElementById('si-fecha');
+  if(fil)fil.value=si.filiales||0;
+  if(dept)dept.value=si.departamentos||0;
+  if(fecha)fecha.value=si.fecha||'';
+  om('ov-saldo-inicial');
+}
+
+function savSaldoInicial(){
+  var fil=parseFloat(document.getElementById('si-filiales').value)||0;
+  var dept=parseFloat(document.getElementById('si-departamentos').value)||0;
+  var fecha=document.getElementById('si-fecha').value||'';
+  DB.saldos_iniciales={filiales:fil,departamentos:dept,fecha:fecha};
+  try{sd();}catch(e){}
+  // Save to Firebase config collection
+  fbSave('config','saldos_iniciales',DB.saldos_iniciales);
+  cm('ov-saldo-inicial');
+  renderDash();
+  toast('Saldo inicial guardado ✅');
 }
 
 // ===================== INIT =====================
