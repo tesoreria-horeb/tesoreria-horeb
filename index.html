@@ -1395,6 +1395,11 @@ function renderDash(){
   // Separate filiales and departamentos
   var filIds=DB.filiales.filter(function(f){return (f.tipo||'filial')!=='departamento';}).map(function(f){return f.id;});
   var deptIds=DB.filiales.filter(function(f){return f.tipo==='departamento';}).map(function(f){return f.id;});
+  // If no filiales found but movimientos exist, treat all non-dept as filiales
+  if(filIds.length===0&&deptIds.length<DB.filiales.length){
+    filIds=DB.filiales.map(function(f){return f.id;});
+    deptIds=[];
+  }
 
   // Filter movements by month
   var cm2=movs.filter(function(m){var p=m.fec.split('-').map(Number);return p[0]===curY&&p[1]===curM;});
@@ -1520,6 +1525,8 @@ function renderDash(){
     egD.push(mm.filter(function(m){return m.tipo==='egreso'&&(m.moneda||'PEN')==='PEN';}).reduce(function(a,m){return a+Number(m.mon);},0));
   }
 
+  // Render charts with small delay to ensure canvas is ready
+  setTimeout(function(){
   if(chBar)chBar.destroy();
   var ctxBar=document.getElementById('ch-bar');
   if(ctxBar){
@@ -1537,11 +1544,13 @@ function renderDash(){
   var pieLabels=Object.keys(catTotals);
   var pieData=pieLabels.map(function(k){return catTotals[k];});
   var pieColors=['#2ECC71','#C9A84C','#3498DB','#E74C3C','#9B59B6','#1ABC9C','#E67E22','#F39C12','#D35400','#27AE60','#2980B9','#8E44AD'];
-  if(chPie)chPie.destroy();
+  if(chDona)chDona.destroy();
   var ctxPie=document.getElementById('ch-dona');
   if(ctxPie&&pieLabels.length>0){
-    chPie=new Chart(ctxPie,{type:'doughnut',data:{labels:pieLabels,datasets:[{data:pieData,backgroundColor:pieColors.slice(0,pieLabels.length),borderWidth:2,borderColor:'#0D1B2A'}]},options:{responsive:true,plugins:{legend:{position:'bottom',labels:{color:'rgba(247,243,233,.7)',font:{size:10}}}}}});
+    chDona=new Chart(ctxPie,{type:'doughnut',data:{labels:pieLabels,datasets:[{data:pieData,backgroundColor:pieColors.slice(0,pieLabels.length),borderWidth:2,borderColor:'#0D1B2A'}]},options:{responsive:true,plugins:{legend:{position:'bottom',labels:{color:'rgba(247,243,233,.7)',font:{size:10}}}}}});
   }
+
+  },50);
 
   // Last movements
   var ltb=document.getElementById('dash-rec');
