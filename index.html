@@ -1580,7 +1580,8 @@ function renderDash(){
   }
 }
 
-function openMovModal(id){
+function openMovModal(b,id){
+  if(b&&b.getAttribute)id=b.getAttribute('data-id');
   EID=id||null;updCats();popMiem('m-miem');
   var fs=document.getElementById('m-fil');
   fs.innerHTML='';
@@ -1810,6 +1811,87 @@ function delMov(b){
 }
 
 // ===================== FILIALES =====================
+function renderMov(){
+  var s=(document.getElementById('mov-s')||{value:''}).value.toLowerCase();
+  var ft=(document.getElementById('mov-ft')||{value:''}).value;
+  var fa=(document.getElementById('mov-fa')||{value:''}).value;
+  var fm=(document.getElementById('mov-fm')||{value:''}).value;
+  var fc=(document.getElementById('mov-fc')||{value:''}).value;
+  var ff=(document.getElementById('mov-ff')||{value:''}).value;
+  var ftipo=(document.getElementById('mov-ftipo')||{value:''}).value;
+  var movs=gAccMov();
+  if(s)movs=movs.filter(function(m){return (m.desc||'').toLowerCase().includes(s)||(m.cat||'').toLowerCase().includes(s)||(m.miem||'').toLowerCase().includes(s);});
+  if(ft)movs=movs.filter(function(m){return m.tipo===ft;});
+  if(fa)movs=movs.filter(function(m){return m.fec.split('-')[0]===fa;});
+  if(fm)movs=movs.filter(function(m){return m.fec.split('-')[1]===fm.padStart(2,'0');});
+  if(fc)movs=movs.filter(function(m){return m.cat===fc;});
+  if(ff&&ff!=='all')movs=movs.filter(function(m){return m.fil===ff;});
+  if(ftipo){
+    var tipoFilIds=DB.filiales.filter(function(f){return (f.tipo||'filial')===ftipo;}).map(function(f){return f.id;});
+    movs=movs.filter(function(m){return tipoFilIds.indexOf(m.fil)>-1;});
+  }
+  // Sort by date DESC then timestamp DESC
+  movs.sort(function(a,b){var dd=b.fec.localeCompare(a.fec);return dd!==0?dd:(b.ts||0)-(a.ts||0);});
+
+  // Totals
+  var ti=movs.filter(function(m){return m.tipo==='ingreso'&&(m.moneda||'PEN')==='PEN';}).reduce(function(a,m){return a+Number(m.mon);},0);
+  var te=movs.filter(function(m){return m.tipo==='egreso'&&(m.moneda||'PEN')==='PEN';}).reduce(function(a,m){return a+Number(m.mon);},0);
+  var tiUSD=movs.filter(function(m){return m.tipo==='ingreso'&&m.moneda==='USD';}).reduce(function(a,m){return a+Number(m.mon);},0);
+  var teUSD=movs.filter(function(m){return m.tipo==='egreso'&&m.moneda==='USD';}).reduce(function(a,m){return a+Number(m.mon);},0);
+  var tot=document.getElementById('mov-totals');
+  if(tot){
+    var totText='S/. — Ingresos: '+fmt(ti)+' | Egresos: '+fmt(te)+' | Saldo: '+fmt(ti-te);
+    if(tiUSD>0||teUSD>0)totText+='     $ — Ingresos: '+tiUSD.toFixed(2)+' | Egresos: '+teUSD.toFixed(2)+' | Saldo: '+(tiUSD-teUSD).toFixed(2);
+    tot.textContent=totText;
+  }
+
+  // Pagination
+  var MPP=20;
+  var pgs=Math.ceil(movs.length/MPP)||1;if(movPg>pgs)movPg=1;
+  var sl=movs.slice((movPg-1)*MPP,movPg*MPP);
+  var tb=document.getElementById('mov-list');
+  if(!tb)return;
+  if(!sl.length){tb.innerHTML='<tr><td colspan="10"><div class="empty"><span class="ic">📋</span><p>No hay movimientos</p></div></td></tr>';return;}
+
+  tb.innerHTML=sl.map(function(m,i){
+    var cur=(m.moneda==='USD')?'$ ':'S/. ';
+    var amtCell='<span class="amt-'+(m.tipo==='ingreso'?'i':'e')+'">'+cur+Number(m.mon).toFixed(2)+'</span>';
+    var miemNom='—';
+    if(m.miem){var miemObj=DB.miembros.find(function(x){return x.id===m.miem;});if(miemObj)miemNom=miemObj.nom+(miemObj.ape?' '+miemObj.ape:'');}
+    var compCell=m.comp||'—';
+    var btns='<button class="btn btn-sm btn-s" onclick="openMovModal(this)" data-id="'+m.id+'" title="Editar">✏️</button>'
+      +' <button class="btn btn-sm btn-d" onclick="delMovSingle(this)" data-id="'+m.id+'" title="Eliminar">🗑️</button>';
+    return '<tr>'
+      +'<td><input type="checkbox" class="mov-chk" data-id="'+m.id+'" onchange="updBulkBtn(this)" style="cursor:pointer"></td>'
+      +'<td style="color:rgba(247,243,233,.4);font-size:11px">'+(((movPg-1)*MPP)+i+1)+'</td>'
+      +'<td>'+fd2(m.fec)+'</td>'
+      +'<td>'+m.desc+'</td>'
+      +'<td style="font-size:11px">'+m.cat+'</td>'
+      +'<td style="font-size:11px">'+miemNom+'</td>'
+      +'<td style="font-size:11px">'+m.met+'</td>'
+      +'<td><span class="badge '+(m.tipo==='ingreso'?'b-act':'b-ven')+'">'+(m.tipo==='ingreso'?'INGRESO':'EGRESO')+'</span></td>'
+      +'<td>'+amtCell+'</td>'
+      +'<td class="hide-mobile">'+compCell+'</td>'
+      +'<td class="hide-mobile" style="font-size:11px">'+gfn(m.fil)+'</td>'
+      +'<td>'+btns+'</td>'
+      +'</tr>';
+  }).join('');
+
+  // Pagination controls
+  var pag=document.getElementById('mov-pag');
+  if(pag){
+    var pagHtml='';
+    if(pgs>1){
+      pagHtml+='<button class="btn btn-s" onclick="movPg=Math.max(1,movPg-1);renderMov()" '+(movPg===1?'disabled':'')+'>◀</button> ';
+      pagHtml+='<span style="font-size:12px;color:rgba(247,243,233,.5)">Pág '+movPg+' de '+pgs+'</span> ';
+      pagHtml+='<button class="btn btn-s" onclick="movPg=Math.min('+pgs+',movPg+1);renderMov()" '+(movPg===pgs?'disabled':'')+'>▶</button>';
+    }
+    pagHtml+='<span style="font-size:11px;color:rgba(247,243,233,.4);margin-left:10px">'+movs.length+' movimientos</span>';
+    pag.innerHTML=pagHtml;
+  }
+}
+
+
 function renderFil(){
   const s=document.getElementById('fil-s').value.toLowerCase();
   let fils=DB.filiales.filter(f=>!s||f.nom.toLowerCase().includes(s)||f.cod.toLowerCase().includes(s)||f.pastor.toLowerCase().includes(s));
