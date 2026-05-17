@@ -2198,6 +2198,33 @@ function genCaja(){
   var filEl=document.getElementById('rc-fil');
   var fil=filEl.value;
   var fn=fil==='all'?'Todas las Sedes':gfn(fil);
+
+  // ===== SALDO ANTERIOR para Departamentos =====
+  var saldoAnterior=0;
+  var filObj=fil!=='all'?DB.filiales.find(function(f){return f.id===fil;}):null;
+  var esDepartamento=filObj&&filObj.tipo==='departamento';
+
+  if(esDepartamento){
+    // Saldo inicial del departamento (configurado al crear la filial)
+    var siDept=parseFloat(filObj.saldoInicial||0);
+    var siFecha=filObj.saldoInicialFecha||'';
+
+    // Calcular todos los movimientos ANTERIORES al mes seleccionado
+    var movsPrevios=gAccMov().filter(function(m){
+      if(m.fil!==fil)return false;
+      var y=parseInt(m.fec.split('-')[0]);
+      var mo=parseInt(m.fec.split('-')[1]);
+      // Movimientos antes del mes actual
+      return (y<anio)||(y===anio&&mo<mes);
+    });
+
+    // Sumar ingresos y restar egresos de los movimientos previos
+    var ingPrev=movsPrevios.filter(function(m){return m.tipo==='ingreso'&&(m.moneda||'PEN')==='PEN';}).reduce(function(a,m){return a+Number(m.mon);},0);
+    var egPrev=movsPrevios.filter(function(m){return m.tipo==='egreso'&&(m.moneda||'PEN')==='PEN';}).reduce(function(a,m){return a+Number(m.mon);},0);
+
+    saldoAnterior=siDept+ingPrev-egPrev;
+  }
+
   var movs=gAccMov().filter(function(m){
     var y=parseInt(m.fec.split('-')[0]),mo=parseInt(m.fec.split('-')[1]);
     return y===anio&&mo===mes&&(fil==='all'||m.fil===fil);
@@ -2205,7 +2232,8 @@ function genCaja(){
   movs.sort(function(a,b){return a.fec.localeCompare(b.fec);});
   var ti=movs.filter(function(m){return m.tipo==='ingreso'&&(m.moneda||'PEN')==='PEN';}).reduce(function(a,m){return a+Number(m.mon);},0);
   var te=movs.filter(function(m){return m.tipo==='egreso'&&(m.moneda||'PEN')==='PEN';}).reduce(function(a,m){return a+Number(m.mon);},0);
-  var saldo=ti-te;
+  // Para departamentos, el saldo total incluye el saldo anterior
+  var saldo=esDepartamento?(saldoAnterior+ti-te):(ti-te);
   var tiUSD=movs.filter(function(m){return m.tipo==='ingreso'&&m.moneda==='USD';}).reduce(function(a,m){return a+Number(m.mon);},0);
   var teUSD=movs.filter(function(m){return m.tipo==='egreso'&&m.moneda==='USD';}).reduce(function(a,m){return a+Number(m.mon);},0);
   var saldoUSD=tiUSD-teUSD;
@@ -2213,6 +2241,18 @@ function genCaja(){
 
   // Build data rows
   var dataRows='';
+
+  // Para departamentos: insertar fila de Saldo Anterior como primera línea
+  if(esDepartamento){
+    var diaUno=String(mes).padStart(2,'0')+'/'+String(1).padStart(2,'0')+'/'+anio;
+    var saldoAntColor=saldoAnterior>=0?'':'color:red;';
+    dataRows+='<tr style="background:#f0f7f0">'
+      +'<td style="border:1px solid #333;padding:3px 5px;font-size:11px;font-weight:bold">01/'+String(mes).padStart(2,'0')+'/'+anio+'</td>'
+      +'<td style="border:1px solid #333;padding:3px 6px;font-size:11px;font-weight:bold;font-style:italic">⟵ Saldo anterior ('+MESES[mes-2>=0?mes-2:11]+' '+( mes-1>=1?anio:anio-1)+')</td>'
+      +'<td style="border:1px solid #333;padding:3px 5px;font-size:11px;text-align:right;font-weight:bold;'+saldoAntColor+'">S/. '+saldoAnterior.toFixed(2)+'</td>'
+      +'<td style="border:1px solid #333;padding:3px 5px;font-size:11px"></td>'
+      +'</tr>';
+  }
   movs.forEach(function(m){
     dataRows+='<tr>'
       +'<td style="border:1px solid #333;padding:3px 5px;font-size:11px">'+fd2(m.fec)+'</td>'
@@ -2280,7 +2320,14 @@ function genCaja(){
   // Totals section
   html+='<table style="width:100%;border-collapse:collapse;border-top:2px solid #333">';
   html+='<tr>';
-  html+='<td style="padding:6px 8px;font-size:11px;font-style:italic;width:55%" rowspan="3">Valores en Moneda Nacional - Soles Peruano.<br><br>FECHA _______/_______/________</td>';
+  html+='<td style="padding:6px 8px;font-size:11px;font-style:italic;width:55%" rowspan="'+(esDepartamento?'4':'3')+'">Valores en Moneda Nacional - Soles Peruano.<br><br>FECHA _______/_______/________</td>';
+  if(esDepartamento){
+    html+='<td style="border:1px solid #333;padding:5px 8px;font-size:12px;font-weight:bold">Saldo Anterior</td>';
+    html+='<td style="border:1px solid #333;padding:5px 8px;font-size:11px;text-align:right;'+(saldoAnterior<0?'color:red;':'')+'">'+'S/. '+saldoAnterior.toFixed(2)+'</td>';
+    html+='<td style="border:2px solid #333;padding:5px;background:#000;width:80px">&nbsp;</td>';
+    html+='</tr>';
+    html+='<tr>';
+  }
   html+='<td style="border:1px solid #333;padding:5px 8px;font-size:12px;font-weight:bold">Entradas</td>';
   html+='<td style="border:1px solid #333;padding:5px 8px;font-size:11px;text-align:right">S/. '+ti.toFixed(2)+(tiUSD>0?' / $ '+tiUSD.toFixed(2):'')+'</td>';
   html+='<td style="border:2px solid #333;padding:5px;background:#000;width:80px">&nbsp;</td>';
