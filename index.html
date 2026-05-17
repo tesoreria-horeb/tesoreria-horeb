@@ -4734,12 +4734,15 @@ function genEjecutivo(){
   var varEg=teMes-tePrev;
 
   // Saldo anterior TOTAL (arrastre de todos los meses anteriores, todas las filiales)
+  // Incluye el Saldo Inicial configurado en el sistema para filiales
+  var siFiliales=Number((DB.saldos_iniciales||{}).filiales)||0;
   var todosPrevios=allMovs.filter(function(m){
     var y=parseInt(m.fec.split('-')[0]),mo=parseInt(m.fec.split('-')[1]);
     var esFilial=filiales.some(function(f){return f.id===m.fil;});
     return esFilial&&(m.moneda||'PEN')==='PEN'&&((y<anio)||(y===anio&&mo<mes));
   });
-  var grandSA=todosPrevios.filter(function(m){return m.tipo==='ingreso';}).reduce(function(a,m){return a+Number(m.mon);},0)
+  var grandSA=siFiliales
+             +todosPrevios.filter(function(m){return m.tipo==='ingreso';}).reduce(function(a,m){return a+Number(m.mon);},0)
              -todosPrevios.filter(function(m){return m.tipo==='egreso';}).reduce(function(a,m){return a+Number(m.mon);},0);
 
   // Por cada filial: Saldo en Caja = todos sus movimientos hasta fin del mes actual
@@ -4759,7 +4762,8 @@ function genEjecutivo(){
 
   var grandTi=rowsFiliales.reduce(function(a,r){return a+r.i;},0);
   var grandTe=rowsFiliales.reduce(function(a,r){return a+r.e;},0);
-  var grandSaldo=rowsFiliales.reduce(function(a,r){return a+r.saldoAct;},0);
+  // Saldo en caja total = saldo inicial configurado + todos los movimientos hasta fin del mes
+  var grandSaldo=siFiliales+rowsFiliales.reduce(function(a,r){return a+r.saldoAct;},0);
 
   function fmtC(v,pg){
     var col=v>=0?(pg?'#1A7A4A':'#C0392B'):(pg?'#C0392B':'#1A7A4A');
