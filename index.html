@@ -289,7 +289,7 @@ tbody td{padding:9px 11px;color:rgba(247,243,233,.8);vertical-align:middle}
     </div>
     <div class="fg"><label>Usuario</label><input id="lu" placeholder="Usuario" autocomplete="off"></div>
     <div class="fg"><label>Contraseña</label><input type="password" id="lp" placeholder="Contraseña"></div>
-    <button class="btn-login" onclick="doLogin()">Ingresar al Sistema</button>
+    <button id="lbtn" class="btn-login" onclick="doLogin()">Ingresar al Sistema</button>
     <div class="login-err" id="lerr">Usuario o contraseña incorrectos</div>
     <div class="demo-hint">
       <p>Accesos de demostración:</p>
@@ -1145,9 +1145,39 @@ function doLogin(){
     {user:'tesorero',      pass:'tesoro123', nom:'Tesorero Principal', rol:'tesorero_principal',niv:2, fil:'all'},
   ];
   let usr=USERS.find(x=>x.user===u&&x.pass===p);
-  if(!usr){try{if(DB&&DB.usuarios)usr=DB.usuarios.find(x=>x.user===u&&x.pass===p);}catch(e){}}
+  if(!usr){try{if(DB&&DB.usuarios)usr=DB.usuarios.find(x=>x.user===u&&x.pass===p&&x.act!==0);}catch(e){}}
+
+  // Si no encontró el usuario y Firebase aún no cargó (celular nuevo), esperar y reintentar
+  if(!usr && (!DB.usuarios||DB.usuarios.length===0) && window.FB_DB){
+    var lerr=document.getElementById('lerr');
+    var lbtn=document.getElementById('lbtn');
+    if(lerr)lerr.style.display='none';
+    if(lbtn){lbtn.textContent='⏳ Cargando...';lbtn.disabled=true;}
+    // Buscar directamente en Firebase
+    window.FB_DB.collection('usuarios').get().then(function(snap){
+      var fbUsers=[];
+      snap.forEach(function(d){fbUsers.push(d.data());});
+      if(fbUsers.length>0){DB.usuarios=fbUsers;try{sd();}catch(e){}}
+      usr=DB.usuarios.find(function(x){return x.user===u&&x.pass===p&&x.act!==0;});
+      if(lbtn){lbtn.textContent='Ingresar';lbtn.disabled=false;}
+      if(usr){
+        _finishLogin(usr);
+      } else {
+        if(lerr)lerr.style.display='block';
+      }
+    }).catch(function(){
+      if(lbtn){lbtn.textContent='Ingresar';lbtn.disabled=false;}
+      if(lerr)lerr.style.display='block';
+    });
+    return;
+  }
+
   document.getElementById('lerr').style.display=usr?'none':'block';
   if(!usr)return;
+  _finishLogin(usr);
+}
+
+function _finishLogin(usr){
   CU=usr;
   document.getElementById('login-screen').style.display='none';
   document.getElementById('app').style.display='block';
@@ -1159,10 +1189,10 @@ function doLogin(){
   document.querySelectorAll('.nav-admin').forEach(e=>e.style.display='');
   document.querySelectorAll('.nav-contador-only').forEach(e=>e.style.display='');
   document.querySelectorAll('.nav-no-contador').forEach(e=>e.style.display='');
-  document.querySelectorAll('.nav-directiva').forEach(e=>e.style.display=CU.niv<=2?'':'none');
+  document.querySelectorAll('.nav-directiva').forEach(e=>e.style.display=usr.niv<=2?'':'none');
   // Then hide based on level
-  if(CU.niv>2)document.querySelectorAll('.nav-filiales').forEach(e=>e.style.display='none');
-  if(CU.niv>=4)document.querySelectorAll('.nav-admin').forEach(e=>e.style.display='none');
+  if(usr.niv>2)document.querySelectorAll('.nav-filiales').forEach(e=>e.style.display='none');
+  if(usr.niv>=4)document.querySelectorAll('.nav-admin').forEach(e=>e.style.display='none');
   // Contador: only show financial reports and movimientos (read-only)
   if(CU.niv===5){
     document.querySelectorAll('.nav-no-contador').forEach(e=>e.style.display='none');
