@@ -4762,8 +4762,13 @@ function genEjecutivo(){
 
   var grandTi=rowsFiliales.reduce(function(a,r){return a+r.i;},0);
   var grandTe=rowsFiliales.reduce(function(a,r){return a+r.e;},0);
-  // Saldo en caja total = saldo inicial configurado + todos los movimientos hasta fin del mes
-  var grandSaldo=siFiliales+rowsFiliales.reduce(function(a,r){return a+r.saldoAct;},0);
+  // Saldo bancario acumulado hasta fin del mes seleccionado
+  var saldoBanco=(DB.banco||[]).filter(function(b){
+    var y=parseInt(b.fec.split('-')[0]),mo=parseInt(b.fec.split('-')[1]);
+    return (y<anio)||(y===anio&&mo<=mes);
+  }).reduce(function(s,b){return s+(b.tipo==='deposito'?Number(b.mon):-Number(b.mon));},0);
+  // Saldo en caja total = saldo inicial + movimientos acumulados − lo que está en banco
+  var grandSaldo=siFiliales+rowsFiliales.reduce(function(a,r){return a+r.saldoAct;},0)-saldoBanco;
 
   function fmtC(v,pg){
     var col=v>=0?(pg?'#1A7A4A':'#C0392B'):(pg?'#C0392B':'#1A7A4A');
@@ -4784,10 +4789,11 @@ function genEjecutivo(){
   html+='<div class="rpt-body">';
 
   // KPI Cards
-  html+='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px">';
+  html+='<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:18px">';
   [{lbl:'Saldo Anterior',val:'S/. '+grandSA.toFixed(2),col:'#8B6914',bg:'#fffde7',sub:'Arrastre hasta fin de '+mesPrevNom+' '+anioPrev},
    {lbl:'Ingresos '+mesNom,val:'S/. '+grandTi.toFixed(2),col:'#1A7A4A',bg:'#e8f5e9',sub:fmtC(varIng,true)+' vs '+mesPrevNom},
    {lbl:'Egresos '+mesNom,val:'S/. '+grandTe.toFixed(2),col:'#C0392B',bg:'#ffebee',sub:fmtC(-varEg,true)+' vs '+mesPrevNom},
+   {lbl:'Saldo en Banco',val:'S/. '+saldoBanco.toFixed(2),col:'#1565C0',bg:'#e3f2fd',sub:'Depósitos acumulados'},
    {lbl:'Saldo en Caja',val:'S/. '+grandSaldo.toFixed(2),col:grandSaldo>=0?'#1A7A4A':'#C0392B',bg:grandSaldo>=0?'#e8f5e9':'#ffebee',sub:grandSaldo>=0?'✅ Superávit':'⚠️ Déficit'}
   ].forEach(function(c){
     html+='<div style="padding:12px;background:'+c.bg+';border-radius:6px;border-left:4px solid '+c.col+'">';
@@ -4823,7 +4829,7 @@ function genEjecutivo(){
   html+='<td style="border:1px solid #C9A84C;padding:7px 8px;text-align:right;font-weight:bold;color:'+(grandSaldo>=0?'#1A7A4A':'#C0392B')+'">S/. '+grandSaldo.toFixed(2)+'</td>';
   html+='</tr></tfoot></table>';
 
-  html+='<div style="font-size:10px;color:#888;margin-bottom:16px">* Saldo Anterior = arrastre acumulado de todas las sedes hasta fin de '+mesPrevNom+'. &nbsp; Saldo en Caja por sede = total acumulado hasta fin de '+mesNom+'.</div>';
+  html+='<div style="font-size:10px;color:#888;margin-bottom:16px">* Saldo Anterior = arrastre acumulado de todas las sedes hasta fin de '+mesPrevNom+'. &nbsp; Saldo en Caja = Saldo Anterior + Ingresos − Egresos − Saldo en Banco (el banco salió de caja).</div>';
   html+=rptSign('Tesorero Principal','Pastor Principal');
   html+='</div></div>';
   document.getElementById('rej-prev').innerHTML=html;
