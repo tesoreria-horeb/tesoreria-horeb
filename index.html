@@ -2206,7 +2206,7 @@ function genCaja(){
 
   if(esDepartamento){
     // Saldo inicial del departamento (configurado al crear la filial)
-    var siDept=parseFloat(filObj.saldoInicial||0);
+    var siDept=parseFloat(filObj.saldo_inicial||0);
     var siFecha=filObj.saldoInicialFecha||'';
 
     // Calcular todos los movimientos ANTERIORES al mes seleccionado
