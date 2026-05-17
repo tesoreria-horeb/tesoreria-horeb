@@ -1139,42 +1139,64 @@ function fd(u,p){document.getElementById('lu').value=u;document.getElementById('
 
 function doLogin(){
   const u=document.getElementById('lu').value.trim(),p=document.getElementById('lp').value.trim();
-  // Usuarios hardcoded - siempre funcionan sin depender de nada externo
+  if(!u||!p){document.getElementById('lerr').style.display='block';return;}
+
+  // Usuarios hardcoded - siempre funcionan
   const USERS=[
     {user:'administrador', pass:'pastor123', nom:'Administrador',      rol:'pastor',            niv:1, fil:'all'},
     {user:'tesorero',      pass:'tesoro123', nom:'Tesorero Principal', rol:'tesorero_principal',niv:2, fil:'all'},
   ];
   let usr=USERS.find(x=>x.user===u&&x.pass===p);
-  if(!usr){try{if(DB&&DB.usuarios)usr=DB.usuarios.find(x=>x.user===u&&x.pass===p&&x.act!==0);}catch(e){}}
 
-  // Si no encontró el usuario y Firebase aún no cargó (celular nuevo), esperar y reintentar
-  if(!usr && (!DB.usuarios||DB.usuarios.length===0) && window.FB_DB){
-    var lerr=document.getElementById('lerr');
-    var lbtn=document.getElementById('lbtn');
-    if(lerr)lerr.style.display='none';
-    if(lbtn){lbtn.textContent='⏳ Cargando...';lbtn.disabled=true;}
-    // Buscar directamente en Firebase
-    window.FB_DB.collection('usuarios').get().then(function(snap){
-      var fbUsers=[];
-      snap.forEach(function(d){fbUsers.push(d.data());});
-      if(fbUsers.length>0){DB.usuarios=fbUsers;try{sd();}catch(e){}}
-      usr=DB.usuarios.find(function(x){return x.user===u&&x.pass===p&&x.act!==0;});
-      if(lbtn){lbtn.textContent='Ingresar';lbtn.disabled=false;}
-      if(usr){
-        _finishLogin(usr);
-      } else {
-        if(lerr)lerr.style.display='block';
+  // Buscar en caché local
+  if(!usr){
+    try{
+      if(DB&&DB.usuarios&&DB.usuarios.length>0){
+        usr=DB.usuarios.find(function(x){
+          return x.user===u && x.pass===p && x.act!==false && x.act!==0;
+        });
       }
-    }).catch(function(){
-      if(lbtn){lbtn.textContent='Ingresar';lbtn.disabled=false;}
-      if(lerr)lerr.style.display='block';
-    });
+    }catch(e){}
+  }
+
+  // Si encontró, entrar
+  if(usr){document.getElementById('lerr').style.display='none';_finishLogin(usr);return;}
+
+  // No encontró — ir siempre a Firebase directamente (celular nuevo O usuario recién creado)
+  var lerr=document.getElementById('lerr');
+  var lbtn=document.getElementById('lbtn');
+  if(lerr)lerr.style.display='none';
+  if(lbtn){lbtn.textContent='⏳ Verificando...';lbtn.disabled=true;}
+
+  function restoreBtn(){if(lbtn){lbtn.textContent='Ingresar al Sistema';lbtn.disabled=false;}}
+
+  if(!window.FB_DB){
+    restoreBtn();
+    if(lerr)lerr.style.display='block';
     return;
   }
 
-  document.getElementById('lerr').style.display=usr?'none':'block';
-  if(!usr)return;
-  _finishLogin(usr);
+  window.FB_DB.collection('usuarios').get().then(function(snap){
+    var fbUsers=[];
+    snap.forEach(function(d){fbUsers.push(d.data());});
+    // Actualizar caché local con lo que vino de Firebase
+    if(fbUsers.length>0){DB.usuarios=fbUsers;try{sd();}catch(e){}}
+    // Buscar el usuario
+    var found=fbUsers.find(function(x){
+      return x.user===u && x.pass===p && x.act!==false && x.act!==0;
+    });
+    restoreBtn();
+    if(found){
+      if(lerr)lerr.style.display='none';
+      _finishLogin(found);
+    } else {
+      if(lerr)lerr.style.display='block';
+    }
+  }).catch(function(err){
+    console.warn('Firebase login error:',err);
+    restoreBtn();
+    if(lerr)lerr.style.display='block';
+  });
 }
 
 function _finishLogin(usr){
