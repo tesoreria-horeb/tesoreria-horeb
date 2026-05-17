@@ -1251,7 +1251,7 @@ function stab(p,t){document.querySelectorAll('#'+p+'-tabs .tab-btn').forEach(b=>
 
 function popFil(){
   const fils=DB.filiales;
-  const sids=['m-fil','mi-fil','v-fil','mov-ff','vot-ff','miem-ff','rc-fil','rcon-fil','rfid-fil','rvot-fil','banco-filter-fil','banco-filial','rcat-fil'];
+  const sids=['m-fil','mi-fil','v-fil','mov-ff','vot-ff','miem-ff','rc-fil','rcon-fil','rfid-fil','rvot-fil','banco-filter-fil','banco-filial'];
   sids.forEach(sid=>{
     const sel=document.getElementById(sid);if(!sel)return;
     sel.querySelectorAll('[data-dyn]').forEach(o=>o.remove());
@@ -1271,6 +1271,36 @@ function popFil(){
   });
 }
 
+function popRcatFil(){
+  var sel=document.getElementById('rcat-fil');
+  if(!sel)return;
+  sel.innerHTML='';
+  // Opción todas filiales
+  var oAllFil=document.createElement('option');
+  oAllFil.value='all-filiales';
+  oAllFil.textContent='— Todas las Filiales —';
+  sel.appendChild(oAllFil);
+  // Filiales individuales
+  var filiales=DB.filiales.filter(function(f){return (f.tipo||'filial')!=='departamento';});
+  filiales.forEach(function(f){
+    var o=document.createElement('option');
+    o.value=f.id;o.textContent=f.nom;
+    sel.appendChild(o);
+  });
+  // Separador departamentos
+  var oAllDept=document.createElement('option');
+  oAllDept.value='all-departamentos';
+  oAllDept.textContent='— Todos los Departamentos —';
+  sel.appendChild(oAllDept);
+  // Departamentos individuales
+  var deptos=DB.filiales.filter(function(f){return f.tipo==='departamento';});
+  deptos.forEach(function(f){
+    var o=document.createElement('option');
+    o.value=f.id;o.textContent=f.nom;
+    sel.appendChild(o);
+  });
+}
+
 function popYrs(){
   const yrs=[];for(let y=2020;y<=new Date().getFullYear()+1;y++)yrs.push(y);
   ['ch-year','rc-anio','rcon-anio','rcomp-a1','rcomp-a2','rdz-anio','rfid-anio','mov-fa','rban-anio','dash-anio','rej-anio','rdept-anio','rcat-anio'].forEach(sid=>{
@@ -1286,6 +1316,7 @@ function popYrs(){
   var rejM=document.getElementById('rej-mes');if(rejM)rejM.value=nowMo;
   var rdM=document.getElementById('rdept-mes');if(rdM)rdM.value=nowMo;
   var rcM=document.getElementById('rcat-mes');if(rcM)rcM.value=nowMo;
+  popRcatFil();
 }
 
 function checkBancoNote(){
@@ -2042,6 +2073,7 @@ function savFil(){
   cm('ov-fil');
   renderFil();
   popFil();
+  popRcatFil();
   toast(EID?'Filial actualizada':'Filial registrada');
 }
 function edFil(id){openFilModal(id);}
@@ -2052,6 +2084,7 @@ function delFil(id){
   fbDelete('filiales',id);
   renderFil();
   popFil();
+  popRcatFil();
   toast('Filial eliminada','err');
 }
 
@@ -4953,11 +4986,24 @@ function genCategorias(){
   if(!anio){toast('Seleccione el año','err');return;}
 
   var mesNom=mes?MESES[parseInt(mes)-1]+' '+anio:'Año '+anio;
-  var fn=fil==='all'?'Todas las Sedes y Departamentos':gfn(fil);
+
+  // Determinar qué filiales aplican según la selección
+  var filIds=[];
+  var fn='';
+  if(fil==='all-filiales'){
+    filIds=DB.filiales.filter(function(f){return (f.tipo||'filial')!=='departamento';}).map(function(f){return f.id;});
+    fn='Todas las Filiales';
+  } else if(fil==='all-departamentos'){
+    filIds=DB.filiales.filter(function(f){return f.tipo==='departamento';}).map(function(f){return f.id;});
+    fn='Todos los Departamentos';
+  } else {
+    filIds=[fil];
+    fn=gfn(fil);
+  }
 
   var movs=gAccMov().filter(function(m){
     var y=parseInt(m.fec.split('-')[0]),mo=parseInt(m.fec.split('-')[1]);
-    var filOk=fil==='all'||m.fil===fil;
+    var filOk=filIds.indexOf(m.fil)>-1;
     var mesOk=!mes||(mo===parseInt(mes)&&y===anio);
     var anoOk=mes?true:y===anio;
     var tipoOk=!tipo||m.tipo===tipo;
