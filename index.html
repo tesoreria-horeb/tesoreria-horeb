@@ -288,7 +288,7 @@ tbody td{padding:9px 11px;color:rgba(247,243,233,.8);vertical-align:middle}
       <p>Sistema de Tesorería</p>
     </div>
     <div class="fg"><label>Usuario</label><input id="lu" placeholder="Usuario" autocomplete="off"></div>
-    <div class="fg"><label>Contraseña</label><input type="password" id="lp" placeholder="Contraseña"></div>
+    <div class="fg"><label>Contraseña</label><div style="position:relative"><input type="password" id="lp" placeholder="Contraseña" style="padding-right:38px"><button type="button" onclick="var i=document.getElementById('lp');i.type=i.type==='password'?'text':'password';this.textContent=i.type==='password'?'👁️':'🙈'" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:16px;padding:0;line-height:1">👁️</button></div></div>
     <button id="lbtn" class="btn-login" onclick="doLogin()">Ingresar al Sistema</button>
     <div class="login-err" id="lerr">Usuario o contraseña incorrectos</div>
     <div class="demo-hint">
@@ -362,7 +362,7 @@ tbody td{padding:9px 11px;color:rgba(247,243,233,.8);vertical-align:middle}
 
       <!-- DASHBOARD -->
       <div class="mod active" id="mod-dashboard">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
           <span style="font-size:12px;color:rgba(247,243,233,.5)">Resumen de:</span>
           <select id="dash-mes" onchange="renderDash()" class="fs" style="width:140px">
             <option value="0">Mes actual</option>
@@ -374,6 +374,11 @@ tbody td{padding:9px 11px;color:rgba(247,243,233,.8);vertical-align:middle}
             <option value="11">Noviembre</option><option value="12">Diciembre</option>
           </select>
           <select id="dash-anio" onchange="renderDash()" class="fs" style="width:100px"></select>
+          <div class="nav-no-contador" style="margin-left:auto">
+            <button class="btn btn-p" onclick="sm('movimientos');setTimeout(function(){var b=document.getElementById('btn-nuevo-mov');if(b)b.click();},300)" style="font-size:13px;padding:8px 18px;display:flex;align-items:center;gap:6px">
+              ➕ Nuevo Lanzamiento
+            </button>
+          </div>
         </div>
         <div class="stat-grid" id="dash-stats"></div>
         <div class="charts-grid">
@@ -408,7 +413,7 @@ tbody td{padding:9px 11px;color:rgba(247,243,233,.8);vertical-align:middle}
             <option value="departamento">Solo Departamentos</option>
           </select>
           <select class="fs" id="mov-ff" onchange="renderMov()"><option value="">Todas las sedes</option></select>
-          <button class="btn btn-p" onclick="openMovModal()">+ Nuevo</button>
+          <button id="btn-nuevo-mov" class="btn btn-p" onclick="openMovModal()">+ Nuevo</button>
           <button class="btn btn-d" id="btn-del-selected" onclick="delSelectedMov()" style="display:none">🗑️ Eliminar seleccionados</button>
         </div>
         <div class="card">
