@@ -4709,146 +4709,119 @@ function genEjecutivo(){
 
   var allMovs=gAccMov();
 
-  // Movimientos del mes actual
+  // Solo filiales (sin departamentos)
+  var filiales=DB.filiales.filter(function(f){return (f.tipo||'filial')!=='departamento';});
+
+  // Movimientos del mes — solo filiales
   var movsMes=allMovs.filter(function(m){
     var y=parseInt(m.fec.split('-')[0]),mo=parseInt(m.fec.split('-')[1]);
-    return y===anio&&mo===mes&&(m.moneda||'PEN')==='PEN';
+    var esFilial=filiales.some(function(f){return f.id===m.fil;});
+    return y===anio&&mo===mes&&(m.moneda||'PEN')==='PEN'&&esFilial;
   });
 
-  // Movimientos del mes anterior (para comparación)
+  // Movimientos mes anterior — solo filiales
   var movsPrev=allMovs.filter(function(m){
     var y=parseInt(m.fec.split('-')[0]),mo=parseInt(m.fec.split('-')[1]);
-    return y===anioPrev&&mo===mesPrev&&(m.moneda||'PEN')==='PEN';
+    var esFilial=filiales.some(function(f){return f.id===m.fil;});
+    return y===anioPrev&&mo===mesPrev&&(m.moneda||'PEN')==='PEN'&&esFilial;
   });
 
   var tiMes=movsMes.filter(function(m){return m.tipo==='ingreso';}).reduce(function(a,m){return a+Number(m.mon);},0);
   var teMes=movsMes.filter(function(m){return m.tipo==='egreso';}).reduce(function(a,m){return a+Number(m.mon);},0);
   var tiPrev=movsPrev.filter(function(m){return m.tipo==='ingreso';}).reduce(function(a,m){return a+Number(m.mon);},0);
   var tePrev=movsPrev.filter(function(m){return m.tipo==='egreso';}).reduce(function(a,m){return a+Number(m.mon);},0);
-
-  // Saldo acumulado hasta fin del mes (solo filiales)
-  var filiales=DB.filiales.filter(function(f){return (f.tipo||'filial')!=='departamento';});
-  var deptos=DB.filiales.filter(function(f){return f.tipo==='departamento';});
-
-  // Totales por filial del mes
-  var rowsFiliales=filiales.map(function(f){
-    var mf=movsMes.filter(function(m){return m.fil===f.id;});
-    var i=mf.filter(function(m){return m.tipo==='ingreso';}).reduce(function(a,m){return a+Number(m.mon);},0);
-    var e=mf.filter(function(m){return m.tipo==='egreso';}).reduce(function(a,m){return a+Number(m.mon);},0);
-    var bal=i-e;
-    return {nom:f.nom, i:i, e:e, bal:bal, tipo:'filial'};
-  }).filter(function(r){return r.i>0||r.e>0;});
-
-  // Totales por departamento del mes (con saldo anterior)
-  var rowsDeptos=deptos.map(function(f){
-    var mf=movsMes.filter(function(m){return m.fil===f.id;});
-    var i=mf.filter(function(m){return m.tipo==='ingreso';}).reduce(function(a,m){return a+Number(m.mon);},0);
-    var e=mf.filter(function(m){return m.tipo==='egreso';}).reduce(function(a,m){return a+Number(m.mon);},0);
-    // Saldo anterior del departamento
-    var siDept=parseFloat(f.saldo_inicial||0);
-    var mprev=allMovs.filter(function(m){
-      if(m.fil!==f.id)return false;
-      var y=parseInt(m.fec.split('-')[0]),mo=parseInt(m.fec.split('-')[1]);
-      return (y<anio)||(y===anio&&mo<mes);
-    });
-    var iprev=mprev.filter(function(m){return m.tipo==='ingreso'&&(m.moneda||'PEN')==='PEN';}).reduce(function(a,m){return a+Number(m.mon);},0);
-    var eprev=mprev.filter(function(m){return m.tipo==='egreso'&&(m.moneda||'PEN')==='PEN';}).reduce(function(a,m){return a+Number(m.mon);},0);
-    var saldoAnt=siDept+iprev-eprev;
-    var saldoFin=saldoAnt+i-e;
-    return {nom:f.nom, saldoAnt:saldoAnt, i:i, e:e, saldoFin:saldoFin, tipo:'departamento'};
-  });
-
-  var totalTiFil=rowsFiliales.reduce(function(a,r){return a+r.i;},0);
-  var totalTeFil=rowsFiliales.reduce(function(a,r){return a+r.e;},0);
-  var totalTiDept=rowsDeptos.reduce(function(a,r){return a+r.i;},0);
-  var totalTeDept=rowsDeptos.reduce(function(a,r){return a+r.e;},0);
-  var grandTi=totalTiFil+totalTiDept;
-  var grandTe=totalTeFil+totalTeDept;
-  var grandBal=grandTi-grandTe;
   var varIng=tiMes-tiPrev;
   var varEg=teMes-tePrev;
 
-  function fmtC(v,positiveGreen){
-    var col=v>=0?(positiveGreen?'#1A7A4A':'#C0392B'):(positiveGreen?'#C0392B':'#1A7A4A');
+  // Por cada filial: saldo anterior acumulado + mes actual
+  var rowsFiliales=filiales.map(function(f){
+    var mprev=allMovs.filter(function(m){
+      if(m.fil!==f.id||(m.moneda||'PEN')!=='PEN')return false;
+      var y=parseInt(m.fec.split('-')[0]),mo=parseInt(m.fec.split('-')[1]);
+      return (y<anio)||(y===anio&&mo<mes);
+    });
+    var saldoAnt=mprev.filter(function(m){return m.tipo==='ingreso';}).reduce(function(a,m){return a+Number(m.mon);},0)
+                -mprev.filter(function(m){return m.tipo==='egreso';}).reduce(function(a,m){return a+Number(m.mon);},0);
+    var mf=movsMes.filter(function(m){return m.fil===f.id;});
+    var i=mf.filter(function(m){return m.tipo==='ingreso';}).reduce(function(a,m){return a+Number(m.mon);},0);
+    var e=mf.filter(function(m){return m.tipo==='egreso';}).reduce(function(a,m){return a+Number(m.mon);},0);
+    var saldoAct=saldoAnt+i-e;
+    return {nom:f.nom, saldoAnt:saldoAnt, i:i, e:e, saldoAct:saldoAct};
+  }).filter(function(r){return r.saldoAnt!==0||r.i>0||r.e>0;});
+
+  var grandSA=rowsFiliales.reduce(function(a,r){return a+r.saldoAnt;},0);
+  var grandTi=rowsFiliales.reduce(function(a,r){return a+r.i;},0);
+  var grandTe=rowsFiliales.reduce(function(a,r){return a+r.e;},0);
+  var grandSaldo=rowsFiliales.reduce(function(a,r){return a+r.saldoAct;},0);
+
+  function fmtC(v,pg){
+    var col=v>=0?(pg?'#1A7A4A':'#C0392B'):(pg?'#C0392B':'#1A7A4A');
     return '<span style="color:'+col+';font-weight:bold">S/. '+Math.abs(v).toFixed(2)+(v>=0?' ▲':' ▼')+'</span>';
   }
 
-  // Build filiales rows
-  var trFiliales=rowsFiliales.map(function(r){
-    return '<tr>'
-      +'<td style="border:1px solid #ddd;padding:5px 8px;font-size:11px">'+r.nom+'</td>'
-      +'<td style="border:1px solid #ddd;padding:5px 8px;font-size:11px;text-align:center"><span style="background:#e8f5e9;color:#1A7A4A;padding:2px 7px;border-radius:3px;font-size:10px">Filial</span></td>'
-      +'<td style="border:1px solid #ddd;padding:5px 8px;font-size:11px;text-align:right;color:#1A7A4A">S/. '+r.i.toFixed(2)+'</td>'
-      +'<td style="border:1px solid #ddd;padding:5px 8px;font-size:11px;text-align:right;color:#C0392B">S/. '+r.e.toFixed(2)+'</td>'
-      +'<td style="border:1px solid #ddd;padding:5px 8px;font-size:11px;text-align:right;font-weight:bold;color:'+(r.bal>=0?'#1A7A4A':'#C0392B')+'">S/. '+r.bal.toFixed(2)+'</td>'
+  var trFiliales=rowsFiliales.map(function(r,idx){
+    var bg=idx%2===0?'#fff':'#f9f9f9';
+    function td(v,col){return '<td style="border:1px solid #ddd;padding:6px 8px;font-size:11px;text-align:right;'+(col?'font-weight:bold;color:'+col+';':'')+'">S/. '+v.toFixed(2)+'</td>';}
+    return '<tr style="background:'+bg+'">'
+      +'<td style="border:1px solid #ddd;padding:6px 8px;font-size:11px;font-weight:bold">'+r.nom+'</td>'
+      +td(r.saldoAnt,r.saldoAnt>=0?'':'#C0392B')
+      +'<td style="border:1px solid #ddd;padding:6px 8px;font-size:11px;text-align:right;color:#1A7A4A">'+(r.i>0?'S/. '+r.i.toFixed(2):'<span style="color:#ccc">—</span>')+'</td>'
+      +'<td style="border:1px solid #ddd;padding:6px 8px;font-size:11px;text-align:right;color:#C0392B">'+(r.e>0?'S/. '+r.e.toFixed(2):'<span style="color:#ccc">—</span>')+'</td>'
+      +td(r.saldoAct,r.saldoAct>=0?'#1A7A4A':'#C0392B')
       +'</tr>';
   }).join('');
 
-  var trDeptos=rowsDeptos.map(function(r){
-    return '<tr>'
-      +'<td style="border:1px solid #ddd;padding:5px 8px;font-size:11px">'+r.nom+'</td>'
-      +'<td style="border:1px solid #ddd;padding:5px 8px;font-size:11px;text-align:center"><span style="background:#e3f2fd;color:#1565C0;padding:2px 7px;border-radius:3px;font-size:10px">Depto.</span></td>'
-      +'<td style="border:1px solid #ddd;padding:5px 8px;font-size:11px;text-align:right;color:#1A7A4A">S/. '+r.i.toFixed(2)+'</td>'
-      +'<td style="border:1px solid #ddd;padding:5px 8px;font-size:11px;text-align:right;color:#C0392B">S/. '+r.e.toFixed(2)+'</td>'
-      +'<td style="border:1px solid #ddd;padding:5px 8px;font-size:11px;text-align:right;font-weight:bold;color:'+(r.saldoFin>=0?'#1A7A4A':'#C0392B')+'">S/. '+r.saldoFin.toFixed(2)+'</td>'
-      +'</tr>';
-  }).join('');
-
-  var html='<div class="rpt-wrap">'+rptHd('RESUMEN EJECUTIVO MENSUAL',mesNom.toUpperCase()+' '+anio);
+  var html='<div class="rpt-wrap">'+rptHd('RESUMEN EJECUTIVO MENSUAL — SEDES',mesNom.toUpperCase()+' '+anio);
   html+='<div class="rpt-body">';
 
   // KPI Cards
   html+='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px">';
-  var cards=[
-    {lbl:'Total Ingresos',val:'S/. '+grandTi.toFixed(2),col:'#1A7A4A',bg:'#e8f5e9',var:fmtC(varIng,true),varlbl:'vs '+mesPrevNom},
-    {lbl:'Total Egresos',val:'S/. '+grandTe.toFixed(2),col:'#C0392B',bg:'#ffebee',var:fmtC(-varEg,true),varlbl:'vs '+mesPrevNom},
-    {lbl:'Balance del Mes',val:'S/. '+grandBal.toFixed(2),col:grandBal>=0?'#8B6914':'#C0392B',bg:grandBal>=0?'#fffde7':'#ffebee',var:'',varlbl:grandBal>=0?'Superávit':'Déficit'},
-    {lbl:'Total Movimientos',val:movsMes.length+' registros',col:'#1565C0',bg:'#e3f2fd',var:'',varlbl:filiales.length+' filiales · '+deptos.length+' deptos.'}
-  ];
-  cards.forEach(function(c){
+  [{lbl:'Saldo Anterior',val:'S/. '+grandSA.toFixed(2),col:'#8B6914',bg:'#fffde7',sub:'Arrastre de '+mesPrevNom},
+   {lbl:'Ingresos '+mesNom,val:'S/. '+grandTi.toFixed(2),col:'#1A7A4A',bg:'#e8f5e9',sub:fmtC(varIng,true)+' vs '+mesPrevNom},
+   {lbl:'Egresos '+mesNom,val:'S/. '+grandTe.toFixed(2),col:'#C0392B',bg:'#ffebee',sub:fmtC(-varEg,true)+' vs '+mesPrevNom},
+   {lbl:'Saldo en Caja',val:'S/. '+grandSaldo.toFixed(2),col:grandSaldo>=0?'#1A7A4A':'#C0392B',bg:grandSaldo>=0?'#e8f5e9':'#ffebee',sub:grandSaldo>=0?'✅ Superávit':'⚠️ Déficit'}
+  ].forEach(function(c){
     html+='<div style="padding:12px;background:'+c.bg+';border-radius:6px;border-left:4px solid '+c.col+'">';
-    html+='<div style="font-size:10px;color:#666;font-weight:bold;text-transform:uppercase;letter-spacing:1px">'+c.lbl+'</div>';
+    html+='<div style="font-size:9px;color:#666;font-weight:bold;text-transform:uppercase;letter-spacing:1px">'+c.lbl+'</div>';
     html+='<div style="font-size:18px;font-weight:bold;color:'+c.col+';margin:4px 0">'+c.val+'</div>';
-    html+='<div style="font-size:10px;color:#888">'+(c.var||'')+' '+c.varlbl+'</div>';
+    html+='<div style="font-size:10px;color:#888">'+c.sub+'</div>';
     html+='</div>';
   });
   html+='</div>';
 
-  // Comparativo con mes anterior
+  // Comparativo mes anterior
   html+='<div style="background:#f8f5ef;border:1px solid #C9A84C;border-radius:6px;padding:10px 14px;margin-bottom:16px">';
-  html+='<div style="font-size:11px;font-weight:bold;color:#8B6914;margin-bottom:6px">📊 COMPARATIVO: '+mesNom.toUpperCase()+' vs '+mesPrevNom.toUpperCase()+' '+anioPrev+'</div>';
+  html+='<div style="font-size:11px;font-weight:bold;color:#8B6914;margin-bottom:8px">📊 COMPARATIVO: '+mesNom.toUpperCase()+' vs '+mesPrevNom.toUpperCase()+' '+anioPrev+'</div>';
   html+='<table style="width:100%;font-size:11px"><tr>';
-  html+='<td style="width:33%;text-align:center"><div style="color:#666">Ingresos '+mesPrevNom+'</div><div style="font-size:15px;font-weight:bold;color:#1A7A4A">S/. '+tiPrev.toFixed(2)+'</div></td>';
-  html+='<td style="width:33%;text-align:center"><div style="color:#666">Ingresos '+mesNom+'</div><div style="font-size:15px;font-weight:bold;color:#1A7A4A">S/. '+tiMes.toFixed(2)+'</div><div style="font-size:10px">'+fmtC(varIng,true)+'</div></td>';
-  html+='<td style="width:33%;text-align:center"><div style="color:#666">Egresos '+mesNom+'</div><div style="font-size:15px;font-weight:bold;color:#C0392B">S/. '+teMes.toFixed(2)+'</div><div style="font-size:10px">'+fmtC(-varEg,true)+'</div></td>';
+  html+='<td style="width:25%;text-align:center;padding:6px"><div style="color:#666;margin-bottom:3px">Ingresos '+mesPrevNom+'</div><div style="font-size:16px;font-weight:bold;color:#1A7A4A">S/. '+tiPrev.toFixed(2)+'</div></td>';
+  html+='<td style="width:25%;text-align:center;padding:6px"><div style="color:#666;margin-bottom:3px">Ingresos '+mesNom+'</div><div style="font-size:16px;font-weight:bold;color:#1A7A4A">S/. '+tiMes.toFixed(2)+'</div><div style="margin-top:2px">'+fmtC(varIng,true)+'</div></td>';
+  html+='<td style="width:25%;text-align:center;padding:6px"><div style="color:#666;margin-bottom:3px">Egresos '+mesPrevNom+'</div><div style="font-size:16px;font-weight:bold;color:#C0392B">S/. '+tePrev.toFixed(2)+'</div></td>';
+  html+='<td style="width:25%;text-align:center;padding:6px"><div style="color:#666;margin-bottom:3px">Egresos '+mesNom+'</div><div style="font-size:16px;font-weight:bold;color:#C0392B">S/. '+teMes.toFixed(2)+'</div><div style="margin-top:2px">'+fmtC(-varEg,true)+'</div></td>';
   html+='</tr></table></div>';
 
-  // Detalle por sede/depto
+  // Tabla detalle por sede
   html+='<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:14px">';
   html+='<thead><tr style="background:#0D1B2A">';
-  html+='<th style="color:#C9A84C;padding:7px 8px;text-align:left">Sede / Departamento</th>';
-  html+='<th style="color:#C9A84C;padding:7px 8px;text-align:center">Tipo</th>';
-  html+='<th style="color:#C9A84C;padding:7px 8px;text-align:right">Ingresos</th>';
-  html+='<th style="color:#C9A84C;padding:7px 8px;text-align:right">Egresos</th>';
-  html+='<th style="color:#C9A84C;padding:7px 8px;text-align:right">Balance / Saldo</th>';
-  html+='</tr></thead><tbody>';
-  if(rowsFiliales)html+=trFiliales;
-  if(rowsDeptos)html+=trDeptos;
-  html+='</tbody>';
+  ['Sede / Filial','Saldo Anterior','Ingresos del Mes','Egresos del Mes','Saldo en Caja'].forEach(function(h){
+    html+='<th style="color:#C9A84C;padding:7px 8px;text-align:'+(h==='Sede / Filial'?'left':'right')+'">'+h+'</th>';
+  });
+  html+='</tr></thead>';
+  html+='<tbody>'+(trFiliales||'<tr><td colspan="5" style="text-align:center;padding:16px;color:#888">Sin movimientos en este período</td></tr>')+'</tbody>';
   html+='<tfoot><tr style="background:#f8f5ef">';
-  html+='<td colspan="2" style="border:1px solid #C9A84C;padding:7px 8px;font-weight:bold;font-size:12px">TOTALES GENERALES</td>';
+  html+='<td style="border:1px solid #C9A84C;padding:7px 8px;font-weight:bold">TOTALES ('+filiales.length+' sedes)</td>';
+  html+='<td style="border:1px solid #C9A84C;padding:7px 8px;text-align:right;font-weight:bold;color:#8B6914">S/. '+grandSA.toFixed(2)+'</td>';
   html+='<td style="border:1px solid #C9A84C;padding:7px 8px;text-align:right;font-weight:bold;color:#1A7A4A">S/. '+grandTi.toFixed(2)+'</td>';
   html+='<td style="border:1px solid #C9A84C;padding:7px 8px;text-align:right;font-weight:bold;color:#C0392B">S/. '+grandTe.toFixed(2)+'</td>';
-  html+='<td style="border:1px solid #C9A84C;padding:7px 8px;text-align:right;font-weight:bold;color:'+(grandBal>=0?'#1A7A4A':'#C0392B')+'">S/. '+grandBal.toFixed(2)+'</td>';
+  html+='<td style="border:1px solid #C9A84C;padding:7px 8px;text-align:right;font-weight:bold;color:'+(grandSaldo>=0?'#1A7A4A':'#C0392B')+'">S/. '+grandSaldo.toFixed(2)+'</td>';
   html+='</tr></tfoot></table>';
 
+  html+='<div style="font-size:10px;color:#888;margin-bottom:16px">* Saldo Anterior = todos los movimientos registrados antes de '+mesNom+' '+anio+'. &nbsp; Saldo en Caja = Saldo Anterior + Ingresos − Egresos del mes.</div>';
   html+=rptSign('Tesorero Principal','Pastor Principal');
   html+='</div></div>';
   document.getElementById('rej-prev').innerHTML=html;
   toast('Resumen Ejecutivo generado ✅');
 }
 
-// ===================== RPT ESTADO DEPARTAMENTOS =====================
 function genDepartamentos(){
   if(!CU||CU.niv>2){toast('Sin acceso','err');return;}
   var mes=parseInt(document.getElementById('rdept-mes').value);
