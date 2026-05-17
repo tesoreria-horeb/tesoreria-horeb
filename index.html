@@ -4785,13 +4785,16 @@ function genEjecutivo(){
 
   var trFiliales=rowsFiliales.map(function(r,idx){
     var bg=idx%2===0?'#fff':'#f9f9f9';
+    var bal=r.i-r.e;
     return '<tr style="background:'+bg+'">'
       +'<td style="border:1px solid #ddd;padding:6px 8px;font-size:11px;font-weight:bold">'+r.nom+'</td>'
       +'<td style="border:1px solid #ddd;padding:6px 8px;font-size:11px;text-align:right;color:#1A7A4A">'+(r.i>0?'S/. '+r.i.toFixed(2):'<span style="color:#ccc">—</span>')+'</td>'
       +'<td style="border:1px solid #ddd;padding:6px 8px;font-size:11px;text-align:right;color:#C0392B">'+(r.e>0?'S/. '+r.e.toFixed(2):'<span style="color:#ccc">—</span>')+'</td>'
-      +'<td style="border:1px solid #ddd;padding:6px 8px;font-size:11px;text-align:right;font-weight:bold;color:'+(r.saldoAct>=0?'#1A7A4A':'#C0392B')+'">S/. '+r.saldoAct.toFixed(2)+'</td>'
+      +'<td style="border:1px solid #ddd;padding:6px 8px;font-size:11px;text-align:right;font-weight:bold;color:'+(bal>=0?'#1A7A4A':'#C0392B')+'">S/. '+bal.toFixed(2)+'</td>'
       +'</tr>';
   }).join('');
+
+  var grandBal=grandTi-grandTe;
 
   var html='<div class="rpt-wrap">'+rptHd('RESUMEN EJECUTIVO MENSUAL — SEDES',mesNom.toUpperCase()+' '+anio);
   html+='<div class="rpt-body">';
@@ -4822,10 +4825,10 @@ function genEjecutivo(){
   html+='<td style="width:25%;text-align:center;padding:6px"><div style="color:#666;margin-bottom:3px">Egresos '+mesNom+'</div><div style="font-size:16px;font-weight:bold;color:#C0392B">S/. '+teMes.toFixed(2)+'</div><div style="margin-top:2px">'+fmtC(-varEg,true)+'</div></td>';
   html+='</tr></table></div>';
 
-  // Tabla detalle por sede — SIN columna saldo anterior
+  // Tabla detalle por sede
   html+='<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:14px">';
   html+='<thead><tr style="background:#0D1B2A">';
-  ['Sede / Filial','Ingresos del Mes','Egresos del Mes','Saldo en Caja'].forEach(function(h){
+  ['Sede / Filial','Ingresos del Mes','Egresos del Mes','Saldo'].forEach(function(h){
     html+='<th style="color:#C9A84C;padding:7px 8px;text-align:'+(h==='Sede / Filial'?'left':'right')+'">'+h+'</th>';
   });
   html+='</tr></thead>';
@@ -4834,7 +4837,7 @@ function genEjecutivo(){
   html+='<td style="border:1px solid #C9A84C;padding:7px 8px;font-weight:bold">TOTALES ('+filiales.length+' sedes)</td>';
   html+='<td style="border:1px solid #C9A84C;padding:7px 8px;text-align:right;font-weight:bold;color:#1A7A4A">S/. '+grandTi.toFixed(2)+'</td>';
   html+='<td style="border:1px solid #C9A84C;padding:7px 8px;text-align:right;font-weight:bold;color:#C0392B">S/. '+grandTe.toFixed(2)+'</td>';
-  html+='<td style="border:1px solid #C9A84C;padding:7px 8px;text-align:right;font-weight:bold;color:'+(grandSaldo>=0?'#1A7A4A':'#C0392B')+'">S/. '+grandSaldo.toFixed(2)+'</td>';
+  html+='<td style="border:1px solid #C9A84C;padding:7px 8px;text-align:right;font-weight:bold;color:'+(grandBal>=0?'#1A7A4A':'#C0392B')+'">S/. '+grandBal.toFixed(2)+'</td>';
   html+='</tr></tfoot></table>';
 
   html+='<div style="font-size:10px;color:#888;margin-bottom:16px">* Saldo Anterior = arrastre acumulado de todas las sedes hasta fin de '+mesPrevNom+'. &nbsp; Saldo en Caja = Saldo Anterior + Ingresos − Egresos − Transferido a Banco.</div>';
