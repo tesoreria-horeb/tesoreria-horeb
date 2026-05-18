@@ -294,7 +294,7 @@ tbody td{padding:9px 11px;color:rgba(247,243,233,.8);vertical-align:middle}
     <div class="demo-hint">
       <p>Accesos de demostración:</p>
       <div class="demo-tags">
-        <span class="demo-tag" onclick="fd('administrador','pastor123')">Administrador</span>
+        <span class="demo-tag" onclick="fd('adm','pastor123')">Administrador</span>
         <span class="demo-tag" onclick="fd('tesorero','tesoro123')">Tesorero Principal</span>
       </div>
     </div>
@@ -1124,7 +1124,7 @@ function initDB(){
 
 // Usuarios fijos — siempre disponibles sin depender del localStorage
 const USUARIOS_FIJOS=[
-  {user:'administrador', pass:'pastor123', nom:'Administrador',     rol:'pastor',            niv:1, fil:'all'},
+  {user:'adm', pass:'pastor123', nom:'Administrador',     rol:'pastor',            niv:1, fil:'all'},
   {user:'tesorero',      pass:'tesoro123', nom:'Tesorero Principal', rol:'tesorero_principal',niv:2, fil:'all'},
 ];
 
@@ -1160,7 +1160,7 @@ function doLogin(){
 
   // Usuarios hardcoded - siempre funcionan
   const USERS=[
-    {user:'administrador', pass:'pastor123', nom:'Administrador',      rol:'pastor',            niv:1, fil:'all'},
+    {user:'adm', pass:'pastor123', nom:'Administrador',      rol:'pastor',            niv:1, fil:'all'},
     {user:'tesorero',      pass:'tesoro123', nom:'Tesorero Principal', rol:'tesorero_principal',niv:2, fil:'all'},
   ];
   let usr=USERS.find(x=>x.user===u&&x.pass===p);
@@ -2844,7 +2844,7 @@ function renderUsrs(){
     var fl=u.fil==='all'?'Todo el sistema':gfn(u.fil);
     var ok=u.act!==0;
     var btns='<button class="btn btn-sm btn-s" onclick="edUsr(this)" data-id="'+u.user+'">Editar</button>';
-    if(u.user!=='administrador')btns+=' <button class="btn btn-sm btn-d" onclick="delUsr(this)" data-id="'+u.user+'">Eliminar</button>';
+    if(u.user!=='adm')btns+=' <button class="btn btn-sm btn-d" onclick="delUsr(this)" data-id="'+u.user+'">Eliminar</button>';
     var passCell='<span id="pw-'+u.user+'" style="font-family:monospace;letter-spacing:2px">&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;</span>'
       +' <button onclick="togglePw(this)" data-uid="'+u.user+'" style="background:none;border:none;cursor:pointer;color:var(--gold-light);font-size:11px;padding:0 3px" title="Mostrar">&#128065;</button>'
       +(CU&&CU.niv<=2?' <button onclick="openChgPw(this)" data-uid="'+u.user+'" style="background:none;border:none;cursor:pointer;color:var(--gold-light);font-size:10px;padding:0 3px" title="Cambiar clave">&#128273;</button>':'');
@@ -2945,7 +2945,7 @@ function edUsr(btn){openUsrModal(btn.getAttribute?btn.getAttribute('data-id'):bt
 
 function delUsr(btn){
   var id=btn.getAttribute?btn.getAttribute('data-id'):btn;
-  if(id==='administrador'){toast('No se puede eliminar al Administrador del sistema','err');return;}
+  if(id==='adm'){toast('No se puede eliminar al Administrador del sistema','err');return;}
   if(CU&&id===CU.user){toast('No puedes eliminarte a ti mismo','err');return;}
   if(!confirm('Eliminar usuario "'+id+'"?'))return;
   DB.usuarios=DB.usuarios.filter(function(u){return u.user!==id;});
@@ -5143,7 +5143,7 @@ document.addEventListener('DOMContentLoaded',()=>{
       var s=JSON.parse(saved);
       // Buscar usuario directamente sin pasar por el formulario
       var USERS=[
-    {user:'administrador', pass:'pastor123', nom:'Administrador',      rol:'pastor',            niv:1, fil:'all'},
+    {user:'adm', pass:'pastor123', nom:'Administrador',      rol:'pastor',            niv:1, fil:'all'},
     {user:'tesorero',      pass:'tesoro123', nom:'Tesorero Principal',  rol:'tesorero_principal',niv:2, fil:'all'},
   ];
       var usr=USERS.find(function(x){return x.user===s.user&&x.pass===s.pass;});
