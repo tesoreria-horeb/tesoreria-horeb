@@ -1279,7 +1279,16 @@ function sm(n){
   else if(n==='rpt-fidelidad'){updFidMiems();}
   else if(n==='usuarios'){if(CU&&CU.niv<=1)renderUsrs();else{toast('Sin acceso','err');sm('dashboard');}}
   else if(n==='backup'){if(CU&&CU.niv<=1)renderBackup();else{toast('Sin acceso','err');sm('dashboard');}}
-  else if(n==='banco'){renderBanco();}
+  else if(n==='banco'){
+    // Set current month by default so table starts filtered to current month
+    var bMesEl=document.getElementById('banco-filter-mes');
+    var bAnioEl=document.getElementById('banco-filter-anio');
+    if(bMesEl&&!bMesEl._init){
+      bMesEl.value=String(new Date().getMonth()+1).padStart(2,'0');
+      bMesEl._init=true;
+    }
+    renderBanco();
+  }
   else if(n==='rpt-banco'){
     if(CU&&CU.niv<=2){
       var rbanAnio=document.getElementById('rban-anio');
