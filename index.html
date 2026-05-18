@@ -2202,7 +2202,7 @@ function renderMiem(){
 function openMiemModal(id=null){
   EID=id;stab('miem','datos');
   const fs=document.getElementById('mi-fil');fs.innerHTML='';
-  gAccFil().forEach(f=>{const o=document.createElement('option');o.value=f.id;o.textContent=f.nom;fs.appendChild(o);});
+  gAccFil().filter(function(f){return (f.tipo||'filial')!=='departamento';}).forEach(f=>{const o=document.createElement('option');o.value=f.id;o.textContent=f.nom;fs.appendChild(o);});
   if(CU.niv>=3)fs.value=CU.fil;
   if(id){
     const m=DB.miembros.find(x=>x.id===id);
