@@ -494,8 +494,10 @@ tbody td{padding:9px 11px;color:rgba(247,243,233,.8);vertical-align:middle}
             <option value="">Todos los roles</option>
             <option value="pastor">Pastor Principal</option>
             <option value="tesorero_principal">Tesorero Principal</option>
+            <option value="auxiliar_central">Auxiliar Tesorería Central</option>
             <option value="tesorero_sede">Tesorero Sede</option>
             <option value="tesorero_filial">Tesorero Filial</option>
+            <option value="contador">Contador (Solo Lectura)</option>
           </select>
           <button class="btn btn-p" onclick="openUsrModal(null)">+ Nuevo Usuario</button>
         </div>
@@ -2842,7 +2844,7 @@ function updUsrFil(){
   var rol=document.getElementById('u-rol').value;
   var sel=document.getElementById('u-fil');
   sel.innerHTML='';
-  if(rol==='pastor'||rol==='tesorero_principal'||rol==='contador'){
+  if(rol==='pastor'||rol==='tesorero_principal'||rol==='auxiliar_central'||rol==='contador'){
     var o=document.createElement('option');o.value='all';o.textContent='Todo el sistema';sel.appendChild(o);
   } else {
     DB.filiales.forEach(function(f){var o=document.createElement('option');o.value=f.id;o.textContent=f.nom;sel.appendChild(o);});
