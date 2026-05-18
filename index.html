@@ -1679,7 +1679,8 @@ function renderDash(){
           +'<div style="font-size:20px;font-weight:bold;color:#3498DB">'+DB.miembros.length+'</div>'
         +'</div>'
       +'</div>'
-      +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:10px">'
+      +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:10px">'
+        +dc('Saldo Anterior',saldoAntFil,'#F0C040','')
         +dc('Entradas',ing,'#2ECC71','')
         +dc('Salidas',eg,'#E74C3C','')
         +dc('Balance Mes',ing-eg,ing-eg>=0?'#2ECC71':'#E74C3C','')
