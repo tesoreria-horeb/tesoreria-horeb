@@ -236,9 +236,6 @@ tbody td{padding:9px 11px;color:rgba(247,243,233,.8);vertical-align:middle}
   .btn-sm{padding:4px 7px!important;font-size:10px!important}
 }
 /* ===== CONTADOR: Solo Lectura ===== */
-body.contador-mode .btn-p,
-body.contador-mode .btn-g,
-body.contador-mode .btn-d,
 body.contador-mode #btn-nuevo-mov,
 body.contador-mode [onclick*="openMovModal"],
 body.contador-mode [onclick*="openBancoModal"],
@@ -251,10 +248,9 @@ body.contador-mode [onclick*="delMov"],
 body.contador-mode [onclick*="delFil"],
 body.contador-mode [onclick*="delBanco"],
 body.contador-mode [onclick*="savMov"],
-body.contador-mode [onclick*="Nuevo Lanzamiento"],
-body.contador-mode .tb .btn-p,
-body.contador-mode .tb .btn-g,
-body.contador-mode .tb .btn-d {
+body.contador-mode .modal-ft .btn-p,
+body.contador-mode .modal-ft .btn-g,
+body.contador-mode .modal-ft .btn-d {
   display: none !important;
 }
 </style>
@@ -1318,13 +1314,13 @@ function sm(n){
     renderBanco();
   }
   else if(n==='rpt-banco'){
-    if(CU&&CU.niv<=2){
+    if(CU&&(CU.niv<=2||CU.niv===5)){
       var rbanAnio=document.getElementById('rban-anio');
       if(rbanAnio&&!rbanAnio.value)rbanAnio.value=new Date().getFullYear();
     } else {toast('Sin acceso','err');sm('dashboard');}
   }
   else if(n==='rpt-ejecutivo'||n==='rpt-departamentos'||n==='rpt-categorias'){
-    if(CU&&CU.niv<=2){
+    if(CU&&(CU.niv<=2||CU.niv===5)){
       var nowM=new Date().getMonth()+1;
       var nowY=new Date().getFullYear();
       var rejM=document.getElementById('rej-mes');if(rejM&&!rejM._init){rejM.value=nowM;rejM._init=true;}
