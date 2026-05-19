@@ -954,6 +954,10 @@ tbody td{padding:9px 11px;color:rgba(247,243,233,.8);vertical-align:middle}
       <input type="number" id="si-filiales" placeholder="0.00" step="0.01" min="0">
     </div>
     <div class="fld">
+      <label>Saldo Inicial — Filiales y Sede Central ($ USD)</label>
+      <input type="number" id="si-filiales-usd" placeholder="0.00" step="0.01" min="0">
+    </div>
+    <div class="fld">
       <label>Saldo Inicial — Departamentos (S/.)</label>
       <input type="number" id="si-departamentos" placeholder="0.00" step="0.01" min="0">
     </div>
@@ -1626,6 +1630,7 @@ function renderDash(){
 
   // Saldo anterior = Saldo Caja del mes anterior
   var siFiliales=Number((DB.saldos_iniciales||{}).filiales)||0;
+  var siFilUSD=Number((DB.saldos_iniciales||{}).filialesUSD)||0;
   var siDeptos=Number((DB.saldos_iniciales||{}).departamentos)||0;
 
   var allMovsFil=gAccMov().filter(function(m){var f=DB.filiales.find(function(x){return x.id===m.fil;});return !f||(f.tipo||'filial')!=='departamento';});
@@ -1645,6 +1650,14 @@ function renderDash(){
   var saldoAntFil=prevSaldoTotalFil-prevBanco;
   var saldoTotalFil=saldoAntFil+(ing-eg);
   var saldoCajaFil=saldoTotalFil-saldoBanco;
+
+  // USD calculations
+  var prevMovsFilUSD=allMovsFil.filter(function(m){return m.fec.substring(0,7)<selectedYM&&m.moneda==='USD';});
+  var saldoAntUSD=siFilUSD
+    +prevMovsFilUSD.filter(function(m){return m.tipo==='ingreso';}).reduce(function(a,m){return a+Number(m.mon);},0)
+    -prevMovsFilUSD.filter(function(m){return m.tipo==='egreso';}).reduce(function(a,m){return a+Number(m.mon);},0);
+  var saldoTotalUSD=saldoAntUSD+(ingUSD-egUSD);
+  var hasUSD=siFilUSD>0||ingUSD>0||egUSD>0||saldoAntUSD!==0;
 
   // My filial saldo anterior
   var prevMovsMyFil=allMovsMyFil.filter(function(m){return m.fec.substring(0,7)<selectedYM&&(m.moneda||'PEN')==='PEN';});
@@ -1666,6 +1679,12 @@ function renderDash(){
     return '<div style="text-align:center'+(bg?';background:'+bg+';border-radius:6px;padding:8px':'')+'">'
       +'<div style="font-size:10px;color:rgba(247,243,233,.45);margin-bottom:4px">'+lbl+'</div>'
       +'<div style="font-size:'+(bg?'17':'15')+'px;font-weight:bold;color:'+color+'">'+fmt(val)+'</div>'
+      +'</div>';
+  }
+  function dcUSD(lbl,val,color,bg){
+    return '<div style="text-align:center'+(bg?';background:'+bg+';border-radius:6px;padding:8px':'')+'">'
+      +'<div style="font-size:10px;color:rgba(247,243,233,.45);margin-bottom:4px">'+lbl+'</div>'
+      +'<div style="font-size:'+(bg?'17':'15')+'px;font-weight:bold;color:'+color+'">$ '+Math.abs(val).toFixed(2)+'</div>'
       +'</div>';
   }
 
@@ -1690,6 +1709,17 @@ function renderDash(){
         +dc('🏦 Saldo Banco',saldoBanco,'#5DADE2','rgba(46,134,171,.1)')
         +dc('💵 Saldo Caja',saldoCajaFil,'#2ECC71','rgba(46,204,113,.1)')
       +'</div>'
+      +(hasUSD?
+        '<div style="margin-top:10px;padding:10px 12px;background:rgba(52,152,219,.08);border-radius:6px;border:1px solid rgba(52,152,219,.25)">'
+        +'<div style="font-size:10px;color:#5DADE2;font-weight:bold;margin-bottom:8px;letter-spacing:1px">🇺🇸 DÓLARES (USD)</div>'
+        +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">'
+          +dcUSD('Saldo Anterior',saldoAntUSD,'#5DADE2','')
+          +dcUSD('Entradas',ingUSD,'#2ECC71','')
+          +dcUSD('Salidas',egUSD,'#E74C3C','')
+          +dcUSD('Saldo Total',saldoTotalUSD,saldoTotalUSD>=0?'#5DADE2':'#E74C3C','rgba(52,152,219,.1)')
+        +'</div>'
+        +'</div>'
+      :'')
     +'</div>';
 
   if(deptIds.length>0){
@@ -3855,9 +3885,11 @@ function openSaldoInicial(){
   if(!CU||CU.niv>1){toast('Solo el Administrador puede configurar el saldo inicial','err');return;}
   var si=DB.saldos_iniciales||{};
   var fil=document.getElementById('si-filiales');
+  var filUSD=document.getElementById('si-filiales-usd');
   var dept=document.getElementById('si-departamentos');
   var fecha=document.getElementById('si-fecha');
   if(fil)fil.value=si.filiales||0;
+  if(filUSD)filUSD.value=si.filialesUSD||0;
   if(dept)dept.value=si.departamentos||0;
   if(fecha)fecha.value=si.fecha||'';
   om('ov-saldo-inicial');
@@ -3865,11 +3897,11 @@ function openSaldoInicial(){
 
 function savSaldoInicial(){
   var fil=parseFloat(document.getElementById('si-filiales').value)||0;
+  var filUSD=parseFloat(document.getElementById('si-filiales-usd').value)||0;
   var dept=parseFloat(document.getElementById('si-departamentos').value)||0;
   var fecha=document.getElementById('si-fecha').value||'';
-  DB.saldos_iniciales={filiales:fil,departamentos:dept,fecha:fecha};
+  DB.saldos_iniciales={filiales:fil,filialesUSD:filUSD,departamentos:dept,fecha:fecha};
   try{sd();}catch(e){}
-  // Save to Firebase config collection
   fbSave('config','saldos_iniciales',DB.saldos_iniciales);
   cm('ov-saldo-inicial');
   renderDash();
@@ -4715,9 +4747,11 @@ function openSaldoInicial(){
   if(!CU||CU.niv>1){toast('Solo el Administrador puede configurar el saldo inicial','err');return;}
   var si=DB.saldos_iniciales||{};
   var fil=document.getElementById('si-filiales');
+  var filUSD=document.getElementById('si-filiales-usd');
   var dept=document.getElementById('si-departamentos');
   var fecha=document.getElementById('si-fecha');
   if(fil)fil.value=si.filiales||0;
+  if(filUSD)filUSD.value=si.filialesUSD||0;
   if(dept)dept.value=si.departamentos||0;
   if(fecha)fecha.value=si.fecha||'';
   om('ov-saldo-inicial');
@@ -4725,11 +4759,11 @@ function openSaldoInicial(){
 
 function savSaldoInicial(){
   var fil=parseFloat(document.getElementById('si-filiales').value)||0;
+  var filUSD=parseFloat(document.getElementById('si-filiales-usd').value)||0;
   var dept=parseFloat(document.getElementById('si-departamentos').value)||0;
   var fecha=document.getElementById('si-fecha').value||'';
-  DB.saldos_iniciales={filiales:fil,departamentos:dept,fecha:fecha};
+  DB.saldos_iniciales={filiales:fil,filialesUSD:filUSD,departamentos:dept,fecha:fecha};
   try{sd();}catch(e){}
-  // Save to Firebase config collection
   fbSave('config','saldos_iniciales',DB.saldos_iniciales);
   cm('ov-saldo-inicial');
   renderDash();
