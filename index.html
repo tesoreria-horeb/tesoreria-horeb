@@ -235,6 +235,28 @@ tbody td{padding:9px 11px;color:rgba(247,243,233,.8);vertical-align:middle}
   .btn{padding:7px 10px!important;font-size:11px!important}
   .btn-sm{padding:4px 7px!important;font-size:10px!important}
 }
+/* ===== CONTADOR: Solo Lectura ===== */
+body.contador-mode .btn-p,
+body.contador-mode .btn-g,
+body.contador-mode .btn-d,
+body.contador-mode #btn-nuevo-mov,
+body.contador-mode [onclick*="openMovModal"],
+body.contador-mode [onclick*="openBancoModal"],
+body.contador-mode [onclick*="openFilModal"],
+body.contador-mode [onclick*="openMiemModal"],
+body.contador-mode [onclick*="openVotModal"],
+body.contador-mode [onclick*="openUsrModal"],
+body.contador-mode [onclick*="openSaldoInicial"],
+body.contador-mode [onclick*="delMov"],
+body.contador-mode [onclick*="delFil"],
+body.contador-mode [onclick*="delBanco"],
+body.contador-mode [onclick*="savMov"],
+body.contador-mode [onclick*="Nuevo Lanzamiento"],
+body.contador-mode .tb .btn-p,
+body.contador-mode .tb .btn-g,
+body.contador-mode .tb .btn-d {
+  display: none !important;
+}
 </style>
 
 <!-- Firebase compat SDK via CDN -->
@@ -1837,6 +1859,7 @@ function edMov(btn){openMovModal(btn.getAttribute('data-id'));}
 function delMov(btn){delMovSingle(btn.getAttribute('data-id'));}
 
 function openMovModal(id){
+  if(CU&&CU.niv===5){toast('Acceso solo lectura','err');return;}
   EID=id||null;updCats();popMiem('m-miem');
   var fs=document.getElementById('m-fil');
   fs.innerHTML='';
@@ -1896,6 +1919,7 @@ function openMovModal(id){
 }
 
 function savMov(keepOpen){
+  if(CU&&CU.niv===5){toast('Acceso solo lectura — no puede guardar','err');return;}
   var tipo=document.getElementById('m-tipo').value;
   var fec=document.getElementById('m-fecha').value;
   var monStr=document.getElementById('m-monto').value;
@@ -3271,6 +3295,7 @@ function renderBanco(){
 }
 
 function openBancoModal(tipo,id){
+  if(CU&&CU.niv===5){toast('Acceso solo lectura','err');return;}
   EID=id||null;
   var tit=document.getElementById('banco-modal-tit');
   if(tit)tit.textContent=tipo==='deposito'?'Registrar Depósito al Banco':'Registrar Retiro del Banco';
@@ -3308,6 +3333,7 @@ function openBancoModal(tipo,id){
 }
 
 function savBanco(){
+  if(CU&&CU.niv===5){toast('Acceso solo lectura','err');return;}
   var fec=document.getElementById('banco-fecha').value;
   var mon=parseFloat(document.getElementById('banco-monto').value);
   var desc=document.getElementById('banco-desc').value.trim();
@@ -4234,6 +4260,7 @@ function delSelectedMov(){delSelected('mov');}
 var bancoPg=1; var BANCO_PP=15;
 
 function savBanco(){
+  if(CU&&CU.niv===5){toast('Acceso solo lectura','err');return;}
   var fec=document.getElementById('banco-fecha').value;
   var mon=parseFloat(document.getElementById('banco-monto').value);
   var desc=document.getElementById('banco-desc').value.trim();
