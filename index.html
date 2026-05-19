@@ -2588,7 +2588,7 @@ function genCaja(){
   html+='<tbody>'+dataRows+'</tbody>';
   html+='</table>';
 
-  // Totals section
+  // Totals section — Soles
   html+='<table style="width:100%;border-collapse:collapse;border-top:2px solid #333">';
   html+='<tr>';
   html+='<td style="padding:6px 8px;font-size:11px;font-style:italic;width:55%" rowspan="'+(esDepartamento?'4':'3')+'">Valores en Moneda Nacional - Soles Peruano.<br><br>FECHA _______/_______/________</td>';
@@ -2600,20 +2600,42 @@ function genCaja(){
     html+='<tr>';
   }
   html+='<td style="border:1px solid #333;padding:5px 8px;font-size:12px;font-weight:bold">Entradas</td>';
-  html+='<td style="border:1px solid #333;padding:5px 8px;font-size:11px;text-align:right">S/. '+ti.toFixed(2)+(tiUSD>0?' / $ '+tiUSD.toFixed(2):'')+'</td>';
+  html+='<td style="border:1px solid #333;padding:5px 8px;font-size:11px;text-align:right">S/. '+ti.toFixed(2)+'</td>';
   html+='<td style="border:2px solid #333;padding:5px;background:#000;width:80px">&nbsp;</td>';
   html+='</tr>';
   html+='<tr>';
   html+='<td style="border:1px solid #333;padding:5px 8px;font-size:12px;font-weight:bold">Sal&iacute;das</td>';
   html+='<td style="border:1px solid #333;padding:5px 8px;background:#000">&nbsp;</td>';
-  html+='<td style="border:2px solid #333;padding:5px 8px;font-size:11px;text-align:right">S/. '+te.toFixed(2)+(teUSD>0?' / $ '+teUSD.toFixed(2):'')+'</td>';
+  html+='<td style="border:2px solid #333;padding:5px 8px;font-size:11px;text-align:right">S/. '+te.toFixed(2)+'</td>';
   html+='</tr>';
   html+='<tr>';
   html+='<td style="border:1px solid #333;padding:5px 8px;font-size:12px;font-weight:bold">Saldo</td>';
-  html+='<td style="border:1px solid #333;padding:5px 8px;font-size:11px;text-align:right">S/. '+saldo.toFixed(2)+(saldoUSD?(' / $ '+saldoUSD.toFixed(2)):'')+'</td>';
+  html+='<td style="border:1px solid #333;padding:5px 8px;font-size:11px;text-align:right">S/. '+saldo.toFixed(2)+'</td>';
   html+='<td style="border:2px solid #333;padding:5px;background:#000">&nbsp;</td>';
   html+='</tr>';
   html+='</table>';
+
+  // Totals section — USD (solo si hay movimientos en dólares)
+  if(tiUSD>0||teUSD>0){
+    html+='<table style="width:100%;border-collapse:collapse;border-top:1px solid #5DADE2;margin-top:6px">';
+    html+='<tr>';
+    html+='<td style="padding:5px 8px;font-size:11px;font-style:italic;width:55%;color:#1565C0" rowspan="3">🇺🇸 Valores en Dólares Americanos (USD).</td>';
+    html+='<td style="border:1px solid #5DADE2;padding:4px 8px;font-size:12px;font-weight:bold;color:#1565C0">Entradas USD</td>';
+    html+='<td style="border:1px solid #5DADE2;padding:4px 8px;font-size:11px;text-align:right;color:#1A7A4A">$ '+tiUSD.toFixed(2)+'</td>';
+    html+='<td style="border:1px solid #5DADE2;padding:4px;background:#1565C0;width:80px;opacity:0.7">&nbsp;</td>';
+    html+='</tr>';
+    html+='<tr>';
+    html+='<td style="border:1px solid #5DADE2;padding:4px 8px;font-size:12px;font-weight:bold;color:#1565C0">Salidas USD</td>';
+    html+='<td style="border:1px solid #5DADE2;padding:4px 8px;background:#1565C0;opacity:0.7">&nbsp;</td>';
+    html+='<td style="border:1px solid #5DADE2;padding:4px 8px;font-size:11px;text-align:right;color:#C0392B">$ '+teUSD.toFixed(2)+'</td>';
+    html+='</tr>';
+    html+='<tr>';
+    html+='<td style="border:1px solid #5DADE2;padding:4px 8px;font-size:12px;font-weight:bold;color:#1565C0">Saldo USD</td>';
+    html+='<td style="border:1px solid #5DADE2;padding:4px 8px;font-size:11px;text-align:right;color:'+(saldoUSD>=0?'#1565C0':'#C0392B')+'">$ '+saldoUSD.toFixed(2)+'</td>';
+    html+='<td style="border:1px solid #5DADE2;padding:4px;background:#1565C0;opacity:0.7">&nbsp;</td>';
+    html+='</tr>';
+    html+='</table>';
+  }
 
   // Signatures
   html+='<table style="width:100%;border-collapse:collapse;margin-top:30px">';
@@ -2641,16 +2663,35 @@ function genCons(){
   const anio=parseInt(document.getElementById('rcon-anio').value);
   const fil=document.getElementById('rcon-fil').value;
   let movs=gAccMov().filter(m=>{const y=parseInt(m.fec.split('-')[0]);return y===anio&&(fil==='all'||m.fil===fil);});
-  let ti=0,te=0,rows='';
+  let ti=0,te=0,tiUSD=0,teUSD=0,rows='';
   if(per==='mensual'||per==='trimestral'){
     const gs=per==='mensual'?MESES.map((n,i)=>({n,ms:[i+1]})):[{n:'1er Trimestre',ms:[1,2,3]},{n:'2do Trimestre',ms:[4,5,6]},{n:'3er Trimestre',ms:[7,8,9]},{n:'4to Trimestre',ms:[10,11,12]}];
-    gs.forEach(g=>{const gm=movs.filter(m=>g.ms.includes(parseInt(m.fec.split('-')[1])));const i=gm.filter(m=>m.tipo==='ingreso'&&(m.moneda||'PEN')==='PEN').reduce((a,m)=>a+Number(m.mon),0);const e=gm.filter(m=>m.tipo==='egreso'&&(m.moneda||'PEN')==='PEN').reduce((a,m)=>a+Number(m.mon),0);ti+=i;te+=e;rows+=`<tr><td><strong>${g.n}</strong></td><td style="color:green">S/. ${i.toFixed(2)}</td><td style="color:red">S/. ${e.toFixed(2)}</td><td style="font-weight:bold;color:${i-e>=0?'green':'red'}">S/. ${(i-e).toFixed(2)}</td></tr>`;});
+    gs.forEach(g=>{
+      const gm=movs.filter(m=>g.ms.includes(parseInt(m.fec.split('-')[1])));
+      const i=gm.filter(m=>m.tipo==='ingreso'&&(m.moneda||'PEN')==='PEN').reduce((a,m)=>a+Number(m.mon),0);
+      const e=gm.filter(m=>m.tipo==='egreso'&&(m.moneda||'PEN')==='PEN').reduce((a,m)=>a+Number(m.mon),0);
+      const iU=gm.filter(m=>m.tipo==='ingreso'&&m.moneda==='USD').reduce((a,m)=>a+Number(m.mon),0);
+      const eU=gm.filter(m=>m.tipo==='egreso'&&m.moneda==='USD').reduce((a,m)=>a+Number(m.mon),0);
+      ti+=i;te+=e;tiUSD+=iU;teUSD+=eU;
+      var usdCell=iU>0||eU>0?` <span style="font-size:10px;color:#5DADE2">&nbsp;|&nbsp; $ ${iU.toFixed(2)} / $ ${eU.toFixed(2)}</span>`:'';
+      rows+=`<tr><td><strong>${g.n}</strong></td><td style="color:green">S/. ${i.toFixed(2)}${usdCell}</td><td style="color:red">S/. ${e.toFixed(2)}</td><td style="font-weight:bold;color:${i-e>=0?'green':'red'}">S/. ${(i-e).toFixed(2)}</td></tr>`;
+    });
   }else{
     const ct={};movs.forEach(m=>{if(!ct[m.cat])ct[m.cat]={tipo:m.tipo,t:0};ct[m.cat].t+=Number(m.mon);});
     Object.entries(ct).sort((a,b)=>b[1].t-a[1].t).forEach(([c,d])=>{if(d.tipo==='ingreso')ti+=d.t;else te+=d.t;rows+=`<tr><td>${c}</td><td>${d.tipo==='ingreso'?'Ingreso':'Egreso'}</td><td style="color:${d.tipo==='ingreso'?'green':'red'};font-weight:bold">S/. ${d.t.toFixed(2)}</td></tr>`;});
   }
   const isA=per==='anual';const fn=fil==='all'?'Todas las Sedes':gfn(fil);
-  document.getElementById('rcon-prev').innerHTML=`<div class="rpt-wrap">${rptHd('Informe Consolidado '+(per.charAt(0).toUpperCase()+per.slice(1)),anio+' — '+fn)}<div class="rpt-body"><table><thead><tr>${isA?'<th>Categoría</th><th>Tipo</th><th>Total</th>':'<th>Período</th><th>Ingresos</th><th>Egresos</th><th>Balance</th>'}</tr></thead><tbody>${rows}</tbody></table><div class="rpt-totals"><table><tr><td><strong>Total Ingresos:</strong></td><td style="color:green;font-weight:bold">S/. ${ti.toFixed(2)}</td><td style="padding-left:18px"><strong>Total Egresos:</strong></td><td style="color:red;font-weight:bold">S/. ${te.toFixed(2)}</td><td style="padding-left:18px"><strong>Balance:</strong></td><td style="font-weight:bold;color:${ti-te>=0?'green':'red'}">S/. ${(ti-te).toFixed(2)}</td></tr></table></div></div></div>`;
+  var usdSection='';
+  if(tiUSD>0||teUSD>0){
+    usdSection='<div style="margin-top:14px;padding:10px 14px;background:rgba(52,152,219,.08);border:1px solid rgba(52,152,219,.3);border-radius:6px">'
+      +'<div style="font-size:11px;font-weight:bold;color:#5DADE2;margin-bottom:6px">🇺🇸 DÓLARES (USD)</div>'
+      +'<table><tr>'
+      +'<td><strong>Total Ingresos USD:</strong></td><td style="color:#1A7A4A;font-weight:bold;padding:4px 12px">$ '+tiUSD.toFixed(2)+'</td>'
+      +'<td style="padding-left:18px"><strong>Total Egresos USD:</strong></td><td style="color:#C0392B;font-weight:bold;padding:4px 12px">$ '+teUSD.toFixed(2)+'</td>'
+      +'<td style="padding-left:18px"><strong>Balance USD:</strong></td><td style="font-weight:bold;color:'+(tiUSD-teUSD>=0?'#5DADE2':'#C0392B')+';padding:4px 12px">$ '+(tiUSD-teUSD).toFixed(2)+'</td>'
+      +'</tr></table></div>';
+  }
+  document.getElementById('rcon-prev').innerHTML=`<div class="rpt-wrap">${rptHd('Informe Consolidado '+(per.charAt(0).toUpperCase()+per.slice(1)),anio+' — '+fn)}<div class="rpt-body"><table><thead><tr>${isA?'<th>Categoría</th><th>Tipo</th><th>Total</th>':'<th>Período</th><th>Ingresos</th><th>Egresos</th><th>Balance</th>'}</tr></thead><tbody>${rows}</tbody></table><div class="rpt-totals"><table><tr><td><strong>Total Ingresos:</strong></td><td style="color:green;font-weight:bold">S/. ${ti.toFixed(2)}</td><td style="padding-left:18px"><strong>Total Egresos:</strong></td><td style="color:red;font-weight:bold">S/. ${te.toFixed(2)}</td><td style="padding-left:18px"><strong>Balance:</strong></td><td style="font-weight:bold;color:${ti-te>=0?'green':'red'}">S/. ${(ti-te).toFixed(2)}</td></tr></table></div>${usdSection}</div></div>`;
   toast('Consolidado generado');
 }
 
@@ -4915,6 +4956,24 @@ function genEjecutivo(){
   html+='<td style="border:1px solid #C9A84C;padding:7px 8px;text-align:right;font-weight:bold;color:'+(grandBal>=0?'#1A7A4A':'#C0392B')+'">S/. '+grandBal.toFixed(2)+'</td>';
   html+='</tr></tfoot></table>';
 
+  // Sección USD si hay movimientos en dólares
+  var tiUSDej=movsMes.filter(function(m){var esF=filiales.some(function(f){return f.id===m.fil;});return esF&&m.tipo==='ingreso'&&m.moneda==='USD';}).reduce(function(a,m){return a+Number(m.mon);},0);
+  var teUSDej=movsMes.filter(function(m){var esF=filiales.some(function(f){return f.id===m.fil;});return esF&&m.tipo==='egreso'&&m.moneda==='USD';}).reduce(function(a,m){return a+Number(m.mon);},0);
+  var siUSDej=Number((DB.saldos_iniciales||{}).filialesUSD)||0;
+  var allPrevUSD=allMovs.filter(function(m){var esF=filiales.some(function(f){return f.id===m.fil;});var y=parseInt(m.fec.split('-')[0]),mo=parseInt(m.fec.split('-')[1]);return esF&&m.moneda==='USD'&&((y<anio)||(y===anio&&mo<mes));});
+  var saldoAntUSDej=siUSDej+allPrevUSD.filter(function(m){return m.tipo==='ingreso';}).reduce(function(a,m){return a+Number(m.mon);},0)-allPrevUSD.filter(function(m){return m.tipo==='egreso';}).reduce(function(a,m){return a+Number(m.mon);},0);
+  var saldoTotalUSDej=saldoAntUSDej+tiUSDej-teUSDej;
+  if(siUSDej>0||tiUSDej>0||teUSDej>0){
+    html+='<div style="margin-top:14px;padding:12px 14px;background:rgba(52,152,219,.08);border:1px solid rgba(52,152,219,.3);border-radius:6px">';
+    html+='<div style="font-size:11px;font-weight:bold;color:#5DADE2;margin-bottom:10px">🇺🇸 MOVIMIENTOS EN DÓLARES (USD) — '+mesNom.toUpperCase()+' '+anio+'</div>';
+    html+='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">';
+    html+='<div style="text-align:center"><div style="font-size:9px;color:#888;margin-bottom:4px">Saldo Anterior</div><div style="font-size:17px;font-weight:bold;color:#5DADE2">$ '+saldoAntUSDej.toFixed(2)+'</div></div>';
+    html+='<div style="text-align:center"><div style="font-size:9px;color:#888;margin-bottom:4px">Entradas</div><div style="font-size:17px;font-weight:bold;color:#1A7A4A">$ '+tiUSDej.toFixed(2)+'</div></div>';
+    html+='<div style="text-align:center"><div style="font-size:9px;color:#888;margin-bottom:4px">Salidas</div><div style="font-size:17px;font-weight:bold;color:#C0392B">$ '+teUSDej.toFixed(2)+'</div></div>';
+    html+='<div style="text-align:center;background:rgba(52,152,219,.1);border-radius:6px;padding:8px"><div style="font-size:9px;color:#888;margin-bottom:4px">Saldo Total</div><div style="font-size:17px;font-weight:bold;color:'+(saldoTotalUSDej>=0?'#5DADE2':'#C0392B')+'">$ '+saldoTotalUSDej.toFixed(2)+'</div></div>';
+    html+='</div></div>';
+  }
+
   html+='<div style="font-size:10px;color:#888;margin-bottom:16px">* Saldo Anterior = arrastre acumulado de todas las sedes hasta fin de '+mesPrevNom+'. &nbsp; Saldo en Caja = Saldo Anterior + Ingresos − Egresos − Transferido a Banco.</div>';
   html+=rptSign('Tesorero Principal','Pastor Principal');
   html+='</div></div>';
@@ -5118,6 +5177,37 @@ function genCategorias(){
 
   if(!tipo||tipo==='ingreso') html+=buildCatTable(ings,'📥 INGRESOS POR CATEGORÍA','#1A7A4A',totalIng);
   if(!tipo||tipo==='egreso') html+=buildCatTable(egs,'📤 EGRESOS POR CATEGORÍA','#C0392B',totalEg);
+
+  // USD section
+  var movsUSD=gAccMov().filter(function(m){
+    var y=parseInt(m.fec.split('-')[0]),mo=parseInt(m.fec.split('-')[1]);
+    var filOk=filIds.indexOf(m.fil)>-1;
+    var mesOk=!mes||(mo===parseInt(mes)&&y===anio);
+    var anoOk=mes?true:y===anio;
+    var tipoOk=!tipo||m.tipo===tipo;
+    return filOk&&mesOk&&anoOk&&tipoOk&&m.moneda==='USD';
+  });
+  if(movsUSD.length>0){
+    var totalIngUSD=movsUSD.filter(function(m){return m.tipo==='ingreso';}).reduce(function(a,m){return a+Number(m.mon);},0);
+    var totalEgUSD=movsUSD.filter(function(m){return m.tipo==='egreso';}).reduce(function(a,m){return a+Number(m.mon);},0);
+    var catsUSD={};
+    movsUSD.forEach(function(m){if(!catsUSD[m.cat])catsUSD[m.cat]={tipo:m.tipo,total:0,count:0};catsUSD[m.cat].total+=Number(m.mon);catsUSD[m.cat].count++;});
+    var ingsUSD=Object.entries(catsUSD).filter(function(e){return e[1].tipo==='ingreso';}).sort(function(a,b){return b[1].total-a[1].total;});
+    var egsUSD=Object.entries(catsUSD).filter(function(e){return e[1].tipo==='egreso';}).sort(function(a,b){return b[1].total-a[1].total;});
+    html+='<div style="margin-top:20px;padding:12px 14px;background:rgba(52,152,219,.08);border:1px solid rgba(52,152,219,.3);border-radius:6px">';
+    html+='<div style="font-size:12px;font-weight:bold;color:#5DADE2;margin-bottom:12px">🇺🇸 MOVIMIENTOS EN DÓLARES (USD)</div>';
+    html+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px">';
+    html+='<div style="padding:10px;background:rgba(52,152,219,.1);border-radius:6px"><div style="font-size:9px;color:#888;font-weight:bold;text-transform:uppercase">Ingresos USD</div><div style="font-size:16px;font-weight:bold;color:#1A7A4A">$ '+totalIngUSD.toFixed(2)+'</div></div>';
+    html+='<div style="padding:10px;background:rgba(52,152,219,.1);border-radius:6px"><div style="font-size:9px;color:#888;font-weight:bold;text-transform:uppercase">Egresos USD</div><div style="font-size:16px;font-weight:bold;color:#C0392B">$ '+totalEgUSD.toFixed(2)+'</div></div>';
+    html+='<div style="padding:10px;background:rgba(52,152,219,.1);border-radius:6px"><div style="font-size:9px;color:#888;font-weight:bold;text-transform:uppercase">Balance USD</div><div style="font-size:16px;font-weight:bold;color:'+(totalIngUSD-totalEgUSD>=0?'#5DADE2':'#C0392B')+'">$ '+(totalIngUSD-totalEgUSD).toFixed(2)+'</div></div>';
+    html+='</div>';
+    [ingsUSD.length>0?'<div style="font-size:11px;font-weight:bold;color:#1A7A4A;margin-bottom:4px">📥 Ingresos por categoría (USD)</div>':''
+    ,ingsUSD.map(function(e){return '<div style="display:flex;justify-content:space-between;padding:4px 8px;font-size:11px;border-bottom:1px solid rgba(52,152,219,.1)"><span>'+e[0]+'</span><span style="color:#1A7A4A;font-weight:bold">$ '+e[1].total.toFixed(2)+'</span></div>';}).join('')
+    ,egsUSD.length>0?'<div style="font-size:11px;font-weight:bold;color:#C0392B;margin:8px 0 4px">📤 Egresos por categoría (USD)</div>':''
+    ,egsUSD.map(function(e){return '<div style="display:flex;justify-content:space-between;padding:4px 8px;font-size:11px;border-bottom:1px solid rgba(52,152,219,.1)"><span>'+e[0]+'</span><span style="color:#C0392B;font-weight:bold">$ '+e[1].total.toFixed(2)+'</span></div>';}).join('')
+    ].forEach(function(s){html+=s;});
+    html+='</div>';
+  }
 
   html+=rptSign('Tesorero Principal','Pastor Principal');
   html+='</div></div>';
