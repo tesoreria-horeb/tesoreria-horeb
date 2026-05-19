@@ -1852,7 +1852,22 @@ function renderDash(){
 }
 
 function edMov(btn){openMovModal(btn.getAttribute('data-id'));}
-function delMov(btn){delMovSingle(btn.getAttribute('data-id'));}
+function delMov(btn){
+  var id=btn&&btn.getAttribute?btn.getAttribute('data-id'):btn;
+  if(!id){return;}
+  if(!confirm('¿Eliminar este movimiento?'))return;
+  var linkedBanco=DB.banco?DB.banco.find(function(bn){return bn.movId===id;}):null;
+  if(linkedBanco){
+    if(!confirm('Este movimiento tiene un depósito bancario vinculado. ¿Eliminar también el depósito bancario?'))return;
+    DB.banco=DB.banco.filter(function(b){return b.movId!==id;});
+    fbDelete('banco',linkedBanco.id);
+  }
+  DB.movimientos=DB.movimientos.filter(function(m){return m.id!==id;});
+  try{sd();}catch(e){}
+  fbDelete('movimientos',id);
+  renderMov();
+  toast('Movimiento eliminado','err');
+}
 
 function openMovModal(id){
   if(CU&&CU.niv===5){toast('Acceso solo lectura','err');return;}
