@@ -4957,8 +4957,8 @@ function genEjecutivo(){
   html+='</tr></tfoot></table>';
 
   // Sección USD si hay movimientos en dólares
-  var tiUSDej=movsMes.filter(function(m){var esF=filiales.some(function(f){return f.id===m.fil;});return esF&&m.tipo==='ingreso'&&m.moneda==='USD';}).reduce(function(a,m){return a+Number(m.mon);},0);
-  var teUSDej=movsMes.filter(function(m){var esF=filiales.some(function(f){return f.id===m.fil;});return esF&&m.tipo==='egreso'&&m.moneda==='USD';}).reduce(function(a,m){return a+Number(m.mon);},0);
+  var tiUSDej=allMovs.filter(function(m){var esF=filiales.some(function(f){return f.id===m.fil;});var y=parseInt(m.fec.split('-')[0]),mo=parseInt(m.fec.split('-')[1]);return esF&&m.tipo==='ingreso'&&m.moneda==='USD'&&y===anio&&mo===mes;}).reduce(function(a,m){return a+Number(m.mon);},0);
+  var teUSDej=allMovs.filter(function(m){var esF=filiales.some(function(f){return f.id===m.fil;});var y=parseInt(m.fec.split('-')[0]),mo=parseInt(m.fec.split('-')[1]);return esF&&m.tipo==='egreso'&&m.moneda==='USD'&&y===anio&&mo===mes;}).reduce(function(a,m){return a+Number(m.mon);},0);
   var siUSDej=Number((DB.saldos_iniciales||{}).filialesUSD)||0;
   var allPrevUSD=allMovs.filter(function(m){var esF=filiales.some(function(f){return f.id===m.fil;});var y=parseInt(m.fec.split('-')[0]),mo=parseInt(m.fec.split('-')[1]);return esF&&m.moneda==='USD'&&((y<anio)||(y===anio&&mo<mes));});
   var saldoAntUSDej=siUSDej+allPrevUSD.filter(function(m){return m.tipo==='ingreso';}).reduce(function(a,m){return a+Number(m.mon);},0)-allPrevUSD.filter(function(m){return m.tipo==='egreso';}).reduce(function(a,m){return a+Number(m.mon);},0);
