@@ -2475,7 +2475,7 @@ function genCaja(){
   var saldoAnteriorUSD=0;
   var filObj=fil!=='all'?DB.filiales.find(function(f){return f.id===fil;}):null;
   var esDepartamento=filObj&&filObj.tipo==='departamento';
-  var esSedeCentral=fil==='sede';
+  var esSedeCentral=fil!=='all'&&filObj&&(filObj.id==='sede'||filObj.cod==='S000'||(filObj.nom&&filObj.nom.toLowerCase().includes('sede central')))&&!esDepartamento;
 
   if(esDepartamento){
     // Saldo inicial del departamento (configurado al crear la filial)
