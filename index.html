@@ -1232,11 +1232,11 @@ function _finishLogin(usr){
   document.querySelectorAll('.nav-admin').forEach(e=>e.style.display='');
   document.querySelectorAll('.nav-contador-only').forEach(e=>e.style.display='');
   document.querySelectorAll('.nav-no-contador').forEach(e=>e.style.display='');
-  document.querySelectorAll('.nav-directiva').forEach(e=>e.style.display=usr.niv<=2?'':'none');
+  document.querySelectorAll('.nav-directiva').forEach(e=>e.style.display=(usr.niv<=2||usr.niv===5)?'':'none');
   // Then hide based on level
-  if(usr.niv>2)document.querySelectorAll('.nav-filiales').forEach(e=>e.style.display='none');
-  if(usr.niv>=4)document.querySelectorAll('.nav-admin').forEach(e=>e.style.display='none');
-  // Contador: only show financial reports and movimientos (read-only)
+  if(usr.niv>2&&usr.niv!==5)document.querySelectorAll('.nav-filiales').forEach(e=>e.style.display='none');
+  if(usr.niv>=4&&usr.niv!==5)document.querySelectorAll('.nav-admin').forEach(e=>e.style.display='none');
+  // Contador: puede ver todo pero no puede editar — ocultar solo opciones de escritura
   if(CU.niv===5){
     document.querySelectorAll('.nav-no-contador').forEach(e=>e.style.display='none');
   }
@@ -1317,9 +1317,9 @@ function sm(n){
 
 // ===================== HELPERS =====================
 var movPg=1;
-function gAccMov(){if(!CU)return[];return CU.niv<=2?DB.movimientos:DB.movimientos.filter(m=>m.fil===CU.fil);}
-function gAccFil(){if(!CU)return[];return CU.niv<=2?DB.filiales:DB.filiales.filter(f=>f.id===CU.fil);}
-function gAccMiem(){if(!CU)return[];return CU.niv<=2?DB.miembros:DB.miembros.filter(m=>m.fil===CU.fil);}
+function gAccMov(){if(!CU)return[];return (CU.niv<=2||CU.niv===5||CU.fil==='all')?DB.movimientos:DB.movimientos.filter(m=>m.fil===CU.fil);}
+function gAccFil(){if(!CU)return[];return (CU.niv<=2||CU.niv===5||CU.fil==='all')?DB.filiales:DB.filiales.filter(f=>f.id===CU.fil);}
+function gAccMiem(){if(!CU)return[];return (CU.niv<=2||CU.niv===5||CU.fil==='all')?DB.miembros:DB.miembros.filter(m=>m.fil===CU.fil);}
 function fmt(n){return'S/. '+Number(n||0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',');}
 function fd2(d){if(!d)return'—';const p=d.split('-');return p[2]+'/'+p[1]+'/'+p[0];}
 function today(){return new Date().toISOString().split('T')[0];}
@@ -1748,7 +1748,7 @@ function renderDash(){
       +'</div>'
     +'</div>';
 
-  document.getElementById('dash-stats').innerHTML=CU&&CU.niv<=2?adminHtml:filialHtml;
+  document.getElementById('dash-stats').innerHTML=CU&&(CU.niv<=2||CU.niv===5)?adminHtml:filialHtml;
 
   // ===== CHARTS =====
   var mn=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
@@ -3537,7 +3537,7 @@ function importBackup(){
 
 // ===================== RPT BANCO =====================
 function genRptBanco(){
-  if(!CU||CU.niv>2){toast('Sin acceso','err');return;}
+  if(!CU||( CU.niv>2&&CU.niv!==5)){toast('Sin acceso','err');return;}
   var mes=document.getElementById('rban-mes').value;
   var anio=parseInt(document.getElementById('rban-anio').value);
   var tipo=document.getElementById('rban-tipo').value;
@@ -3695,7 +3695,7 @@ document.addEventListener('click',function(e){
 // ===================== TRANSFERIR MIEMBRO =====================
 function openTransferMiem(b){
   var id=b&&b.getAttribute?b.getAttribute("data-id"):b;
-  if(!CU||CU.niv>2){toast('Sin acceso','err');return;}
+  if(!CU||( CU.niv>2&&CU.niv!==5)){toast('Sin acceso','err');return;}
   var m=DB.miembros.find(function(x){return x.id===id;});
   if(!m){toast('Miembro no encontrado','err');return;}
   var info=document.getElementById('transfer-miem-info');
@@ -4469,7 +4469,7 @@ function importBackup(){
 
 // ===================== RPT BANCO =====================
 function genRptBanco(){
-  if(!CU||CU.niv>2){toast('Sin acceso','err');return;}
+  if(!CU||( CU.niv>2&&CU.niv!==5)){toast('Sin acceso','err');return;}
   var mes=document.getElementById('rban-mes').value;
   var anio=parseInt(document.getElementById('rban-anio').value);
   var tipo=document.getElementById('rban-tipo').value;
@@ -4627,7 +4627,7 @@ document.addEventListener('click',function(e){
 // ===================== TRANSFERIR MIEMBRO =====================
 function openTransferMiem(b){
   var id=b&&b.getAttribute?b.getAttribute("data-id"):b;
-  if(!CU||CU.niv>2){toast('Sin acceso','err');return;}
+  if(!CU||( CU.niv>2&&CU.niv!==5)){toast('Sin acceso','err');return;}
   var m=DB.miembros.find(function(x){return x.id===id;});
   if(!m){toast('Miembro no encontrado','err');return;}
   var info=document.getElementById('transfer-miem-info');
@@ -4865,7 +4865,7 @@ function savSaldoInicial(){
 
 // ===================== RPT EJECUTIVO MENSUAL =====================
 function genEjecutivo(){
-  if(!CU||CU.niv>2){toast('Sin acceso','err');return;}
+  if(!CU||( CU.niv>2&&CU.niv!==5)){toast('Sin acceso','err');return;}
   var mes=parseInt(document.getElementById('rej-mes').value);
   var anio=parseInt(document.getElementById('rej-anio').value);
   if(!anio){toast('Seleccione el año','err');return;}
@@ -5034,7 +5034,7 @@ function genEjecutivo(){
 }
 
 function genDepartamentos(){
-  if(!CU||CU.niv>2){toast('Sin acceso','err');return;}
+  if(!CU||( CU.niv>2&&CU.niv!==5)){toast('Sin acceso','err');return;}
   var mes=parseInt(document.getElementById('rdept-mes').value);
   var anio=parseInt(document.getElementById('rdept-anio').value);
   if(!anio){toast('Seleccione el año','err');return;}
@@ -5131,7 +5131,7 @@ function genDepartamentos(){
 
 // ===================== RPT GASTOS POR CATEGORÍA =====================
 function genCategorias(){
-  if(!CU||CU.niv>2){toast('Sin acceso','err');return;}
+  if(!CU||( CU.niv>2&&CU.niv!==5)){toast('Sin acceso','err');return;}
   var mes=document.getElementById('rcat-mes').value;
   var anio=parseInt(document.getElementById('rcat-anio').value);
   var fil=document.getElementById('rcat-fil').value;
@@ -5336,9 +5336,9 @@ document.addEventListener('DOMContentLoaded',()=>{
         document.querySelectorAll('.nav-admin').forEach(function(e){e.style.display='';});
         document.querySelectorAll('.nav-super').forEach(function(e){e.style.display='';});
         document.querySelectorAll('.nav-no-contador').forEach(function(e){e.style.display='';});
-        document.querySelectorAll('.nav-directiva').forEach(function(e){e.style.display=CU.niv<=2?'':'none';});
-        if(CU.niv>2)document.querySelectorAll('.nav-filiales').forEach(function(e){e.style.display='none';});
-        if(CU.niv>=4)document.querySelectorAll('.nav-admin').forEach(function(e){e.style.display='none';});
+        document.querySelectorAll('.nav-directiva').forEach(function(e){e.style.display=(CU.niv<=2||CU.niv===5)?'':'none';});
+        if(CU.niv>2&&CU.niv!==5)document.querySelectorAll('.nav-filiales').forEach(function(e){e.style.display='none';});
+        if(CU.niv>=4&&CU.niv!==5)document.querySelectorAll('.nav-admin').forEach(function(e){e.style.display='none';});
         if(CU.niv>1)document.querySelectorAll('.nav-super').forEach(function(e){e.style.display='none';});
         if(CU.niv===5)document.querySelectorAll('.nav-no-contador').forEach(function(e){e.style.display='none';});
         document.getElementById('curdate').textContent=new Date().toLocaleDateString('es-PE',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
