@@ -1355,7 +1355,7 @@ function popFil(){
   sids.forEach(sid=>{
     const sel=document.getElementById(sid);if(!sel)return;
     sel.querySelectorAll('[data-dyn]').forEach(o=>o.remove());
-    const accFils=CU&&CU.niv<=2?fils:fils.filter(f=>f.id===(CU&&CU.fil));
+    const accFils=CU&&(CU.niv<=2||CU.niv===5||CU.fil==='all')?fils:fils.filter(f=>f.id===(CU&&CU.fil));
     const filiales=accFils.filter(f=>(f.tipo||'filial')!=='departamento');
     const deptos=accFils.filter(f=>f.tipo==='departamento');
     if(filiales.length>0){
