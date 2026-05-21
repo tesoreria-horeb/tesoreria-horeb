@@ -340,6 +340,7 @@ body.contador-mode .modal-ft .btn-d {
       <div class="nav-item nav-no-contador" onclick="sm('miembros')"><span class="ic">👥</span>Miembros</div>
       <div class="nav-item nav-no-contador" onclick="sm('votos')"><span class="ic">🙏</span>Votos</div>
       <div class="nav-item" onclick="sm('banco')"><span class="ic">🏦</span>Banco</div>
+      <div class="nav-item nav-admin" onclick="sm('cierre-filiales')"><span class="ic">🔄</span>Cierre de Filiales</div>
       <div class="nav-sec nav-admin">Configuración</div>
       <div class="nav-item nav-admin" onclick="sm('categorias')"><span class="ic">🏷️</span>Categorías</div>
       <div class="nav-item nav-super" onclick="sm('usuarios')"><span class="ic">👤</span>Usuarios</div>
@@ -600,6 +601,26 @@ body.contador-mode .modal-ft .btn-d {
             💡 <strong>Recomendación:</strong> Realiza un backup manual al menos una vez al mes y guárdalo en Google Drive o un USB.
           </p>
         </div>
+      </div>
+
+      <!-- CIERRE DE FILIALES -->
+      <div class="mod" id="mod-cierre-filiales">
+        <div class="card" style="margin-bottom:14px">
+          <div class="card-title">⚙️ Período a Cerrar</div>
+          <div class="tb" style="margin-bottom:0">
+            <select class="fs" id="cf-mes">
+              <option value="1">Enero</option><option value="2">Febrero</option>
+              <option value="3">Marzo</option><option value="4">Abril</option>
+              <option value="5">Mayo</option><option value="6">Junio</option>
+              <option value="7">Julio</option><option value="8">Agosto</option>
+              <option value="9">Septiembre</option><option value="10">Octubre</option>
+              <option value="11">Noviembre</option><option value="12">Diciembre</option>
+            </select>
+            <select class="fs" id="cf-anio"></select>
+            <button class="btn btn-p" onclick="renderCierreFiliales()">🔄 Cargar Saldos</button>
+          </div>
+        </div>
+        <div id="cf-panel"></div>
       </div>
 
       <!-- BANCO -->
@@ -1121,14 +1142,58 @@ body.contador-mode .modal-ft .btn-d {
   </div>
 </div>
 
+<!-- MODAL CIERRE FILIAL — VOUCHER DEPÓSITO -->
+<div class="ov" id="ov-cierre">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-hd">
+      <div class="modal-tit" id="ov-cierre-tit">Registrar Depósito Bancario</div>
+      <button class="modal-x" onclick="cm('ov-cierre')">✕</button>
+    </div>
+    <div style="background:rgba(46,134,171,.1);border:1px solid rgba(46,134,171,.3);border-radius:6px;padding:10px 12px;margin-bottom:14px;font-size:12px;color:#5DADE2">
+      🏦 Este registro creará automáticamente un depósito en el módulo Bancario y cerrará el saldo de la filial para el mes seleccionado.
+    </div>
+    <div class="fr fr1"><div class="fld"><label>Filial / Departamento</label><input type="text" id="cf-nom-fil" readonly style="opacity:.7"></div></div>
+    <div class="fr">
+      <div class="fld"><label>Monto a Depositar (S/.)</label><input type="number" id="cf-monto" step="0.01" min="0.01" placeholder="0.00"></div>
+      <div class="fld"><label>Fecha del Depósito</label><input type="date" id="cf-fecha"></div>
+    </div>
+    <div class="fr">
+      <div class="fld"><label>Código de Operación / Voucher</label><input type="text" id="cf-cod-op" placeholder="Ej: 00123456"></div>
+      <div class="fld"><label>Banco / Entidad</label><input type="text" id="cf-banco-nom" placeholder="Ej: BCP, Interbank..."></div>
+    </div>
+    <div class="fr fr1"><div class="fld"><label>Observaciones <span style="color:rgba(247,243,233,.4);font-weight:normal">(opcional)</span></label><input type="text" id="cf-obs" placeholder="Ej: Ofrenda mes de Enero"></div></div>
+    <div class="fr fr1">
+      <div class="fld">
+        <label>Comprobante / Voucher <span style="color:rgba(247,243,233,.4);font-weight:normal">(imagen o PDF, máx 2MB)</span></label>
+        <input type="file" id="cf-comp-file" accept="image/*,.pdf" style="padding:6px;font-size:11px">
+        <div id="cf-comp-preview" style="font-size:11px;color:var(--gold-light);margin-top:4px"></div>
+      </div>
+    </div>
+    <input type="hidden" id="cf-fil-id">
+    <input type="hidden" id="cf-mes-cierre">
+    <input type="hidden" id="cf-anio-cierre">
+    <div class="modal-ft">
+      <button class="btn btn-s" onclick="cm('ov-cierre')">Cancelar</button>
+      <button class="btn btn-g" onclick="savCierreDeposito()">🏦 Confirmar Depósito</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL CATEGORIA -->
 <div class="ov" id="ov-cat">
-  <div class="modal" style="max-width:340px">
+  <div class="modal" style="max-width:460px">
     <div class="modal-hd"><div class="modal-tit" id="cat-tit">Nueva Categoría</div><button class="modal-x" onclick="cm('ov-cat')">✕</button></div>
-    <div class="fr fr1"><div class="fld"><label>Categoría Principal</label><input type="text" id="cat-nom" placeholder="Ej: Alimentación"></div></div>
-    <div class="fr fr1"><div class="fld"><label>Subcategoría <span style="color:rgba(247,243,233,.4);font-weight:normal">(opcional)</span></label><input type="text" id="cat-sub" placeholder="Ej: Vigilia, Reunión, Almuerzo..."></div></div>
-    <div style="font-size:11px;color:rgba(247,243,233,.4);margin-bottom:8px">Si ingresa subcategoría, se guardará como: <em>Categoría > Subcategoría</em></div>
+    <div class="fr fr1"><div class="fld"><label>Nombre de Categoría Principal</label><input type="text" id="cat-nom" placeholder="Ej: Alimentación"></div></div>
+    <div style="margin-bottom:10px">
+      <div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--gold-light);font-weight:700;margin-bottom:6px">Subcategorías <span style="color:rgba(247,243,233,.4);font-weight:normal;text-transform:none;letter-spacing:0">(opcional — puede agregar varias)</span></div>
+      <div id="cat-subs-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px"></div>
+      <button class="btn btn-s btn-sm" type="button" onclick="catAddSubField()" style="font-size:11px">＋ Agregar subcategoría</button>
+    </div>
+    <div style="font-size:11px;color:rgba(247,243,233,.4);margin-bottom:8px;padding:8px;background:rgba(201,168,76,.06);border-radius:6px;border:1px solid rgba(201,168,76,.12)">
+      💡 Cada subcategoría se guardará como: <em>Categoría &gt; Subcategoría</em>.<br>Si no agrega subcategorías, se guarda solo la categoría principal.
+    </div>
     <input type="hidden" id="cat-tipo">
+    <input type="hidden" id="cat-edit-orig">
     <div class="modal-ft"><button class="btn btn-s" onclick="cm('ov-cat')">Cancelar</button><button class="btn btn-p" onclick="savCat()">💾 Guardar</button></div>
   </div>
 </div>
@@ -1153,6 +1218,7 @@ function initDB(){
     movimientos:[],
     banco:[],
     saldos_iniciales:{filiales:0,departamentos:0,fecha:''},
+    cierres:[],
     votos:[],
     cats:{
       ing:['Diezmos','Ofrendas','Primicias','Donaciones','Otros Ingresos'],
@@ -1174,6 +1240,7 @@ try{
   DB=ld();
   if(!DB||!DB.filiales||!DB.miembros||!DB.movimientos||!DB.cats||!DB.usuarios){DB=initDB();}
   if(!DB.banco)DB.banco=[];
+  if(!DB.cierres)DB.cierres=[];
   if(!DB.saldos_iniciales)DB.saldos_iniciales={filiales:0,departamentos:0,fecha:''};
   if(DB.movimientos.length===0){const tmp=initDB();DB.movimientos=tmp.movimientos;}
 }catch(e){DB=initDB();}
@@ -1300,7 +1367,7 @@ function _finishLogin(usr){
 function doLogout(){CU=null;try{localStorage.removeItem('horeb_session');}catch(e){}document.getElementById('app').style.display='none';document.getElementById('login-screen').style.display='flex';document.getElementById('lu').value='';document.getElementById('lp').value='';}
 
 // ===================== NAV =====================
-const TITLES={dashboard:'Menú Principal',usuarios:'Gestion de Usuarios',backup:'Sistema de Backup',banco:'Control Bancario','rpt-banco':'Informe Bancario',movimientos:'Movimientos',filiales:'Filiales',miembros:'Miembros',votos:'Votos',categorias:'Categorías y Usuarios','rpt-caja':'Informe: Libro Caja Mensual','rpt-consolidado':'Informe: Consolidado General','rpt-comparativo':'Informe: Comparativo Anual','rpt-diezmos':'Informe: Diezmos por Filial','rpt-fidelidad':'Informe: Fidelidad Individual','rpt-votos':'Informe: Votos y Cumplimiento','rpt-ejecutivo':'Informe: Resumen Ejecutivo Mensual','rpt-departamentos':'Informe: Estado de Cuenta — Departamentos','rpt-categorias':'Informe: Gastos por Categoría'};
+const TITLES={dashboard:'Menú Principal',usuarios:'Gestion de Usuarios',backup:'Sistema de Backup',banco:'Control Bancario','rpt-banco':'Informe Bancario',movimientos:'Movimientos',filiales:'Filiales',miembros:'Miembros',votos:'Votos',categorias:'Categorías y Usuarios','rpt-caja':'Informe: Libro Caja Mensual','rpt-consolidado':'Informe: Consolidado General','rpt-comparativo':'Informe: Comparativo Anual','rpt-diezmos':'Informe: Diezmos por Filial','rpt-fidelidad':'Informe: Fidelidad Individual','rpt-votos':'Informe: Votos y Cumplimiento','rpt-ejecutivo':'Informe: Resumen Ejecutivo Mensual','rpt-departamentos':'Informe: Estado de Cuenta — Departamentos','rpt-categorias':'Informe: Gastos por Categoría','cierre-filiales':'Cierre de Filiales — Transferencia de Saldos'};
 
 function sm(n){
   // Save current module to restore after F5
@@ -1338,6 +1405,15 @@ function sm(n){
       bMesEl._init=true;
     }
     renderBanco();
+  }
+  else if(n==='cierre-filiales'){
+    if(CU&&CU.niv<=2){
+      var cfMes=document.getElementById('cf-mes');
+      var cfAnio=document.getElementById('cf-anio');
+      if(cfAnio&&!cfAnio.options.length)popYrsEl(cfAnio);
+      if(cfMes&&!cfMes._init){cfMes.value=new Date().getMonth()+1;cfMes._init=true;}
+      if(cfAnio&&!cfAnio.value)cfAnio.value=new Date().getFullYear();
+    } else {toast('Solo el Tesorero Principal puede acceder','err');sm('dashboard');}
   }
   else if(n==='rpt-banco'){
     if(CU&&(CU.niv<=2||CU.niv===5)){
@@ -1429,7 +1505,7 @@ function popRcatFil(){
 
 function popYrs(){
   const yrs=[];for(let y=2020;y<=new Date().getFullYear()+1;y++)yrs.push(y);
-  ['ch-year','rc-anio','rcon-anio','rcomp-a1','rcomp-a2','rdz-anio','rfid-anio','mov-fa','rban-anio','dash-anio','rej-anio','rdept-anio','rcat-anio'].forEach(sid=>{
+  ['ch-year','rc-anio','rcon-anio','rcomp-a1','rcomp-a2','rdz-anio','rfid-anio','mov-fa','rban-anio','dash-anio','rej-anio','rdept-anio','rcat-anio','cf-anio'].forEach(sid=>{
     const sel=document.getElementById(sid);if(!sel)return;
     sel.innerHTML='';yrs.forEach(y=>{const o=document.createElement('option');o.value=y;o.textContent=y;sel.appendChild(o);});
     sel.value=new Date().getFullYear();
@@ -1443,6 +1519,13 @@ function popYrs(){
   var rdM=document.getElementById('rdept-mes');if(rdM)rdM.value=nowMo;
   var rcM=document.getElementById('rcat-mes');if(rcM)rcM.value=nowMo;
   popRcatFil();
+}
+
+// Pobla un <select> de años dado el elemento
+function popYrsEl(sel){
+  sel.innerHTML='';
+  for(var y=2020;y<=new Date().getFullYear()+1;y++){var o=document.createElement('option');o.value=y;o.textContent=y;sel.appendChild(o);}
+  sel.value=new Date().getFullYear();
 }
 
 function onToggleBanco(){
@@ -2460,38 +2543,334 @@ function delVot(id){
 }
 
 // ===================== CATEGORIAS =====================
+// ===================== CIERRE DE FILIALES =====================
+
+// Calcula el saldo neto de una filial para un mes/año dados
+// (ingresos - egresos de ESE mes únicamente)
+function cfSaldoMes(filId, mes, anio){
+  var allMovs=gAccMov();
+  var movs=allMovs.filter(function(m){
+    var y=parseInt(m.fec.split('-')[0]), mo=parseInt(m.fec.split('-')[1]);
+    return m.fil===filId && y===anio && mo===mes && (m.moneda||'PEN')==='PEN';
+  });
+  var ing=movs.filter(function(m){return m.tipo==='ingreso';}).reduce(function(a,m){return a+Number(m.mon);},0);
+  var eg=movs.filter(function(m){return m.tipo==='egreso';}).reduce(function(a,m){return a+Number(m.mon);},0);
+  return {ing:ing, eg:eg, saldo:ing-eg};
+}
+
+// Verifica si ya existe cierre para filial+mes+año
+function cfYaCerrado(filId, mes, anio){
+  return (DB.cierres||[]).some(function(c){
+    return c.filId===filId && c.mes===mes && c.anio===anio;
+  });
+}
+
+function renderCierreFiliales(){
+  var mes=parseInt(document.getElementById('cf-mes').value);
+  var anio=parseInt(document.getElementById('cf-anio').value);
+  if(!anio){toast('Seleccione el año','err');return;}
+
+  var todasFiliales=DB.filiales.filter(function(f){return f.id!=='sede';});
+  if(!todasFiliales.length){
+    document.getElementById('cf-panel').innerHTML='<div class="empty"><span class="ic">🏛️</span>No hay filiales ni departamentos registrados</div>';
+    return;
+  }
+
+  var mesNom=MESES[mes-1];
+  var rows=todasFiliales.map(function(f){
+    var sd=cfSaldoMes(f.id, mes, anio);
+    var cerrado=cfYaCerrado(f.id, mes, anio);
+    var cierre=cerrado?(DB.cierres||[]).find(function(c){return c.filId===f.id&&c.mes===mes&&c.anio===anio;}):null;
+    var tipo=f.tipo||'filial';
+    var tipoLabel=tipo==='departamento'?'🏛️ Departamento':'🏛️ Filial';
+    var estadoBadge=cerrado
+      ?'<span class="badge b-cum">✅ Depositado</span>'
+      :'<span class="badge b-pend">🔴 Pendiente</span>';
+    var accion='';
+    if(!cerrado && sd.saldo>0){
+      accion='<button class="btn btn-g btn-sm" onclick="openCierreModal(\''+f.id+'\',\''+f.nom.replace(/'/g,"\\'") +'\','+sd.saldo+','+mes+','+anio+')">🏦 Registrar Depósito</button>';
+    } else if(!cerrado && sd.saldo<=0){
+      accion='<span style="font-size:11px;color:rgba(247,243,233,.4)">Sin saldo pendiente</span>';
+    } else {
+      // ya cerrado — mostrar detalle del voucher
+      accion='<span style="font-size:10px;color:var(--gold-light)">📄 Op: '+cierre.codOp+' | '+cierre.bancoNom+' | '+fd2(cierre.fecha)+'</span>';
+    }
+    return '<tr>'
+      +'<td style="padding:9px 11px">'+tipoLabel+' '+f.nom+'</td>'
+      +'<td style="padding:9px 11px;text-align:right;color:#1A7A4A;font-weight:700">S/. '+sd.ing.toFixed(2)+'</td>'
+      +'<td style="padding:9px 11px;text-align:right;color:#E74C3C;font-weight:700">S/. '+sd.eg.toFixed(2)+'</td>'
+      +'<td style="padding:9px 11px;text-align:right;font-weight:700;color:'+(sd.saldo>=0?'#C9A84C':'#E74C3C')+'">S/. '+sd.saldo.toFixed(2)+'</td>'
+      +'<td style="padding:9px 11px;text-align:center">'+estadoBadge+'</td>'
+      +'<td style="padding:9px 11px">'+accion+'</td>'
+      +'</tr>';
+  });
+
+  var totalIng=todasFiliales.reduce(function(a,f){return a+cfSaldoMes(f.id,mes,anio).ing;},0);
+  var totalEg=todasFiliales.reduce(function(a,f){return a+cfSaldoMes(f.id,mes,anio).eg;},0);
+  var totalSaldo=totalIng-totalEg;
+  var totalCerrado=todasFiliales.filter(function(f){return cfYaCerrado(f.id,mes,anio);}).length;
+  var totalPend=todasFiliales.length-totalCerrado;
+
+  var html='<div class="card">';
+  html+='<div class="card-title">📊 Saldos de '+mesNom+' '+anio+' — '+todasFiliales.length+' filiales/departamentos';
+  html+='<span style="font-size:11px;font-weight:normal;color:rgba(247,243,233,.5)">'+totalCerrado+' depositados · '+totalPend+' pendientes</span></div>';
+
+  // Resumen
+  html+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px">';
+  html+='<div style="padding:10px;background:rgba(46,204,113,.08);border:1px solid rgba(46,204,113,.2);border-radius:6px;text-align:center"><div style="font-size:9px;color:#888;text-transform:uppercase;font-weight:700">Total Ingresos</div><div style="font-size:18px;font-weight:bold;color:#1A7A4A">S/. '+totalIng.toFixed(2)+'</div></div>';
+  html+='<div style="padding:10px;background:rgba(231,76,60,.08);border:1px solid rgba(231,76,60,.2);border-radius:6px;text-align:center"><div style="font-size:9px;color:#888;text-transform:uppercase;font-weight:700">Total Egresos</div><div style="font-size:18px;font-weight:bold;color:#E74C3C">S/. '+totalEg.toFixed(2)+'</div></div>';
+  html+='<div style="padding:10px;background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.2);border-radius:6px;text-align:center"><div style="font-size:9px;color:#888;text-transform:uppercase;font-weight:700">Saldo a Depositar</div><div style="font-size:18px;font-weight:bold;color:var(--gold-light)">S/. '+totalSaldo.toFixed(2)+'</div></div>';
+  html+='</div>';
+
+  html+='<div class="tw"><table><thead><tr>'
+    +'<th>Filial / Departamento</th><th style="text-align:right">Ingresos</th><th style="text-align:right">Egresos</th>'
+    +'<th style="text-align:right">Saldo</th><th style="text-align:center">Estado</th><th>Acción</th>'
+    +'</tr></thead><tbody>'+rows.join('')+'</tbody></table></div>';
+  html+='</div>';
+  document.getElementById('cf-panel').innerHTML=html;
+}
+
+function openCierreModal(filId, filNom, saldo, mes, anio){
+  document.getElementById('ov-cierre-tit').textContent='Registrar Depósito — '+filNom;
+  document.getElementById('cf-nom-fil').value=filNom;
+  document.getElementById('cf-monto').value=saldo.toFixed(2);
+  document.getElementById('cf-fecha').value=new Date().toISOString().split('T')[0];
+  document.getElementById('cf-cod-op').value='';
+  document.getElementById('cf-banco-nom').value='';
+  document.getElementById('cf-obs').value='';
+  document.getElementById('cf-comp-preview').textContent='';
+  var fi=document.getElementById('cf-comp-file');if(fi){fi.value='';fi.removeAttribute('data-b64');}
+  document.getElementById('cf-fil-id').value=filId;
+  document.getElementById('cf-mes-cierre').value=mes;
+  document.getElementById('cf-anio-cierre').value=anio;
+  om('ov-cierre');
+}
+
+function savCierreDeposito(){
+  var filId=document.getElementById('cf-fil-id').value;
+  var mes=parseInt(document.getElementById('cf-mes-cierre').value);
+  var anio=parseInt(document.getElementById('cf-anio-cierre').value);
+  var monto=parseFloat(document.getElementById('cf-monto').value);
+  var fecha=document.getElementById('cf-fecha').value;
+  var codOp=document.getElementById('cf-cod-op').value.trim();
+  var bancoNom=document.getElementById('cf-banco-nom').value.trim();
+  var obs=document.getElementById('cf-obs').value.trim();
+  var filNom=document.getElementById('cf-nom-fil').value;
+  var compFile=document.getElementById('cf-comp-file');
+  var compB64=compFile?compFile.getAttribute('data-b64'):'';
+
+  if(!fecha){toast('Ingrese la fecha del depósito','err');return;}
+  if(!monto||monto<=0){toast('El monto debe ser mayor a 0','err');return;}
+  if(!codOp){toast('Ingrese el código de operación / voucher','err');return;}
+  if(!bancoNom){toast('Ingrese el banco o entidad','err');return;}
+
+  // 1. Crear movimiento bancario
+  var bancId='B'+Date.now();
+  var bancMov={
+    id:bancId,
+    tipo:'deposito',
+    fec:fecha,
+    mon:monto,
+    desc:'Depósito filial '+filNom+' — '+MESES[mes-1]+' '+anio+(obs?' — '+obs:''),
+    fil:filId,
+    comp:codOp,
+    banco:bancoNom,
+    origen:'cierre_filial'
+  };
+  if(compB64)bancMov.voucher=compB64;
+  if(!DB.banco)DB.banco=[];
+  DB.banco.push(bancMov);
+
+  // 2. Registrar cierre
+  if(!DB.cierres)DB.cierres=[];
+  DB.cierres.push({
+    id:'CF'+Date.now(),
+    filId:filId,
+    filNom:filNom,
+    mes:mes,
+    anio:anio,
+    monto:monto,
+    fecha:fecha,
+    codOp:codOp,
+    bancoNom:bancoNom,
+    obs:obs,
+    bancId:bancId,
+    reg:new Date().toISOString(),
+    regBy:CU?CU.nom:'Sistema'
+  });
+
+  sd();
+  fbSave('banco','banco',DB.banco);
+  fbSave('cierres','cierres',DB.cierres);
+  cm('ov-cierre');
+  renderCierreFiliales();
+  toast('✅ Depósito registrado — Cod. Op: '+codOp);
+}
+
+// Listener para comprobante en modal cierre
+document.addEventListener('change',function(e){
+  if(e.target&&e.target.id==='cf-comp-file'){
+    var file=e.target.files[0];
+    if(!file)return;
+    var preview=document.getElementById('cf-comp-preview');
+    if(file.size>2*1024*1024){if(preview)preview.textContent='⚠️ Archivo muy grande (máx 2MB)';e.target.value='';return;}
+    var reader=new FileReader();
+    reader.onload=function(ev){
+      e.target.setAttribute('data-b64',ev.target.result);
+      if(preview){var icon=file.type.includes('pdf')?'📄':'🖼️';preview.innerHTML=icon+' '+file.name+' ('+Math.round(file.size/1024)+' KB)';}
+    };
+    reader.readAsDataURL(file);
+  }
+});
+
+// ---- CATEGORÍAS: helpers ----
+function catGetBase(name){ return name.includes(' > ')?name.split(' > ')[0].trim():name; }
+
+// Agrupa las entradas del array en {base, subs[]}
+function catGroup(arr){
+  var map={};var order=[];
+  arr.forEach(function(c){
+    var base=catGetBase(c);
+    if(!map[base]){map[base]={base:base,subs:[]};order.push(base);}
+    if(c.includes(' > ')){map[base].subs.push(c.split(' > ').slice(1).join(' > ').trim());}
+  });
+  return order.map(function(b){return map[b];});
+}
+
 function renderCats(){
-  var ingSort=[...DB.cats.ing].sort(function(a,b){return a.localeCompare(b,'es');});
-  var egSort=[...DB.cats.eg].sort(function(a,b){return a.localeCompare(b,'es');});
-  document.getElementById('cat-ing').innerHTML=ingSort.map(c=>`<span class="cat-chip cat-i">${c}<span class="cat-rm" onclick="delCat('ing','${c}')">×</span></span>`).join('');
-  document.getElementById('cat-eg').innerHTML=egSort.map(c=>`<span class="cat-chip cat-e">${c}<span class="cat-rm" onclick="delCat('eg','${c}')">×</span></span>`).join('');
+  var ingGroups=catGroup([...DB.cats.ing].sort(function(a,b){return a.localeCompare(b,'es');}));
+  var egGroups=catGroup([...DB.cats.eg].sort(function(a,b){return a.localeCompare(b,'es');}));
+
+  function renderGroup(g,tipo){
+    var safeBase=g.base.replace(/"/g,'&quot;').replace(/'/g,"\\'");
+    var html='<div style="display:inline-flex;flex-direction:column;gap:3px;margin:4px 4px 4px 0;vertical-align:top">';
+    // chip principal
+    var cls=tipo==='ing'?'cat-i':'cat-e';
+    html+='<span class="cat-chip '+cls+'" style="display:flex;align-items:center;gap:5px">';
+    html+='<span style="font-weight:700">'+g.base+'</span>';
+    html+='<span title="Editar" style="font-size:13px;opacity:.7;cursor:pointer;margin-left:2px" onclick="editCat(\''+tipo+'\',\''+safeBase+'\')">✏️</span>';
+    html+='<span class="cat-rm" title="Eliminar categoría y subcategorías" onclick="delCat(\''+tipo+'\',\''+safeBase+'\')">×</span>';
+    html+='</span>';
+    // subcategorías indentadas
+    g.subs.forEach(function(s){
+      var fullName=g.base+' > '+s;
+      var safeFull=fullName.replace(/"/g,'&quot;').replace(/'/g,"\\'");
+      html+='<span class="cat-chip '+cls+'" style="margin-left:16px;opacity:.85;font-size:10px;display:flex;align-items:center;gap:4px">';
+      html+='↳ '+s;
+      html+='<span class="cat-rm" title="Eliminar subcategoría" onclick="delCatSub(\''+tipo+'\',\''+safeFull+'\')">×</span>';
+      html+='</span>';
+    });
+    html+='</div>';
+    return html;
+  }
+
+  document.getElementById('cat-ing').innerHTML=ingGroups.map(function(g){return renderGroup(g,'ing');}).join('');
+  document.getElementById('cat-eg').innerHTML=egGroups.map(function(g){return renderGroup(g,'eg');}).join('');
   document.getElementById('usr-body').innerHTML=DB.usuarios.map(u=>`<tr><td style="font-family:monospace;color:var(--gold-light)">${u.user}</td><td>${u.nom}</td><td>${ROLES[u.rol]||u.rol}</td><td style="font-size:11px">${u.niv<=2?'Todo el sistema':gfn(u.fil)}</td></tr>`).join('');
 }
+
+// Añade un campo de subcategoría vacío en el modal
+function catAddSubField(value){
+  var list=document.getElementById('cat-subs-list');
+  var idx=list.children.length;
+  var row=document.createElement('div');
+  row.style.cssText='display:flex;gap:6px;align-items:center';
+  row.innerHTML='<input type="text" class="cat-sub-input" placeholder="Ej: Vigilia" value="'+(value||'')+'" style="flex:1;padding:7px 10px;background:rgba(13,27,42,.7);border:1px solid rgba(201,168,76,.2);border-radius:6px;color:var(--cream);font-size:12px;font-family:\'Lato\',sans-serif;outline:none">'
+    +'<button type="button" onclick="this.parentElement.remove()" style="background:rgba(192,57,43,.2);border:1px solid rgba(192,57,43,.4);color:#E74C3C;border-radius:6px;padding:4px 8px;cursor:pointer;font-size:13px;line-height:1">×</button>';
+  list.appendChild(row);
+}
+
+// Abre modal en modo NUEVA categoría
 function openCatModal(tipo){
   document.getElementById('cat-tit').textContent='Nueva Categoría de '+(tipo==='ingreso'?'Ingreso':'Egreso');
   document.getElementById('cat-nom').value='';
-  document.getElementById('cat-sub').value='';
   document.getElementById('cat-tipo').value=tipo;
+  document.getElementById('cat-edit-orig').value='';
+  document.getElementById('cat-subs-list').innerHTML='';
   om('ov-cat');
 }
-function savCat(){
-  const nom=document.getElementById('cat-nom').value.trim();
-  const sub=document.getElementById('cat-sub').value.trim();
-  const tipo=document.getElementById('cat-tipo').value;
-  if(!nom){toast('Ingrese un nombre de categoría','err');return;}
-  const fullNom=sub?nom+' > '+sub:nom;
-  const arr=tipo==='ingreso'?DB.cats.ing:DB.cats.eg;
-  if(arr.includes(fullNom)){toast('Categoría ya existe','err');return;}
-  arr.push(fullNom);sd();fbSave('categorias','cats',DB.cats);cm('ov-cat');renderCats();toast('Categoría agregada');
-}
-function delCat(tipo,nom){
-  if(!confirm('Eliminar categoria "'+nom+'"?'))return;
+
+// Abre modal en modo EDITAR categoría existente
+function editCat(tipo,base){
   var arr=tipo==='ing'?DB.cats.ing:DB.cats.eg;
-  var ci=arr.indexOf(nom);if(ci>-1)arr.splice(ci,1);
+  document.getElementById('cat-tit').textContent='Editar Categoría';
+  document.getElementById('cat-nom').value=base;
+  document.getElementById('cat-tipo').value=tipo==='ing'?'ingreso':'egreso';
+  document.getElementById('cat-edit-orig').value=base; // guardamos el nombre original
+  document.getElementById('cat-subs-list').innerHTML='';
+  // cargar subcategorías existentes
+  arr.filter(function(c){return c.startsWith(base+' > ');}).forEach(function(c){
+    catAddSubField(c.split(' > ').slice(1).join(' > ').trim());
+  });
+  om('ov-cat');
+}
+
+function savCat(){
+  var nom=document.getElementById('cat-nom').value.trim();
+  var tipo=document.getElementById('cat-tipo').value;
+  var origBase=document.getElementById('cat-edit-orig').value.trim();
+  var arr=tipo==='ingreso'?DB.cats.ing:DB.cats.eg;
+  var tipoKey=tipo==='ingreso'?'ing':'eg';
+
+  if(!nom){toast('Ingrese un nombre de categoría','err');return;}
+
+  // Recoger subcategorías del modal
+  var subInputs=document.querySelectorAll('#cat-subs-list .cat-sub-input');
+  var subs=[];
+  subInputs.forEach(function(inp){
+    var v=inp.value.trim();
+    if(v) subs.push(v);
+  });
+
+  if(origBase){
+    // MODO EDITAR: eliminar todo lo relacionado al base original
+    var oldKeys=arr.filter(function(c){return c===origBase||c.startsWith(origBase+' > ');});
+    oldKeys.forEach(function(k){var i=arr.indexOf(k);if(i>-1)arr.splice(i,1);});
+  }
+
+  // Construir nuevas entradas
+  var newEntries=[];
+  if(subs.length===0){
+    // Solo categoría principal (sin subcategorías)
+    newEntries.push(nom);
+  } else {
+    // Con subcategorías — también guardamos las combinaciones
+    subs.forEach(function(s){ newEntries.push(nom+' > '+s); });
+  }
+
+  // Chequear duplicados (ignorando el original si es edición)
+  var duplicated=newEntries.filter(function(e){return arr.includes(e);});
+  if(duplicated.length>0){toast('Ya existe: '+duplicated[0],'err');return;}
+
+  newEntries.forEach(function(e){arr.push(e);});
+  sd();
+  fbSave('categorias','cats',DB.cats);
+  cm('ov-cat');
+  renderCats();
+  toast(origBase?'Categoría actualizada ✅':'Categoría agregada ✅');
+}
+
+// Elimina UNA subcategoría específica (deja el resto intacto)
+function delCatSub(tipo,fullName){
+  if(!confirm('Eliminar subcategoría "'+fullName+'"?'))return;
+  var arr=tipo==='ing'?DB.cats.ing:DB.cats.eg;
+  var ci=arr.indexOf(fullName);if(ci>-1)arr.splice(ci,1);
   try{sd();}catch(e){}
   fbSave('categorias','cats',DB.cats);
   renderCats();
-  toast('Categoria eliminada','err');
+  toast('Subcategoría eliminada','err');
+}
+
+// Elimina la categoría principal Y todas sus subcategorías
+function delCat(tipo,base){
+  var arr=tipo==='ing'?DB.cats.ing:DB.cats.eg;
+  var toDelete=arr.filter(function(c){return c===base||c.startsWith(base+' > ');});
+  if(!confirm('Eliminar "'+base+'" y sus '+( toDelete.length-1 )+' subcategoría(s)?'))return;
+  toDelete.forEach(function(k){var i=arr.indexOf(k);if(i>-1)arr.splice(i,1);});
+  try{sd();}catch(e){}
+  fbSave('categorias','cats',DB.cats);
+  renderCats();
+  toast('Categoría eliminada','err');
 }
 // ===================== REPORTS =====================
 function rptHd(title,sub){
@@ -3562,6 +3941,8 @@ function exportBackup(){
       miembros:DB.miembros,
       filiales:DB.filiales,
       votos:DB.votos,
+      banco:DB.banco,
+      cierres:DB.cierres,
       categorias:DB.cats,
       usuarios:DB.usuarios.map(function(u){
         // Don't export passwords in plain text - just export structure
@@ -3638,6 +4019,7 @@ function importBackup(){
       if(d.filiales)DB.filiales=d.filiales;
       if(d.votos)DB.votos=d.votos;
       if(d.categorias)DB.cats=d.categorias;
+      if(d.cierres)DB.cierres=d.cierres;
       // Don't restore users to avoid lockout
       try{sd();}catch(err){}
       // Push to Firebase
@@ -3666,39 +4048,46 @@ function importBackup(){
 
 // ===================== RPT BANCO =====================
 function genRptBanco(){
-  if(!CU||( CU.niv>2&&CU.niv!==5)){toast('Sin acceso','err');return;}
+  if(!CU||(CU.niv>2&&CU.niv!==5)){toast('Sin acceso','err');return;}
   var mes=document.getElementById('rban-mes').value;
   var anio=parseInt(document.getElementById('rban-anio').value);
   var tipo=document.getElementById('rban-tipo').value;
   if(!anio){toast('Seleccione el año','err');return;}
 
-  var movs=(DB.banco||[]).filter(function(m){
+  var siBanco=Number((DB.saldos_iniciales||{}).banco)||0;
+
+  // Todos los movimientos bancarios ordenados por fecha
+  var todosBanco=(DB.banco||[]).slice().sort(function(a,b){return a.fec.localeCompare(b.fec);});
+
+  // Saldo anterior: saldo inicial config + todos los movimientos ANTES del período seleccionado
+  var cutoff=''; // fecha de corte: primer día del período
+  if(mes){
+    cutoff=anio+'-'+String(parseInt(mes)).padStart(2,'0')+'-01';
+  } else {
+    cutoff=anio+'-01-01';
+  }
+  var saldoAnterior=siBanco;
+  todosBanco.forEach(function(m){
+    if(m.fec<cutoff){
+      saldoAnterior+=(m.tipo==='deposito'?Number(m.mon):-Number(m.mon));
+    }
+  });
+
+  // Movimientos del período seleccionado
+  var movs=todosBanco.filter(function(m){
     var y=parseInt(m.fec.split('-')[0]);
     var mo=parseInt(m.fec.split('-')[1]);
     return y===anio&&(!mes||mo===parseInt(mes));
   });
   if(tipo)movs=movs.filter(function(m){return m.tipo===tipo;});
-  movs.sort(function(a,b){return a.fec.localeCompare(b.fec);});
-
-  // Running saldo
-  var allSorted=(DB.banco||[]).filter(function(m){
-    return parseInt(m.fec.split('-')[0])<=anio;
-  }).sort(function(a,b){return a.fec.localeCompare(b.fec);});
-
-  var saldoInicial=0;
-  allSorted.forEach(function(m){
-    if(m.fec<movs[0].fec||!movs.length){
-      saldoInicial+=(m.tipo==='deposito'?Number(m.mon):-Number(m.mon));
-    }
-  });
 
   var totalDep=movs.filter(function(m){return m.tipo==='deposito';}).reduce(function(a,m){return a+Number(m.mon);},0);
   var totalRet=movs.filter(function(m){return m.tipo==='retiro';}).reduce(function(a,m){return a+Number(m.mon);},0);
-  var saldoFinal=saldoInicial+totalDep-totalRet;
+  var saldoFinal=saldoAnterior+totalDep-totalRet;
 
-  // Build rows with running saldo
-  var runSaldo=saldoInicial;
-  var rows=movs.map(function(m,i){
+  // Filas con saldo corrido
+  var runSaldo=saldoAnterior;
+  var rows=movs.map(function(m){
     runSaldo+=(m.tipo==='deposito'?Number(m.mon):-Number(m.mon));
     var tipoCell=m.tipo==='deposito'
       ?'<span style="color:green;font-weight:bold">⬆️ Depósito</span>'
@@ -3709,9 +4098,9 @@ function genRptBanco(){
     return '<tr>'
       +'<td style="border:1px solid #eee;padding:5px 8px;font-size:11px">'+fd2(m.fec)+'</td>'
       +'<td style="border:1px solid #eee;padding:5px 8px;font-size:11px">'+tipoCell+'</td>'
-      +'<td style="border:1px solid #eee;padding:5px 8px;font-size:11px">'+m.desc+'</td>'
+      +'<td style="border:1px solid #eee;padding:5px 8px;font-size:11px">'+(m.desc||'')+'</td>'
       +'<td style="border:1px solid #eee;padding:5px 8px;font-size:11px">'+gfn(m.fil)+'</td>'
-      +'<td style="border:1px solid #eee;padding:5px 8px;font-size:11px">'+m.comp+'</td>'
+      +'<td style="border:1px solid #eee;padding:5px 8px;font-size:11px">'+(m.comp||'')+'</td>'
       +'<td style="border:1px solid #eee;padding:5px 8px;font-size:11px;text-align:right;color:green;font-weight:bold">'+depCell+'</td>'
       +'<td style="border:1px solid #eee;padding:5px 8px;font-size:11px;text-align:right;color:red;font-weight:bold">'+retCell+'</td>'
       +'<td style="border:1px solid #eee;padding:5px 8px;font-size:11px;text-align:right;font-weight:bold;color:'+saldoColor+'">S/. '+runSaldo.toFixed(2)+'</td>'
@@ -3722,48 +4111,68 @@ function genRptBanco(){
     rows='<tr><td colspan="8" style="text-align:center;padding:20px;color:#888">No hay movimientos bancarios en este período</td></tr>';
   }
 
+  var mesPrevNom=mes?(parseInt(mes)>1?MESES[parseInt(mes)-2]:MESES[11]+' '+(anio-1)):'Dic '+(anio-1);
   var periodoLabel=(mes?MESES[parseInt(mes)-1]+' ':'Año ')+anio;
+
   var html='<div class="rpt-wrap">'+rptHd('Informe Bancario',periodoLabel)
     +'<div class="rpt-body">'
-    // Summary cards
-    +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px">'
+    // 4 cards: Saldo Anterior + Depósitos + Retiros + Saldo Final
+    +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:16px">'
+    +'<div style="padding:12px;background:#fffde7;border:1px solid #C9A84C;border-radius:6px;text-align:center">'
+      +'<div style="font-size:10px;color:#888;margin-bottom:4px;font-weight:bold">Saldo Anterior</div>'
+      +'<div style="font-size:19px;font-weight:bold;color:#8B6914">S/. '+saldoAnterior.toFixed(2)+'</div>'
+      +'<div style="font-size:10px;color:#888">Al cierre de '+mesPrevNom+'</div>'
+    +'</div>'
     +'<div style="padding:12px;background:#f0f7f0;border:1px solid #2ECC71;border-radius:6px;text-align:center">'
-      +'<div style="font-size:11px;color:#666;margin-bottom:4px">Total Depósitos</div>'
-      +'<div style="font-size:20px;font-weight:bold;color:green">S/. '+totalDep.toFixed(2)+'</div>'
-      +'<div style="font-size:10px;color:#888">'+movs.filter(function(m){return m.tipo==='deposito';}).length+' operaciones</div>'
+      +'<div style="font-size:10px;color:#888;margin-bottom:4px;font-weight:bold">Entradas del Mes</div>'
+      +'<div style="font-size:19px;font-weight:bold;color:green">S/. '+totalDep.toFixed(2)+'</div>'
+      +'<div style="font-size:10px;color:#888">'+movs.filter(function(m){return m.tipo==='deposito';}).length+' depósitos</div>'
     +'</div>'
     +'<div style="padding:12px;background:#fff5f5;border:1px solid #E74C3C;border-radius:6px;text-align:center">'
-      +'<div style="font-size:11px;color:#666;margin-bottom:4px">Total Retiros</div>'
-      +'<div style="font-size:20px;font-weight:bold;color:red">S/. '+totalRet.toFixed(2)+'</div>'
-      +'<div style="font-size:10px;color:#888">'+movs.filter(function(m){return m.tipo==='retiro';}).length+' operaciones</div>'
+      +'<div style="font-size:10px;color:#888;margin-bottom:4px;font-weight:bold">Salidas del Mes</div>'
+      +'<div style="font-size:19px;font-weight:bold;color:red">S/. '+totalRet.toFixed(2)+'</div>'
+      +'<div style="font-size:10px;color:#888">'+movs.filter(function(m){return m.tipo==='retiro';}).length+' retiros</div>'
     +'</div>'
     +'<div style="padding:12px;background:'+(saldoFinal>=0?'#f0f7f0':'#fff5f5')+';border:2px solid '+(saldoFinal>=0?'#C9A84C':'#E74C3C')+';border-radius:6px;text-align:center">'
-      +'<div style="font-size:11px;color:#666;margin-bottom:4px">Saldo Final</div>'
-      +'<div style="font-size:22px;font-weight:bold;color:'+(saldoFinal>=0?'#8B6914':'red')+'">S/. '+saldoFinal.toFixed(2)+'</div>'
-      +'<div style="font-size:10px;color:#888">'+(saldoFinal>=0?'Superávit':'Déficit')+'</div>'
+      +'<div style="font-size:10px;color:#888;margin-bottom:4px;font-weight:bold">Saldo Final del Mes</div>'
+      +'<div style="font-size:20px;font-weight:bold;color:'+(saldoFinal>=0?'#8B6914':'red')+'">S/. '+saldoFinal.toFixed(2)+'</div>'
+      +'<div style="font-size:10px;color:#888">'+(saldoFinal>=0?'✅ Superávit':'⚠️ Déficit')+'</div>'
     +'</div>'
     +'</div>'
-    // Table
+    // Fórmula explicativa
+    +'<div style="font-size:11px;color:#888;background:#f9f9f9;border:1px solid #ddd;border-radius:5px;padding:8px 12px;margin-bottom:12px">'
+    +'📐 <strong>Saldo Anterior</strong> (S/. '+saldoAnterior.toFixed(2)+') + <strong>Entradas</strong> (S/. '+totalDep.toFixed(2)+') − <strong>Salidas</strong> (S/. '+totalRet.toFixed(2)+') = <strong>Saldo Final S/. '+saldoFinal.toFixed(2)+'</strong>'
+    +'</div>'
+    // Tabla
     +'<table style="font-size:12px">'
     +'<thead><tr>'
     +'<th style="background:#0D1B2A;color:#C9A84C;padding:7px 8px;text-align:left">Fecha</th>'
     +'<th style="background:#0D1B2A;color:#C9A84C;padding:7px 8px;text-align:left">Tipo</th>'
     +'<th style="background:#0D1B2A;color:#C9A84C;padding:7px 8px;text-align:left">Descripción</th>'
-    +'<th style="background:#0D1B2A;color:#C9A84C;padding:7px 8px;text-align:left">Sede/Filial</th>'
+    +'<th style="background:#0D1B2A;color:#C9A84C;padding:7px 8px;text-align:left">Filial</th>'
     +'<th style="background:#0D1B2A;color:#C9A84C;padding:7px 8px;text-align:left">Referencia</th>'
     +'<th style="background:#0D1B2A;color:#C9A84C;padding:7px 8px;text-align:right">Entrada</th>'
     +'<th style="background:#0D1B2A;color:#C9A84C;padding:7px 8px;text-align:right">Salida</th>'
     +'<th style="background:#0D1B2A;color:#C9A84C;padding:7px 8px;text-align:right">Saldo</th>'
     +'</tr></thead>'
-    +'<tbody>'+rows+'</tbody>'
+    +'<tbody>'
+    // Primera fila: saldo anterior
+    +'<tr style="background:#fffde7">'
+    +'<td colspan="5" style="border:1px solid #eee;padding:5px 8px;font-size:11px;font-style:italic;color:#8B6914">Saldo anterior al inicio del período</td>'
+    +'<td style="border:1px solid #eee;padding:5px 8px;font-size:11px"></td>'
+    +'<td style="border:1px solid #eee;padding:5px 8px;font-size:11px"></td>'
+    +'<td style="border:1px solid #eee;padding:5px 8px;font-size:11px;text-align:right;font-weight:bold;color:#8B6914">S/. '+saldoAnterior.toFixed(2)+'</td>'
+    +'</tr>'
+    +rows
+    +'</tbody>'
     +'<tfoot><tr>'
-    +'<td colspan="5" style="background:#f8f5ef;border:1px solid #C9A84C;padding:7px 8px;font-weight:bold">TOTALES</td>'
+    +'<td colspan="5" style="background:#f8f5ef;border:1px solid #C9A84C;padding:7px 8px;font-weight:bold">TOTALES DEL PERÍODO</td>'
     +'<td style="background:#f8f5ef;border:1px solid #C9A84C;padding:7px 8px;text-align:right;font-weight:bold;color:green">S/. '+totalDep.toFixed(2)+'</td>'
     +'<td style="background:#f8f5ef;border:1px solid #C9A84C;padding:7px 8px;text-align:right;font-weight:bold;color:red">S/. '+totalRet.toFixed(2)+'</td>'
     +'<td style="background:#f8f5ef;border:1px solid #C9A84C;padding:7px 8px;text-align:right;font-weight:bold;color:'+(saldoFinal>=0?'green':'red')+'">S/. '+saldoFinal.toFixed(2)+'</td>'
     +'</tr></tfoot>'
     +'</table>'
-    +'<div style="margin-top:10px;font-size:10px;color:#888">* Valores en Soles Peruanos (S/.)</div>'
+    +'<div style="margin-top:10px;font-size:10px;color:#888">* Saldo Anterior incluye el saldo inicial configurado más todos los movimientos anteriores al período. Valores en Soles Peruanos (S/.).</div>'
     +'<div style="display:flex;gap:40px;justify-content:flex-end;margin-top:36px">'
     +'<div style="border-top:1px solid #333;width:170px;text-align:center;padding-top:3px;font-size:10px">Tesorero Principal</div>'
     +'<div style="border-top:1px solid #333;width:170px;text-align:center;padding-top:3px;font-size:10px">Pastor Principal</div>'
@@ -3771,7 +4180,7 @@ function genRptBanco(){
     +'</div></div>';
 
   document.getElementById('rban-prev').innerHTML=html;
-  toast('Informe bancario generado');
+  toast('Informe bancario generado ✅');
 }
 
 // ===================== BUSCAR MIEMBRO FIDELIDAD =====================
@@ -4193,7 +4602,7 @@ function startRealtimeSync(){
   _fbListeners.forEach(function(unsub){try{unsub();}catch(e){}});
   _fbListeners = [];
 
-  var collections = ['movimientos','filiales','miembros','votos','banco','categorias','usuarios','config'];
+  var collections = ['movimientos','filiales','miembros','votos','banco','cierres','categorias','usuarios','config'];
 
   collections.forEach(function(col){
     var unsub = window.FB_DB.collection(col).onSnapshot(function(snap){
@@ -4219,6 +4628,9 @@ function startRealtimeSync(){
       } else if(col === 'banco'){
         var items=[];snap.forEach(function(d){items.push(d.data());});
         DB.banco=items;try{sd();}catch(e){}
+      } else if(col === 'cierres'){
+        var items=[];snap.forEach(function(d){items.push(d.data());});
+        DB.cierres=items;try{sd();}catch(e){}
       } else if(col === 'config'){
         snap.forEach(function(d){
           if(d.id==='saldos_iniciales'){
@@ -4267,24 +4679,26 @@ function refreshCurrentModule(){
     else if(n==='votos')renderVot();
     else if(n==='categorias')renderCats();
     else if(n==='usuarios')renderUsrs();
+    else if(n==='cierre-filiales')renderCierreFiliales();
   }catch(e){}
 }
 
 async function syncFromFirebase(){
   showSyncMsg('Sincronizando...');
   try{
-    var cols=['movimientos','filiales','miembros','votos','banco','categorias','usuarios'];
+    var cols=['movimientos','filiales','miembros','votos','banco','cierres','categorias','usuarios'];
     var results=await Promise.all(cols.map(function(c){return fbLoadAll(c);}));
     if(results[0]&&results[0].length>0)DB.movimientos=results[0];
     if(results[1]&&results[1].length>0)DB.filiales=results[1];
     if(results[2]&&results[2].length>0)DB.miembros=results[2];
     if(results[3]&&results[3].length>0)DB.votos=results[3];
     if(results[4]&&results[4].length>0)DB.banco=results[4];
-    if(results[4]&&results[4].length>0){var c=results[4][0];if(c&&c.ing)DB.cats=c;}
-    if(results[5]&&results[5].length>0){
+    if(results[5]&&results[5].length>0)DB.cierres=results[5];
+    if(results[6]&&results[6].length>0){var c=results[6][0];if(c&&c.ing)DB.cats=c;}
+    if(results[7]&&results[7].length>0){
       // Replace completely - Firebase is source of truth
-      if(results[5]&&results[5].length>0){
-        DB.usuarios=results[5];
+      if(results[7]&&results[7].length>0){
+        DB.usuarios=results[7];
       }
     }
     try{sd();}catch(e){}
@@ -4492,6 +4906,8 @@ function exportBackup(){
       miembros:DB.miembros,
       filiales:DB.filiales,
       votos:DB.votos,
+      banco:DB.banco,
+      cierres:DB.cierres,
       categorias:DB.cats,
       usuarios:DB.usuarios.map(function(u){
         // Don't export passwords in plain text - just export structure
@@ -4573,6 +4989,7 @@ function importBackup(){
       if(d.miembros)DB.miembros=d.miembros;
       if(d.filiales)DB.filiales=d.filiales;
       if(d.votos)DB.votos=d.votos;
+      if(d.cierres)DB.cierres=d.cierres;
       if(d.categorias)DB.cats=d.categorias;
       // Don't restore users to avoid lockout
       try{sd();}catch(err){}
@@ -4602,39 +5019,46 @@ function importBackup(){
 
 // ===================== RPT BANCO =====================
 function genRptBanco(){
-  if(!CU||( CU.niv>2&&CU.niv!==5)){toast('Sin acceso','err');return;}
+  if(!CU||(CU.niv>2&&CU.niv!==5)){toast('Sin acceso','err');return;}
   var mes=document.getElementById('rban-mes').value;
   var anio=parseInt(document.getElementById('rban-anio').value);
   var tipo=document.getElementById('rban-tipo').value;
   if(!anio){toast('Seleccione el año','err');return;}
 
-  var movs=(DB.banco||[]).filter(function(m){
+  var siBanco=Number((DB.saldos_iniciales||{}).banco)||0;
+
+  // Todos los movimientos bancarios ordenados por fecha
+  var todosBanco=(DB.banco||[]).slice().sort(function(a,b){return a.fec.localeCompare(b.fec);});
+
+  // Saldo anterior: saldo inicial config + todos los movimientos ANTES del período seleccionado
+  var cutoff=''; // fecha de corte: primer día del período
+  if(mes){
+    cutoff=anio+'-'+String(parseInt(mes)).padStart(2,'0')+'-01';
+  } else {
+    cutoff=anio+'-01-01';
+  }
+  var saldoAnterior=siBanco;
+  todosBanco.forEach(function(m){
+    if(m.fec<cutoff){
+      saldoAnterior+=(m.tipo==='deposito'?Number(m.mon):-Number(m.mon));
+    }
+  });
+
+  // Movimientos del período seleccionado
+  var movs=todosBanco.filter(function(m){
     var y=parseInt(m.fec.split('-')[0]);
     var mo=parseInt(m.fec.split('-')[1]);
     return y===anio&&(!mes||mo===parseInt(mes));
   });
   if(tipo)movs=movs.filter(function(m){return m.tipo===tipo;});
-  movs.sort(function(a,b){return a.fec.localeCompare(b.fec);});
-
-  // Running saldo
-  var allSorted=(DB.banco||[]).filter(function(m){
-    return parseInt(m.fec.split('-')[0])<=anio;
-  }).sort(function(a,b){return a.fec.localeCompare(b.fec);});
-
-  var saldoInicial=0;
-  allSorted.forEach(function(m){
-    if(m.fec<movs[0].fec||!movs.length){
-      saldoInicial+=(m.tipo==='deposito'?Number(m.mon):-Number(m.mon));
-    }
-  });
 
   var totalDep=movs.filter(function(m){return m.tipo==='deposito';}).reduce(function(a,m){return a+Number(m.mon);},0);
   var totalRet=movs.filter(function(m){return m.tipo==='retiro';}).reduce(function(a,m){return a+Number(m.mon);},0);
-  var saldoFinal=saldoInicial+totalDep-totalRet;
+  var saldoFinal=saldoAnterior+totalDep-totalRet;
 
-  // Build rows with running saldo
-  var runSaldo=saldoInicial;
-  var rows=movs.map(function(m,i){
+  // Filas con saldo corrido
+  var runSaldo=saldoAnterior;
+  var rows=movs.map(function(m){
     runSaldo+=(m.tipo==='deposito'?Number(m.mon):-Number(m.mon));
     var tipoCell=m.tipo==='deposito'
       ?'<span style="color:green;font-weight:bold">⬆️ Depósito</span>'
@@ -4645,9 +5069,9 @@ function genRptBanco(){
     return '<tr>'
       +'<td style="border:1px solid #eee;padding:5px 8px;font-size:11px">'+fd2(m.fec)+'</td>'
       +'<td style="border:1px solid #eee;padding:5px 8px;font-size:11px">'+tipoCell+'</td>'
-      +'<td style="border:1px solid #eee;padding:5px 8px;font-size:11px">'+m.desc+'</td>'
+      +'<td style="border:1px solid #eee;padding:5px 8px;font-size:11px">'+(m.desc||'')+'</td>'
       +'<td style="border:1px solid #eee;padding:5px 8px;font-size:11px">'+gfn(m.fil)+'</td>'
-      +'<td style="border:1px solid #eee;padding:5px 8px;font-size:11px">'+m.comp+'</td>'
+      +'<td style="border:1px solid #eee;padding:5px 8px;font-size:11px">'+(m.comp||'')+'</td>'
       +'<td style="border:1px solid #eee;padding:5px 8px;font-size:11px;text-align:right;color:green;font-weight:bold">'+depCell+'</td>'
       +'<td style="border:1px solid #eee;padding:5px 8px;font-size:11px;text-align:right;color:red;font-weight:bold">'+retCell+'</td>'
       +'<td style="border:1px solid #eee;padding:5px 8px;font-size:11px;text-align:right;font-weight:bold;color:'+saldoColor+'">S/. '+runSaldo.toFixed(2)+'</td>'
@@ -4658,48 +5082,68 @@ function genRptBanco(){
     rows='<tr><td colspan="8" style="text-align:center;padding:20px;color:#888">No hay movimientos bancarios en este período</td></tr>';
   }
 
+  var mesPrevNom=mes?(parseInt(mes)>1?MESES[parseInt(mes)-2]:MESES[11]+' '+(anio-1)):'Dic '+(anio-1);
   var periodoLabel=(mes?MESES[parseInt(mes)-1]+' ':'Año ')+anio;
+
   var html='<div class="rpt-wrap">'+rptHd('Informe Bancario',periodoLabel)
     +'<div class="rpt-body">'
-    // Summary cards
-    +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px">'
+    // 4 cards: Saldo Anterior + Depósitos + Retiros + Saldo Final
+    +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:16px">'
+    +'<div style="padding:12px;background:#fffde7;border:1px solid #C9A84C;border-radius:6px;text-align:center">'
+      +'<div style="font-size:10px;color:#888;margin-bottom:4px;font-weight:bold">Saldo Anterior</div>'
+      +'<div style="font-size:19px;font-weight:bold;color:#8B6914">S/. '+saldoAnterior.toFixed(2)+'</div>'
+      +'<div style="font-size:10px;color:#888">Al cierre de '+mesPrevNom+'</div>'
+    +'</div>'
     +'<div style="padding:12px;background:#f0f7f0;border:1px solid #2ECC71;border-radius:6px;text-align:center">'
-      +'<div style="font-size:11px;color:#666;margin-bottom:4px">Total Depósitos</div>'
-      +'<div style="font-size:20px;font-weight:bold;color:green">S/. '+totalDep.toFixed(2)+'</div>'
-      +'<div style="font-size:10px;color:#888">'+movs.filter(function(m){return m.tipo==='deposito';}).length+' operaciones</div>'
+      +'<div style="font-size:10px;color:#888;margin-bottom:4px;font-weight:bold">Entradas del Mes</div>'
+      +'<div style="font-size:19px;font-weight:bold;color:green">S/. '+totalDep.toFixed(2)+'</div>'
+      +'<div style="font-size:10px;color:#888">'+movs.filter(function(m){return m.tipo==='deposito';}).length+' depósitos</div>'
     +'</div>'
     +'<div style="padding:12px;background:#fff5f5;border:1px solid #E74C3C;border-radius:6px;text-align:center">'
-      +'<div style="font-size:11px;color:#666;margin-bottom:4px">Total Retiros</div>'
-      +'<div style="font-size:20px;font-weight:bold;color:red">S/. '+totalRet.toFixed(2)+'</div>'
-      +'<div style="font-size:10px;color:#888">'+movs.filter(function(m){return m.tipo==='retiro';}).length+' operaciones</div>'
+      +'<div style="font-size:10px;color:#888;margin-bottom:4px;font-weight:bold">Salidas del Mes</div>'
+      +'<div style="font-size:19px;font-weight:bold;color:red">S/. '+totalRet.toFixed(2)+'</div>'
+      +'<div style="font-size:10px;color:#888">'+movs.filter(function(m){return m.tipo==='retiro';}).length+' retiros</div>'
     +'</div>'
     +'<div style="padding:12px;background:'+(saldoFinal>=0?'#f0f7f0':'#fff5f5')+';border:2px solid '+(saldoFinal>=0?'#C9A84C':'#E74C3C')+';border-radius:6px;text-align:center">'
-      +'<div style="font-size:11px;color:#666;margin-bottom:4px">Saldo Final</div>'
-      +'<div style="font-size:22px;font-weight:bold;color:'+(saldoFinal>=0?'#8B6914':'red')+'">S/. '+saldoFinal.toFixed(2)+'</div>'
-      +'<div style="font-size:10px;color:#888">'+(saldoFinal>=0?'Superávit':'Déficit')+'</div>'
+      +'<div style="font-size:10px;color:#888;margin-bottom:4px;font-weight:bold">Saldo Final del Mes</div>'
+      +'<div style="font-size:20px;font-weight:bold;color:'+(saldoFinal>=0?'#8B6914':'red')+'">S/. '+saldoFinal.toFixed(2)+'</div>'
+      +'<div style="font-size:10px;color:#888">'+(saldoFinal>=0?'✅ Superávit':'⚠️ Déficit')+'</div>'
     +'</div>'
     +'</div>'
-    // Table
+    // Fórmula explicativa
+    +'<div style="font-size:11px;color:#888;background:#f9f9f9;border:1px solid #ddd;border-radius:5px;padding:8px 12px;margin-bottom:12px">'
+    +'📐 <strong>Saldo Anterior</strong> (S/. '+saldoAnterior.toFixed(2)+') + <strong>Entradas</strong> (S/. '+totalDep.toFixed(2)+') − <strong>Salidas</strong> (S/. '+totalRet.toFixed(2)+') = <strong>Saldo Final S/. '+saldoFinal.toFixed(2)+'</strong>'
+    +'</div>'
+    // Tabla
     +'<table style="font-size:12px">'
     +'<thead><tr>'
     +'<th style="background:#0D1B2A;color:#C9A84C;padding:7px 8px;text-align:left">Fecha</th>'
     +'<th style="background:#0D1B2A;color:#C9A84C;padding:7px 8px;text-align:left">Tipo</th>'
     +'<th style="background:#0D1B2A;color:#C9A84C;padding:7px 8px;text-align:left">Descripción</th>'
-    +'<th style="background:#0D1B2A;color:#C9A84C;padding:7px 8px;text-align:left">Sede/Filial</th>'
+    +'<th style="background:#0D1B2A;color:#C9A84C;padding:7px 8px;text-align:left">Filial</th>'
     +'<th style="background:#0D1B2A;color:#C9A84C;padding:7px 8px;text-align:left">Referencia</th>'
     +'<th style="background:#0D1B2A;color:#C9A84C;padding:7px 8px;text-align:right">Entrada</th>'
     +'<th style="background:#0D1B2A;color:#C9A84C;padding:7px 8px;text-align:right">Salida</th>'
     +'<th style="background:#0D1B2A;color:#C9A84C;padding:7px 8px;text-align:right">Saldo</th>'
     +'</tr></thead>'
-    +'<tbody>'+rows+'</tbody>'
+    +'<tbody>'
+    // Primera fila: saldo anterior
+    +'<tr style="background:#fffde7">'
+    +'<td colspan="5" style="border:1px solid #eee;padding:5px 8px;font-size:11px;font-style:italic;color:#8B6914">Saldo anterior al inicio del período</td>'
+    +'<td style="border:1px solid #eee;padding:5px 8px;font-size:11px"></td>'
+    +'<td style="border:1px solid #eee;padding:5px 8px;font-size:11px"></td>'
+    +'<td style="border:1px solid #eee;padding:5px 8px;font-size:11px;text-align:right;font-weight:bold;color:#8B6914">S/. '+saldoAnterior.toFixed(2)+'</td>'
+    +'</tr>'
+    +rows
+    +'</tbody>'
     +'<tfoot><tr>'
-    +'<td colspan="5" style="background:#f8f5ef;border:1px solid #C9A84C;padding:7px 8px;font-weight:bold">TOTALES</td>'
+    +'<td colspan="5" style="background:#f8f5ef;border:1px solid #C9A84C;padding:7px 8px;font-weight:bold">TOTALES DEL PERÍODO</td>'
     +'<td style="background:#f8f5ef;border:1px solid #C9A84C;padding:7px 8px;text-align:right;font-weight:bold;color:green">S/. '+totalDep.toFixed(2)+'</td>'
     +'<td style="background:#f8f5ef;border:1px solid #C9A84C;padding:7px 8px;text-align:right;font-weight:bold;color:red">S/. '+totalRet.toFixed(2)+'</td>'
     +'<td style="background:#f8f5ef;border:1px solid #C9A84C;padding:7px 8px;text-align:right;font-weight:bold;color:'+(saldoFinal>=0?'green':'red')+'">S/. '+saldoFinal.toFixed(2)+'</td>'
     +'</tr></tfoot>'
     +'</table>'
-    +'<div style="margin-top:10px;font-size:10px;color:#888">* Valores en Soles Peruanos (S/.)</div>'
+    +'<div style="margin-top:10px;font-size:10px;color:#888">* Saldo Anterior incluye el saldo inicial configurado más todos los movimientos anteriores al período. Valores en Soles Peruanos (S/.).</div>'
     +'<div style="display:flex;gap:40px;justify-content:flex-end;margin-top:36px">'
     +'<div style="border-top:1px solid #333;width:170px;text-align:center;padding-top:3px;font-size:10px">Tesorero Principal</div>'
     +'<div style="border-top:1px solid #333;width:170px;text-align:center;padding-top:3px;font-size:10px">Pastor Principal</div>'
@@ -4707,7 +5151,7 @@ function genRptBanco(){
     +'</div></div>';
 
   document.getElementById('rban-prev').innerHTML=html;
-  toast('Informe bancario generado');
+  toast('Informe bancario generado ✅');
 }
 
 // ===================== BUSCAR MIEMBRO FIDELIDAD =====================
@@ -5057,10 +5501,23 @@ function genEjecutivo(){
   var grandSA=movsPrevBruto-bancoPrevio;
 
   // Transferido a Banco = solo movimientos bancarios DEL MES seleccionado
-  var saldoBanco=(DB.banco||[]).filter(function(b){
+  var bancoMes=(DB.banco||[]).filter(function(b){
     var y=parseInt(b.fec.split('-')[0]),mo=parseInt(b.fec.split('-')[1]);
     return y===anio&&mo===mes;
-  }).reduce(function(s,b){return s+(b.tipo==='deposito'?Number(b.mon):-Number(b.mon));},0);
+  });
+  var bancoDep=bancoMes.filter(function(b){return b.tipo==='deposito';}).reduce(function(s,b){return s+Number(b.mon);},0);
+  var bancoRet=bancoMes.filter(function(b){return b.tipo==='retiro';}).reduce(function(s,b){return s+Number(b.mon);},0);
+  var saldoBanco=bancoDep-bancoRet;
+
+  // Saldo anterior bancario = saldo_inicial_banco + todos los movimientos banco ANTES del mes
+  var siBanco=Number((DB.saldos_iniciales||{}).banco)||0;
+  var cutoffBanco=anio+'-'+String(mes).padStart(2,'0')+'-01';
+  var saldoAntBanco=siBanco+(DB.banco||[]).filter(function(b){return b.fec<cutoffBanco;})
+    .reduce(function(s,b){return s+(b.tipo==='deposito'?Number(b.mon):-Number(b.mon));},0);
+  var saldoFinalBanco=saldoAntBanco+bancoDep-bancoRet;
+
+  // Ingresos Totales = ingresos caja filiales + entradas banco del mes
+  var ingTotales=grandTi+bancoDep;
 
   // Por cada filial: Saldo en Caja = todos sus movimientos hasta fin del mes actual
   var rowsFiliales=filiales.map(function(f){
@@ -5106,9 +5563,9 @@ function genEjecutivo(){
   // KPI Cards
   html+='<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:18px">';
   [{lbl:'Saldo Anterior',val:'S/. '+grandSA.toFixed(2),col:'#8B6914',bg:'#fffde7',sub:'Arrastre hasta fin de '+mesPrevNom+' '+anioPrev},
-   {lbl:'Ingresos '+mesNom,val:'S/. '+grandTi.toFixed(2),col:'#1A7A4A',bg:'#e8f5e9',sub:fmtC(varIng,true)+' vs '+mesPrevNom},
-   {lbl:'Egresos '+mesNom,val:'S/. '+grandTe.toFixed(2),col:'#C0392B',bg:'#ffebee',sub:fmtC(-varEg,true)+' vs '+mesPrevNom},
-   {lbl:'Transferido a Banco',val:'S/. '+saldoBanco.toFixed(2),col:'#1565C0',bg:'#e3f2fd',sub:'Depósitos acumulados'},
+   {lbl:'Ingresos Totales',val:'S/. '+ingTotales.toFixed(2),col:'#1A7A4A',bg:'#e8f5e9',sub:'Efectivo S/. '+grandTi.toFixed(2)+' + Banco S/. '+bancoDep.toFixed(2)},
+   {lbl:'Egresos Totales',val:'S/. '+grandTe.toFixed(2),col:'#C0392B',bg:'#ffebee',sub:fmtC(-varEg,true)+' vs '+mesPrevNom},
+   {lbl:'Transferido a Banco',val:'S/. '+saldoBanco.toFixed(2),col:'#1565C0',bg:'#e3f2fd',sub:'Neto depósitos − retiros'},
    {lbl:'Saldo en Caja',val:'S/. '+grandSaldo.toFixed(2),col:grandSaldo>=0?'#1A7A4A':'#C0392B',bg:grandSaldo>=0?'#e8f5e9':'#ffebee',sub:grandSaldo>=0?'✅ Superávit':'⚠️ Déficit'}
   ].forEach(function(c){
     html+='<div style="padding:12px;background:'+c.bg+';border-radius:6px;border-left:4px solid '+c.col+'">';
@@ -5119,7 +5576,17 @@ function genEjecutivo(){
   });
   html+='</div>';
 
-  // Comparativo mes anterior
+  // RESUMEN DEL BANCO
+  html+='<div style="background:#e3f2fd;border:1px solid #1565C0;border-radius:6px;padding:12px 14px;margin-bottom:16px">';
+  html+='<div style="font-size:11px;font-weight:bold;color:#1565C0;margin-bottom:10px">🏦 RESUMEN BANCARIO — '+mesNom.toUpperCase()+' '+anio+'</div>';
+  html+='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">';
+  html+='<div style="text-align:center;padding:8px;background:rgba(255,255,255,.6);border-radius:5px"><div style="font-size:9px;color:#555;font-weight:bold;text-transform:uppercase;margin-bottom:3px">Saldo Anterior</div><div style="font-size:17px;font-weight:bold;color:#8B6914">S/. '+saldoAntBanco.toFixed(2)+'</div><div style="font-size:10px;color:#888">Al cierre de '+mesPrevNom+'</div></div>';
+  html+='<div style="text-align:center;padding:8px;background:rgba(255,255,255,.6);border-radius:5px"><div style="font-size:9px;color:#555;font-weight:bold;text-transform:uppercase;margin-bottom:3px">Entradas del Mes</div><div style="font-size:17px;font-weight:bold;color:#1A7A4A">S/. '+bancoDep.toFixed(2)+'</div><div style="font-size:10px;color:#888">'+bancoMes.filter(function(b){return b.tipo==='deposito';}).length+' depósitos</div></div>';
+  html+='<div style="text-align:center;padding:8px;background:rgba(255,255,255,.6);border-radius:5px"><div style="font-size:9px;color:#555;font-weight:bold;text-transform:uppercase;margin-bottom:3px">Salidas del Mes</div><div style="font-size:17px;font-weight:bold;color:#C0392B">S/. '+bancoRet.toFixed(2)+'</div><div style="font-size:10px;color:#888">'+bancoMes.filter(function(b){return b.tipo==='retiro';}).length+' retiros</div></div>';
+  html+='<div style="text-align:center;padding:8px;background:'+(saldoFinalBanco>=0?'rgba(26,122,74,.15)':'rgba(192,57,43,.15)')+';border-radius:5px;border:2px solid '+(saldoFinalBanco>=0?'#1A7A4A':'#C0392B')+'"><div style="font-size:9px;color:#555;font-weight:bold;text-transform:uppercase;margin-bottom:3px">Saldo Final del Mes</div><div style="font-size:17px;font-weight:bold;color:'+(saldoFinalBanco>=0?'#1A7A4A':'#C0392B')+'">S/. '+saldoFinalBanco.toFixed(2)+'</div><div style="font-size:10px;color:#888">'+(saldoFinalBanco>=0?'✅ Positivo':'⚠️ Negativo')+'</div></div>';
+  html+='</div></div>';
+
+  // Comparativo mes anterior  // Comparativo mes anterior
   html+='<div style="background:#f8f5ef;border:1px solid #C9A84C;border-radius:6px;padding:10px 14px;margin-bottom:16px">';
   html+='<div style="font-size:11px;font-weight:bold;color:#8B6914;margin-bottom:8px">📊 COMPARATIVO: '+mesNom.toUpperCase()+' vs '+mesPrevNom.toUpperCase()+' '+anioPrev+'</div>';
   html+='<table style="width:100%;font-size:11px"><tr>';
