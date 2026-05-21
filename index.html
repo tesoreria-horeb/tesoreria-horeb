@@ -5574,7 +5574,7 @@ function genEjecutivo(){
   var movsMes=allMovs.filter(function(m){
     var y=parseInt(m.fec.split('-')[0]),mo=parseInt(m.fec.split('-')[1]);
     var esFilial=filiales.some(function(f){return f.id===m.fil;});
-    return y===anio&&mo===mes&&(m.moneda||'PEN')==='PEN'&&esFilial;
+    return y===anio&&mo===mes&&(m.moneda||'PEN')==='PEN'&&esFilial&&!m.esBancario;
   });
 
   // Movimientos mes anterior — solo filiales (para comparativo)
