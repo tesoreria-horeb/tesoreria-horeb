@@ -678,6 +678,7 @@ body.contador-mode .modal-ft .btn-d {
           <select class="fs" id="rc-anio"></select>
           <select class="fs" id="rc-fil"><option value="all">Todas las sedes y Depts.</option></select>
           <button class="btn btn-p" onclick="genCaja()">📋 Generar</button>
+          <button class="btn btn-s" onclick="syncFromFirebase().then(function(){popFil();popYrs();toast('Datos actualizados ✅');})" title="Actualizar datos desde Firebase">🔄 Actualizar</button>
           <button class="btn btn-pr" onclick="prtRpt('rc-prev')">🖨️ Imprimir/PDF</button>
         </div>
         <div id="rc-prev"></div>
@@ -861,8 +862,20 @@ body.contador-mode .modal-ft .btn-d {
         <div id="m-miem-selected" style="font-size:11px;color:var(--gold-light);margin-top:4px;min-height:16px"></div>
       </div>
     </div>
-    <div id="banco-auto-note" style="display:none;background:rgba(46,134,171,.1);border:1px solid rgba(46,134,171,.3);border-radius:6px;padding:8px 12px;font-size:12px;color:#5DADE2;align-items:center;gap:8px;margin-bottom:8px">
-      🏦 <strong></strong>
+    <div id="banco-auto-note" style="display:none;background:rgba(46,134,171,.15);border:1px solid rgba(46,134,171,.4);border-radius:8px;padding:10px 14px;font-size:12px;color:#5DADE2;margin-bottom:8px">
+      🏦 <strong id="banco-auto-note-txt"></strong>
+      <div style="margin-top:6px;font-size:11px;color:rgba(247,243,233,.5)">Este movimiento irá <strong style="color:#5DADE2">solo al Banco</strong> — no aparecerá en el Libro Caja</div>
+    </div>
+    <!-- Toggle: es movimiento bancario -->
+    <div style="margin-bottom:10px">
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none">
+        <div style="position:relative;width:42px;height:22px;flex-shrink:0">
+          <input type="checkbox" id="m-es-banco" onchange="onToggleBanco()" style="opacity:0;width:0;height:0;position:absolute">
+          <div id="banco-toggle-track" style="position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(247,243,233,.15);border-radius:11px;transition:.2s;border:1px solid rgba(247,243,233,.2)"></div>
+          <div id="banco-toggle-knob" style="position:absolute;top:2px;left:2px;width:16px;height:16px;background:rgba(247,243,233,.5);border-radius:50%;transition:.2s"></div>
+        </div>
+        <span style="font-size:13px">🏦 <strong>Movimiento Bancario</strong> <span style="color:rgba(247,243,233,.4);font-weight:normal;font-size:11px">(solo va al banco, no al Libro Caja)</span></span>
+      </label>
     </div>
     <div class="fr">
       <div class="fld"><label>Monto</label><input type="number" id="m-monto" placeholder="0.00" step="0.01" min="0"></div>
@@ -917,9 +930,9 @@ body.contador-mode .modal-ft .btn-d {
       <button class="tab-btn" onclick="stab('miem','diezmos')">Historial Diezmos</button>
     </div>
     <div class="tab-cnt active" id="miem-tab-datos">
-      <div class="fr"><div class="fld"><label>Código RI</label><input type="text" id="mi-cod" placeholder="Ej: RI-001 o 12345"></div><div class="fld"><label>Sede / Filial</label><select id="mi-fil"></select></div></div>
+      <div class="fr"><div class="fld"><label>DNI <span style="color:rgba(201,168,76,.7);font-size:11px">(Identificación principal)</span></label><input type="text" id="mi-dni" placeholder="Documento de Identidad"></div><div class="fld"><label>Sede / Filial</label><select id="mi-fil"></select></div></div>
       <div class="fr"><div class="fld"><label>Nombres</label><input type="text" id="mi-nom" placeholder="Nombres"></div><div class="fld"><label>Apellidos</label><input type="text" id="mi-ape" placeholder="Apellidos"></div></div>
-      <div class="fr"><div class="fld"><label>DNI</label><input type="text" id="mi-dni" placeholder="DNI"></div><div class="fld"><label>Teléfono</label><input type="text" id="mi-tel" placeholder="Teléfono"></div></div>
+      <div class="fr"><div class="fld"><label>Código RI <span style="color:rgba(247,243,233,.35);font-size:11px;font-weight:normal">(secundario)</span></label><input type="text" id="mi-cod" placeholder="Ej: RI-001"></div><div class="fld"><label>Teléfono</label><input type="text" id="mi-tel" placeholder="Teléfono"></div></div>
       <div class="fr"><div class="fld"><label>Fecha Nacimiento</label><input type="date" id="mi-nac"></div><div class="fld"><label>Fecha Ingreso</label><input type="date" id="mi-ing"></div></div>
       <div class="fr fr1"><div class="fld"><label>Dirección</label><input type="text" id="mi-dir" placeholder="Dirección"></div></div>
     </div>
@@ -974,6 +987,10 @@ body.contador-mode .modal-ft .btn-d {
     <div class="fld">
       <label>Saldo Inicial — Filiales y Sede Central ($ USD)</label>
       <input type="number" id="si-filiales-usd" placeholder="0.00" step="0.01" min="0">
+    </div>
+    <div class="fld">
+      <label>🏦 Saldo Inicial — Banco (S/.)</label>
+      <input type="number" id="si-banco" placeholder="0.00" step="0.01" min="0">
     </div>
     <div class="fld">
       <label>Saldo Inicial — Departamentos (S/.)</label>
@@ -1108,7 +1125,9 @@ body.contador-mode .modal-ft .btn-d {
 <div class="ov" id="ov-cat">
   <div class="modal" style="max-width:340px">
     <div class="modal-hd"><div class="modal-tit" id="cat-tit">Nueva Categoría</div><button class="modal-x" onclick="cm('ov-cat')">✕</button></div>
-    <div class="fr fr1"><div class="fld"><label>Nombre</label><input type="text" id="cat-nom" placeholder="Nombre de la categoría"></div></div>
+    <div class="fr fr1"><div class="fld"><label>Categoría Principal</label><input type="text" id="cat-nom" placeholder="Ej: Alimentación"></div></div>
+    <div class="fr fr1"><div class="fld"><label>Subcategoría <span style="color:rgba(247,243,233,.4);font-weight:normal">(opcional)</span></label><input type="text" id="cat-sub" placeholder="Ej: Vigilia, Reunión, Almuerzo..."></div></div>
+    <div style="font-size:11px;color:rgba(247,243,233,.4);margin-bottom:8px">Si ingresa subcategoría, se guardará como: <em>Categoría > Subcategoría</em></div>
     <input type="hidden" id="cat-tipo">
     <div class="modal-ft"><button class="btn btn-s" onclick="cm('ov-cat')">Cancelar</button><button class="btn btn-p" onclick="savCat()">💾 Guardar</button></div>
   </div>
@@ -1301,6 +1320,13 @@ function sm(n){
   else if(n==='votos')renderVot();
   else if(n==='categorias')renderCats();
   else if(n==='rpt-fidelidad'){updFidMiems();}
+  else if(n==='rpt-caja'||n==='rpt-consolidado'||n==='rpt-comparativo'||n==='rpt-diezmos'){
+    // Auto-sincronizar al abrir cualquier informe
+    if(DB.movimientos.length===0){
+      toast('⏳ Cargando datos...');
+      syncFromFirebase().then(function(){popFil();popYrs();});
+    }
+  }
   else if(n==='usuarios'){if(CU&&CU.niv<=1)renderUsrs();else{toast('Sin acceso','err');sm('dashboard');}}
   else if(n==='backup'){if(CU&&CU.niv<=1)renderBackup();else{toast('Sin acceso','err');sm('dashboard');}}
   else if(n==='banco'){
@@ -1419,22 +1445,33 @@ function popYrs(){
   popRcatFil();
 }
 
-function checkBancoNote(){
-  var cat=document.getElementById('m-cat');
-  var met=document.getElementById('m-met');
-  var tipo=document.getElementById('m-tipo');
+function onToggleBanco(){
+  var cb=document.getElementById('m-es-banco');
+  var track=document.getElementById('banco-toggle-track');
+  var knob=document.getElementById('banco-toggle-knob');
   var note=document.getElementById('banco-auto-note');
-  if(!note||!cat||!met||!tipo)return;
-  var mets=['transferencia','yape','plin','deposito'];
-  var esBanco=(cat.value==='Depósito Bancario')||(mets.indexOf(met.value)>-1);
-  var msg='';
-  if(esBanco){
-    if(tipo.value==='ingreso')msg='🏦 Este ingreso se registrará como depósito bancario automáticamente';
-    else if(cat.value==='Depósito Bancario')msg='🏦 Este egreso se registrará como depósito bancario automáticamente';
-    else msg='🏦 Este pago se registrará como retiro bancario automáticamente';
+  var noteTxt=document.getElementById('banco-auto-note-txt');
+  if(cb&&cb.checked){
+    if(track){track.style.background='rgba(46,134,171,.6)';track.style.borderColor='rgba(46,134,171,.8)';}
+    if(knob){knob.style.left='22px';knob.style.background='#5DADE2';}
+    var tipo=document.getElementById('m-tipo');
+    if(noteTxt)noteTxt.textContent=tipo&&tipo.value==='ingreso'?'Depósito bancario':'Retiro/pago bancario';
+    if(note)note.style.display='block';
+  } else {
+    if(track){track.style.background='rgba(247,243,233,.15)';track.style.borderColor='rgba(247,243,233,.2)';}
+    if(knob){knob.style.left='2px';knob.style.background='rgba(247,243,233,.5)';}
+    if(note)note.style.display='none';
   }
-  note.style.display=esBanco?'flex':'none';
-  var sp=note.querySelector('strong');if(sp)sp.textContent=msg;
+}
+
+function checkBancoNote(){
+  var cb=document.getElementById('m-es-banco');
+  var met=document.getElementById('m-met');
+  var cat=document.getElementById('m-cat');
+  if(!cb||!met||!cat)return;
+  var metodosBanco=['transferencia','yape','plin','deposito','pos','debito','lukita','tunki'];
+  var esBanco=(cat.value==='Depósito Bancario')||(metodosBanco.indexOf(met.value)>-1);
+  if(esBanco&&!cb.checked){cb.checked=true;onToggleBanco();}
 }
 
 var catList=[];
@@ -1912,6 +1949,9 @@ function openMovModal(id){
       clearMiemSearch();
     }
     document.getElementById('m-obs').value=m.obs||'';
+    // Load esBancario toggle state
+    var cbEdit=document.getElementById('m-es-banco');
+    if(cbEdit){cbEdit.checked=!!(m.esBancario);onToggleBanco();}
     var pp=document.getElementById('m-comp-preview');
     if(pp&&(m.compFile||m.hasFile)){
       pp.innerHTML='&#128206; Comprobante adjunto &nbsp;<button class="btn btn-sm btn-s" onclick="verComprobante(this)" data-id="'+m.id+'" style="font-size:10px">&#128065;&#65039; Ver</button>';
@@ -1922,6 +1962,8 @@ function openMovModal(id){
     document.getElementById('m-fecha').value=today();
     ['m-monto','m-desc','m-comp','m-obs'].forEach(id=>document.getElementById(id).value='');
     document.getElementById('m-met').value='efectivo';
+    // Reset banco toggle
+    var cbNew=document.getElementById('m-es-banco');if(cbNew){cbNew.checked=false;onToggleBanco();}
   var monEl=document.getElementById('m-moneda');if(monEl)monEl.value='PEN';document.getElementById('m-miem').value='';
   var fi=document.getElementById('m-comp-file');if(fi){fi.value='';fi.removeAttribute('data-b64');}
   var pp=document.getElementById('m-comp-preview');if(pp)pp.textContent='';
@@ -1959,6 +2001,8 @@ function savMov(keepOpen){
     if(existing)compFile=existing.compFile||'';
   }
 
+  var esBancoToggle=!!(document.getElementById('m-es-banco')&&document.getElementById('m-es-banco').checked);
+
   var obj={
     id:movId,tipo:tipo,fec:fec,mon:mon,desc:desc,cat:cat,fil:fil,
     met:document.getElementById('m-met').value||'efectivo',
@@ -1966,6 +2010,7 @@ function savMov(keepOpen){
     comp:document.getElementById('m-comp').value||'',
     miem:document.getElementById('m-miem').value||'',
     obs:document.getElementById('m-obs').value||'',
+    esBancario:esBancoToggle,
     ts:EID?((DB.movimientos.find(function(x){return x.id===EID;})||{}).ts||Date.now()):Date.now(),
     compFile:compFile
   };
@@ -1991,11 +2036,9 @@ function savMov(keepOpen){
     fbSave('movimientos', obj.id, obj);
   }
 
-  // Auto-link to Banco: by category OR payment method
+  // Banco: usar el toggle explícito del usuario
   var metodosBanco=['transferencia','yape','plin','deposito','pos','debito','lukita','tunki'];
-  var esBanco=(obj.cat==='Depósito Bancario'&&obj.tipo==='egreso')
-    ||(obj.tipo==='ingreso'&&metodosBanco.indexOf(obj.met)>-1)
-    ||(obj.tipo==='egreso'&&metodosBanco.indexOf(obj.met)>-1&&obj.cat!=='Depósito Bancario');
+  var esBanco=esBancoToggle;
   if(esBanco){
     if(!DB.banco)DB.banco=[];
   if(!DB.saldos_iniciales)DB.saldos_iniciales={filiales:0,departamentos:0,fecha:''};
@@ -2418,20 +2461,28 @@ function delVot(id){
 
 // ===================== CATEGORIAS =====================
 function renderCats(){
-  document.getElementById('cat-ing').innerHTML=DB.cats.ing.map(c=>`<span class="cat-chip cat-i">${c}<span class="cat-rm" onclick="delCat('ing','${c}')">×</span></span>`).join('');
-  document.getElementById('cat-eg').innerHTML=DB.cats.eg.map(c=>`<span class="cat-chip cat-e">${c}<span class="cat-rm" onclick="delCat('eg','${c}')">×</span></span>`).join('');
+  var ingSort=[...DB.cats.ing].sort(function(a,b){return a.localeCompare(b,'es');});
+  var egSort=[...DB.cats.eg].sort(function(a,b){return a.localeCompare(b,'es');});
+  document.getElementById('cat-ing').innerHTML=ingSort.map(c=>`<span class="cat-chip cat-i">${c}<span class="cat-rm" onclick="delCat('ing','${c}')">×</span></span>`).join('');
+  document.getElementById('cat-eg').innerHTML=egSort.map(c=>`<span class="cat-chip cat-e">${c}<span class="cat-rm" onclick="delCat('eg','${c}')">×</span></span>`).join('');
   document.getElementById('usr-body').innerHTML=DB.usuarios.map(u=>`<tr><td style="font-family:monospace;color:var(--gold-light)">${u.user}</td><td>${u.nom}</td><td>${ROLES[u.rol]||u.rol}</td><td style="font-size:11px">${u.niv<=2?'Todo el sistema':gfn(u.fil)}</td></tr>`).join('');
 }
 function openCatModal(tipo){
   document.getElementById('cat-tit').textContent='Nueva Categoría de '+(tipo==='ingreso'?'Ingreso':'Egreso');
-  document.getElementById('cat-nom').value='';document.getElementById('cat-tipo').value=tipo;om('ov-cat');
+  document.getElementById('cat-nom').value='';
+  document.getElementById('cat-sub').value='';
+  document.getElementById('cat-tipo').value=tipo;
+  om('ov-cat');
 }
 function savCat(){
-  const nom=document.getElementById('cat-nom').value.trim();const tipo=document.getElementById('cat-tipo').value;
-  if(!nom){toast('Ingrese un nombre','err');return;}
+  const nom=document.getElementById('cat-nom').value.trim();
+  const sub=document.getElementById('cat-sub').value.trim();
+  const tipo=document.getElementById('cat-tipo').value;
+  if(!nom){toast('Ingrese un nombre de categoría','err');return;}
+  const fullNom=sub?nom+' > '+sub:nom;
   const arr=tipo==='ingreso'?DB.cats.ing:DB.cats.eg;
-  if(arr.includes(nom)){toast('Categoría ya existe','err');return;}
-  arr.push(nom);sd();fbSave('categorias','cats',DB.cats);cm('ov-cat');renderCats();toast('Categoría agregada');
+  if(arr.includes(fullNom)){toast('Categoría ya existe','err');return;}
+  arr.push(fullNom);sd();fbSave('categorias','cats',DB.cats);cm('ov-cat');renderCats();toast('Categoría agregada');
 }
 function delCat(tipo,nom){
   if(!confirm('Eliminar categoria "'+nom+'"?'))return;
@@ -2499,6 +2550,14 @@ function prtRpt(divId){
 
 // RPT LIBRO CAJA
 function genCaja(){
+  // Si los datos no cargaron aún, sincronizar primero
+  if(!DB.movimientos||DB.movimientos.length===0){
+    toast('⏳ Sincronizando datos con Firebase...','');
+    syncFromFirebase().then(function(){
+      setTimeout(genCaja, 500);
+    });
+    return;
+  }
   var mes=parseInt(document.getElementById('rc-mes').value);
   var anio=parseInt(document.getElementById('rc-anio').value);
   var filEl=document.getElementById('rc-fil');
@@ -2557,6 +2616,8 @@ function genCaja(){
 
   var movs=gAccMov().filter(function(m){
     var y=parseInt(m.fec.split('-')[0]),mo=parseInt(m.fec.split('-')[1]);
+    // Excluir movimientos bancarios del Libro Caja
+    if(m.esBancario)return false;
     return y===anio&&mo===mes&&(fil==='all'||m.fil===fil);
   });
   movs.sort(function(a,b){return a.fec.localeCompare(b.fec);});
@@ -2604,23 +2665,53 @@ function genCaja(){
         +'</tr>';
     }
   }
-  movs.forEach(function(m){
+  // Separar movimientos por moneda
+  var movsPEN=movs.filter(function(m){return (m.moneda||'PEN')==='PEN';});
+  var movsUSD=movs.filter(function(m){return m.moneda==='USD';});
+
+  // Filas en SOLES
+  movsPEN.forEach(function(m){
     dataRows+='<tr>'
       +'<td style="border:1px solid #333;padding:3px 5px;font-size:11px">'+fd2(m.fec)+'</td>'
       +'<td style="border:1px solid #333;padding:3px 6px;font-size:11px">'+m.desc+(m.cat?' ('+m.cat+')':'')+'</td>'
-      +'<td style="border:1px solid #333;padding:3px 5px;font-size:11px;text-align:right">'+(m.tipo==='ingreso'?(m.moneda==='USD'?'$ ':'S/. ')+Number(m.mon).toFixed(2):'')+'</td>'
-      +'<td style="border:1px solid #333;padding:3px 5px;font-size:11px;text-align:right">'+(m.tipo==='egreso'?(m.moneda==='USD'?'$ ':'S/. ')+Number(m.mon).toFixed(2):'')+'</td>'
+      +'<td style="border:1px solid #333;padding:3px 5px;font-size:11px;text-align:right">'+(m.tipo==='ingreso'?'S/. '+Number(m.mon).toFixed(2):'')+'</td>'
+      +'<td style="border:1px solid #333;padding:3px 5px;font-size:11px;text-align:right">'+(m.tipo==='egreso'?'S/. '+Number(m.mon).toFixed(2):'')+'</td>'
       +'</tr>';
   });
-  // Empty rows to fill form
-  var minRows=Math.max(25,movs.length+3);
-  for(var i=movs.length;i<minRows;i++){
+  // Empty rows for soles section
+  var minRowsPEN=Math.max(20,movsPEN.length+3);
+  for(var i=movsPEN.length+(esDepartamento||esSedeCentral?1:0);i<minRowsPEN;i++){
     dataRows+='<tr>'
       +'<td style="border:1px solid #333;padding:3px 5px;height:20px">&nbsp;</td>'
       +'<td style="border:1px solid #333;padding:3px 5px">&nbsp;</td>'
       +'<td style="border:1px solid #333;padding:3px 5px">&nbsp;</td>'
       +'<td style="border:1px solid #333;padding:3px 5px">&nbsp;</td>'
       +'</tr>';
+  }
+
+  // Sección USD — solo si hay movimientos en dólares
+  var dataRowsUSD='';
+  if(movsUSD.length>0){
+    dataRowsUSD+='<tr style="background:#1565C0">'
+      +'<td colspan="4" style="border:1px solid #333;padding:4px 8px;font-size:12px;font-weight:bold;color:#fff;text-align:center">🇺🇸 MOVIMIENTOS EN DÓLARES (USD)</td>'
+      +'</tr>';
+    movsUSD.forEach(function(m){
+      dataRowsUSD+='<tr style="background:#f0f5ff">'
+        +'<td style="border:1px solid #333;padding:3px 5px;font-size:11px">'+fd2(m.fec)+'</td>'
+        +'<td style="border:1px solid #333;padding:3px 6px;font-size:11px">'+m.desc+(m.cat?' ('+m.cat+')':'')+'</td>'
+        +'<td style="border:1px solid #333;padding:3px 5px;font-size:11px;text-align:right">'+(m.tipo==='ingreso'?'$ '+Number(m.mon).toFixed(2):'')+'</td>'
+        +'<td style="border:1px solid #333;padding:3px 5px;font-size:11px;text-align:right">'+(m.tipo==='egreso'?'$ '+Number(m.mon).toFixed(2):'')+'</td>'
+        +'</tr>';
+    });
+    var minRowsUSD=Math.max(8,movsUSD.length+2);
+    for(var j=movsUSD.length;j<minRowsUSD;j++){
+      dataRowsUSD+='<tr style="background:#f0f5ff">'
+        +'<td style="border:1px solid #333;padding:3px 5px;height:20px">&nbsp;</td>'
+        +'<td style="border:1px solid #333;padding:3px 5px">&nbsp;</td>'
+        +'<td style="border:1px solid #333;padding:3px 5px">&nbsp;</td>'
+        +'<td style="border:1px solid #333;padding:3px 5px">&nbsp;</td>'
+        +'</tr>';
+    }
   }
 
   var html='';
@@ -2665,7 +2756,7 @@ function genCaja(){
   html+='<th style="border:1px solid #333;padding:6px 8px;font-size:12px;width:110px">SALIDA</th>';
   html+='</tr>';
   html+='</thead>';
-  html+='<tbody>'+dataRows+'</tbody>';
+  html+='<tbody>'+dataRows+dataRowsUSD+'</tbody>';
   html+='</table>';
 
   // Totals section — Soles
@@ -3211,7 +3302,8 @@ function renderBanco(){
 
   // Calc saldo on filtered movs
   var sorted=[...movs].sort(function(a,b){return a.fec.localeCompare(b.fec);});
-  var saldoTotal=sorted.reduce(function(s,m){return s+(m.tipo==='deposito'?Number(m.mon):-Number(m.mon));},0);
+  var siBanco=Number((DB.saldos_iniciales||{}).banco)||0;
+  var saldoTotal=siBanco+sorted.reduce(function(s,m){return s+(m.tipo==='deposito'?Number(m.mon):-Number(m.mon));},0);
   var totalDep=movs.filter(function(m){return m.tipo==='deposito';}).reduce(function(a,m){return a+Number(m.mon);},0);
   var totalRet=movs.filter(function(m){return m.tipo==='retiro';}).reduce(function(a,m){return a+Number(m.mon);},0);
   var numDep=movs.filter(function(m){return m.tipo==='deposito';}).length;
@@ -3291,7 +3383,7 @@ function renderBanco(){
       +'<td style="color:rgba(247,243,233,.35);font-size:10px">'+(((bancoPg-1)*BANCO_PP)+i+1)+'</td>'
       +'<td>'+fd2(m.fec)+'</td>'
       +'<td>'+tipoCell+'</td>'
-      +'<td>'+m.desc+(function(){var mts=['transferencia','yape','plin','deposito'];return(m.cat==='Depósito Bancario'||mts.indexOf(m.met)>-1)?'&nbsp;<span style="font-size:9px;background:rgba(46,134,171,.2);color:#5DADE2;padding:1px 5px;border-radius:3px;border:1px solid rgba(46,134,171,.3)">🏦</span>':'';}())+'</td>'
+      +'<td>'+m.desc+(m.esBancario?'&nbsp;<span style="font-size:9px;background:rgba(46,134,171,.2);color:#5DADE2;padding:1px 5px;border-radius:3px;border:1px solid rgba(46,134,171,.3)">🏦 Banco</span>':'')+'</td>'
       +'<td style="font-size:10px">'+gfn(m.fil)+'</td>'
       +'<td>'+montoCell+'</td>'
       +(isAdmin?'<td>'+saldoCell+'</td>':'')
@@ -4017,10 +4109,12 @@ function openSaldoInicial(){
   var fil=document.getElementById('si-filiales');
   var filUSD=document.getElementById('si-filiales-usd');
   var dept=document.getElementById('si-departamentos');
+  var banco=document.getElementById('si-banco');
   var fecha=document.getElementById('si-fecha');
   if(fil)fil.value=si.filiales||0;
   if(filUSD)filUSD.value=si.filialesUSD||0;
   if(dept)dept.value=si.departamentos||0;
+  if(banco)banco.value=si.banco||0;
   if(fecha)fecha.value=si.fecha||'';
   om('ov-saldo-inicial');
 }
@@ -4029,8 +4123,9 @@ function savSaldoInicial(){
   var fil=parseFloat(document.getElementById('si-filiales').value)||0;
   var filUSD=parseFloat(document.getElementById('si-filiales-usd').value)||0;
   var dept=parseFloat(document.getElementById('si-departamentos').value)||0;
+  var banco=parseFloat(document.getElementById('si-banco').value)||0;
   var fecha=document.getElementById('si-fecha').value||'';
-  DB.saldos_iniciales={filiales:fil,filialesUSD:filUSD,departamentos:dept,fecha:fecha};
+  DB.saldos_iniciales={filiales:fil,filialesUSD:filUSD,departamentos:dept,banco:banco,fecha:fecha};
   try{sd();}catch(e){}
   fbSave('config','saldos_iniciales',DB.saldos_iniciales);
   cm('ov-saldo-inicial');
@@ -4880,10 +4975,12 @@ function openSaldoInicial(){
   var fil=document.getElementById('si-filiales');
   var filUSD=document.getElementById('si-filiales-usd');
   var dept=document.getElementById('si-departamentos');
+  var banco=document.getElementById('si-banco');
   var fecha=document.getElementById('si-fecha');
   if(fil)fil.value=si.filiales||0;
   if(filUSD)filUSD.value=si.filialesUSD||0;
   if(dept)dept.value=si.departamentos||0;
+  if(banco)banco.value=si.banco||0;
   if(fecha)fecha.value=si.fecha||'';
   om('ov-saldo-inicial');
 }
@@ -4892,8 +4989,9 @@ function savSaldoInicial(){
   var fil=parseFloat(document.getElementById('si-filiales').value)||0;
   var filUSD=parseFloat(document.getElementById('si-filiales-usd').value)||0;
   var dept=parseFloat(document.getElementById('si-departamentos').value)||0;
+  var banco=parseFloat(document.getElementById('si-banco').value)||0;
   var fecha=document.getElementById('si-fecha').value||'';
-  DB.saldos_iniciales={filiales:fil,filialesUSD:filUSD,departamentos:dept,fecha:fecha};
+  DB.saldos_iniciales={filiales:fil,filialesUSD:filUSD,departamentos:dept,banco:banco,fecha:fecha};
   try{sd();}catch(e){}
   fbSave('config','saldos_iniciales',DB.saldos_iniciales);
   cm('ov-saldo-inicial');
