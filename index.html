@@ -5644,8 +5644,8 @@ function genEjecutivo(){
   var grandTi=rowsFiliales.reduce(function(a,r){return a+r.i;},0);
   var grandTe=rowsFiliales.reduce(function(a,r){return a+r.e;},0);
 
-  // Ingresos Totales = ingresos caja filiales + entradas banco del mes
-  var ingTotales=grandTi+bancoDep;
+  // Ingresos Totales = solo ingresos de caja (igual que Libro Caja)
+  var ingTotales=grandTi;
 
   // Saldo en caja total = Saldo Anterior + ingresos del mes − egresos del mes − transferido a banco del mes
   var grandSaldo=grandSA+grandTi-grandTe-saldoBanco;
@@ -5674,7 +5674,7 @@ function genEjecutivo(){
   // KPI Cards
   html+='<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:18px">';
   [{lbl:'Saldo Anterior',val:'S/. '+grandSA.toFixed(2),col:'#8B6914',bg:'#fffde7',sub:'Arrastre hasta fin de '+mesPrevNom+' '+anioPrev},
-   {lbl:'Ingresos Totales',val:'S/. '+ingTotales.toFixed(2),col:'#1A7A4A',bg:'#e8f5e9',sub:'Efectivo S/. '+grandTi.toFixed(2)+' + Banco S/. '+bancoDep.toFixed(2)},
+   {lbl:'Ingresos Totales',val:'S/. '+ingTotales.toFixed(2),col:'#1A7A4A',bg:'#e8f5e9',sub:fmtC(varIng,true)+' vs '+mesPrevNom},
    {lbl:'Egresos Totales',val:'S/. '+grandTe.toFixed(2),col:'#C0392B',bg:'#ffebee',sub:fmtC(-varEg,true)+' vs '+mesPrevNom},
    {lbl:'Transferido a Banco',val:'S/. '+saldoBanco.toFixed(2),col:'#1565C0',bg:'#e3f2fd',sub:'Neto depósitos − retiros'},
    {lbl:'Saldo en Caja',val:'S/. '+grandSaldo.toFixed(2),col:grandSaldo>=0?'#1A7A4A':'#C0392B',bg:grandSaldo>=0?'#e8f5e9':'#ffebee',sub:grandSaldo>=0?'✅ Superávit':'⚠️ Déficit'}
