@@ -5563,9 +5563,6 @@ function genEjecutivo(){
     .reduce(function(s,b){return s+(b.tipo==='deposito'?Number(b.mon):-Number(b.mon));},0);
   var saldoFinalBanco=saldoAntBanco+bancoDep-bancoRet;
 
-  // Ingresos Totales = ingresos caja filiales + entradas banco del mes
-  var ingTotales=grandTi+bancoDep;
-
   // Por cada filial: Saldo en Caja = todos sus movimientos hasta fin del mes actual
   var rowsFiliales=filiales.map(function(f){
     var todosHasta=allMovs.filter(function(m){
@@ -5583,6 +5580,10 @@ function genEjecutivo(){
 
   var grandTi=rowsFiliales.reduce(function(a,r){return a+r.i;},0);
   var grandTe=rowsFiliales.reduce(function(a,r){return a+r.e;},0);
+
+  // Ingresos Totales = ingresos caja filiales + entradas banco del mes
+  var ingTotales=grandTi+bancoDep;
+
   // Saldo en caja total = Saldo Anterior + ingresos del mes − egresos del mes − transferido a banco del mes
   var grandSaldo=grandSA+grandTi-grandTe-saldoBanco;
 
