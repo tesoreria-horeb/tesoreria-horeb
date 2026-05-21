@@ -1206,6 +1206,11 @@ body.contador-mode .modal-ft .btn-d {
     <input type="hidden" id="cf-fil-id">
     <input type="hidden" id="cf-mes-cierre">
     <input type="hidden" id="cf-anio-cierre">
+    <input type="hidden" id="cf-cierre-edit-id">
+    <!-- Aviso edición -->
+    <div id="cf-info-edicion" style="display:none;background:rgba(243,156,18,.1);border:1px solid rgba(243,156,18,.3);border-radius:6px;padding:9px 12px;margin-bottom:12px;font-size:11px;color:#F39C12">
+      ⚠️ <strong>Modo edición:</strong> El registro anterior (banco o efectivo) será eliminado y reemplazado por el nuevo. Los movimientos vinculados también serán corregidos.
+    </div>
     <div class="modal-ft">
       <button class="btn btn-s" onclick="cm('ov-cierre')">Cancelar</button>
       <button class="btn btn-g" id="cf-btn-confirm" onclick="savCierreDeposito()">🏦 Confirmar Depósito</button>
@@ -2627,26 +2632,33 @@ function renderCierreFiliales(){
     var cerrado=cfYaCerrado(f.id,mes,anio);
     var cierre=cerrado?(DB.cierres||[]).find(function(c){return c.filId===f.id&&c.mes===mes&&c.anio===anio;}):null;
     var tipoLabel=(f.tipo||'filial')==='departamento'?'🏛️ Depto':'🏛️ Filial';
+
     var estadoBadge='';
     if(!cerrado){estadoBadge='<span class="badge b-pend">🔴 Pendiente</span>';}
     else if(cierre&&cierre.tipoEntrega==='efectivo'){estadoBadge='<span class="badge b-fiel">💵 Efectivo</span>';}
     else{estadoBadge='<span class="badge b-cum">🏦 Banco</span>';}
-    var detalle='';
-    if(cerrado&&cierre){
-      if(cierre.tipoEntrega==='efectivo'){
-        detalle='<span style="font-size:10px;color:var(--gold-light)">💵 '+fd2(cierre.fecha)+(cierre.recibidoPor?' · Recibió: '+cierre.recibidoPor:'')+'</span>';
-      } else {
-        detalle='<span style="font-size:10px;color:#5DADE2">🏦 Op: '+cierre.codOp+' · '+cierre.bancoNom+' · '+fd2(cierre.fecha)+'</span>';
-      }
-    }
+
     var accion='';
     if(!cerrado&&sd.saldo>0){
       var safeId=f.id.replace(/'/g,"\\'");
       var safeNom=f.nom.replace(/'/g,"\\'");
-      accion='<button class="btn btn-p btn-sm" onclick="openCierreModal(\''+safeId+'\',\''+safeNom+'\','+sd.saldo+','+mes+','+anio+')">📋 Registrar Entrega</button>';
+      accion='<button class="btn btn-p btn-sm" onclick="openCierreModal(\''+safeId+'\',\''+safeNom+'\','+sd.saldo+','+mes+','+anio+',null)">📋 Registrar Entrega</button>';
     } else if(!cerrado&&sd.saldo<=0){
       accion='<span style="font-size:11px;color:rgba(247,243,233,.4)">Sin saldo pendiente</span>';
-    } else {accion=detalle;}
+    } else if(cerrado&&cierre){
+      // Detalle + botón editar
+      var detalle='';
+      if(cierre.tipoEntrega==='efectivo'){
+        detalle='<div style="font-size:10px;color:var(--gold-light);margin-bottom:4px">💵 '+fd2(cierre.fecha)+(cierre.recibidoPor?' · Recibió: '+cierre.recibidoPor:'')+(cierre.obs?' · '+cierre.obs:'')+'</div>';
+      } else {
+        detalle='<div style="font-size:10px;color:#5DADE2;margin-bottom:4px">🏦 Op: '+cierre.codOp+' · '+cierre.bancoNom+' · '+fd2(cierre.fecha)+(cierre.obs?' · '+cierre.obs:'')+'</div>';
+      }
+      var safeId=f.id.replace(/'/g,"\\'");
+      var safeNom=f.nom.replace(/'/g,"\\'");
+      var safeCierreId=cierre.id.replace(/'/g,"\\'");
+      accion=detalle+'<button class="btn btn-s btn-sm" style="font-size:10px" onclick="openCierreModal(\''+safeId+'\',\''+safeNom+'\','+sd.saldo+','+mes+','+anio+',\''+safeCierreId+'\')">✏️ Editar</button>';
+    }
+
     return '<tr>'
       +'<td style="padding:9px 11px">'+tipoLabel+' '+f.nom+'</td>'
       +'<td style="padding:9px 11px;text-align:right;color:#1A7A4A;font-weight:700">S/. '+sd.ing.toFixed(2)+'</td>'
@@ -2656,6 +2668,7 @@ function renderCierreFiliales(){
       +'<td style="padding:9px 11px">'+accion+'</td>'
       +'</tr>';
   });
+
   var totalIng=todasFiliales.reduce(function(a,f){return a+cfSaldoMes(f.id,mes,anio).ing;},0);
   var totalEg=todasFiliales.reduce(function(a,f){return a+cfSaldoMes(f.id,mes,anio).eg;},0);
   var totalSaldo=totalIng-totalEg;
@@ -2663,6 +2676,7 @@ function renderCierreFiliales(){
   var totalEfectivo=(DB.cierres||[]).filter(function(c){return c.mes===mes&&c.anio===anio&&c.tipoEntrega==='efectivo';}).length;
   var totalCerrado=todasFiliales.filter(function(f){return cfYaCerrado(f.id,mes,anio);}).length;
   var totalPend=todasFiliales.length-totalCerrado;
+
   var html='<div class="card">';
   html+='<div class="card-title">📊 Cierre de '+mesNom+' '+anio+' — '+todasFiliales.length+' filiales/departamentos';
   html+='<span style="font-size:11px;font-weight:normal;color:rgba(247,243,233,.5)">🏦 '+totalBanco+' banco · 💵 '+totalEfectivo+' efectivo · 🔴 '+totalPend+' pendientes</span></div>';
@@ -2679,21 +2693,34 @@ function renderCierreFiliales(){
   document.getElementById('cf-panel').innerHTML=html;
 }
 
-function openCierreModal(filId, filNom, saldo, mes, anio){
-  document.getElementById('ov-cierre-tit').textContent='Registrar Entrega — '+filNom;
+// cierreId = null → nuevo registro | cierreId = 'CF...' → edición
+function openCierreModal(filId, filNom, saldo, mes, anio, cierreId){
+  var esEdicion=!!cierreId;
+  var cierre=esEdicion?(DB.cierres||[]).find(function(c){return c.id===cierreId;}):null;
+
+  document.getElementById('ov-cierre-tit').textContent=(esEdicion?'Editar Cierre — ':'Registrar Entrega — ')+filNom;
   document.getElementById('cf-nom-fil').value=filNom;
-  document.getElementById('cf-monto').value=saldo.toFixed(2);
-  document.getElementById('cf-fecha').value=new Date().toISOString().split('T')[0];
-  document.getElementById('cf-cod-op').value='';
-  document.getElementById('cf-banco-nom').value='';
-  document.getElementById('cf-recibido-por').value='';
-  document.getElementById('cf-obs').value='';
+  document.getElementById('cf-monto').value=cierre?cierre.monto.toFixed(2):saldo.toFixed(2);
+  document.getElementById('cf-fecha').value=cierre?cierre.fecha:new Date().toISOString().split('T')[0];
+  document.getElementById('cf-cod-op').value=cierre&&cierre.codOp?cierre.codOp:'';
+  document.getElementById('cf-banco-nom').value=cierre&&cierre.bancoNom?cierre.bancoNom:'';
+  document.getElementById('cf-recibido-por').value=cierre&&cierre.recibidoPor?cierre.recibidoPor:'';
+  document.getElementById('cf-obs').value=cierre&&cierre.obs?cierre.obs:'';
   document.getElementById('cf-comp-preview').textContent='';
   var fi=document.getElementById('cf-comp-file');if(fi){fi.value='';fi.removeAttribute('data-b64');}
   document.getElementById('cf-fil-id').value=filId;
   document.getElementById('cf-mes-cierre').value=mes;
   document.getElementById('cf-anio-cierre').value=anio;
-  cfSetTipo('banco');
+  // Hidden para saber si es edición y qué cierre editamos
+  document.getElementById('cf-cierre-edit-id').value=cierreId||'';
+
+  // Si es edición cargamos el tipo original, si no banco por defecto
+  cfSetTipo(cierre?cierre.tipoEntrega:'banco');
+
+  // Aviso visual si es edición
+  var infoEdit=document.getElementById('cf-info-edicion');
+  if(infoEdit)infoEdit.style.display=esEdicion?'':'none';
+
   om('ov-cierre');
 }
 
@@ -2706,14 +2733,49 @@ function savCierreDeposito(){
   var obs=document.getElementById('cf-obs').value.trim();
   var filNom=document.getElementById('cf-nom-fil').value;
   var tipoEntrega=document.getElementById('cf-tipo-entrega').value;
+  var editId=document.getElementById('cf-cierre-edit-id').value;
+  var esEdicion=!!editId;
+
   if(!fecha){toast('Ingrese la fecha','err');return;}
   if(!monto||monto<=0){toast('El monto debe ser mayor a 0','err');return;}
+
+  // Si es edición, revertir registros anteriores (banco o movimiento efectivo)
+  if(esEdicion){
+    var cierreViejo=(DB.cierres||[]).find(function(c){return c.id===editId;});
+    if(cierreViejo){
+      // Eliminar movimiento bancario anterior si existía
+      if(cierreViejo.bancId){
+        DB.banco=(DB.banco||[]).filter(function(b){return b.id!==cierreViejo.bancId;});
+        try{
+          if(typeof db!=='undefined')db.collection('banco').doc(cierreViejo.bancId).delete();
+        }catch(e){}
+      }
+      // Eliminar movimiento efectivo anterior si existía
+      if(cierreViejo.movId){
+        DB.movimientos=(DB.movimientos||[]).filter(function(m){return m.id!==cierreViejo.movId;});
+        try{
+          if(typeof db!=='undefined')db.collection('movimientos').doc(cierreViejo.movId).delete();
+        }catch(e){}
+      }
+      // Eliminar el cierre viejo del array
+      DB.cierres=(DB.cierres||[]).filter(function(c){return c.id!==editId;});
+      try{
+        if(typeof db!=='undefined')db.collection('cierres').doc(editId).delete();
+      }catch(e){}
+    }
+  }
+
+  // Construir nuevo cierre
   var cierreObj={
-    id:'CF'+Date.now(),filId:filId,filNom:filNom,
+    id:esEdicion?editId:'CF'+Date.now(),
+    filId:filId,filNom:filNom,
     mes:mes,anio:anio,monto:monto,fecha:fecha,
     obs:obs,tipoEntrega:tipoEntrega,
-    reg:new Date().toISOString(),regBy:CU?CU.nom:'Sistema'
+    reg:new Date().toISOString(),
+    regBy:CU?CU.nom:'Sistema',
+    editado:esEdicion?new Date().toISOString():undefined
   };
+
   if(tipoEntrega==='banco'){
     var codOp=document.getElementById('cf-cod-op').value.trim();
     var bancoNom=document.getElementById('cf-banco-nom').value.trim();
@@ -2732,7 +2794,7 @@ function savCierreDeposito(){
     DB.banco.push(bancMov);
     fbSave('banco',bancId,bancMov);
     cierreObj.codOp=codOp;cierreObj.bancoNom=bancoNom;cierreObj.bancId=bancId;
-    toast('✅ Depósito bancario registrado — Op: '+codOp);
+    toast((esEdicion?'✅ Cierre actualizado → Banco — Op: ':'✅ Depósito registrado — Op: ')+codOp);
   } else {
     var recibidoPor=document.getElementById('cf-recibido-por').value.trim();
     var movId='M'+Date.now();
@@ -2746,8 +2808,9 @@ function savCierreDeposito(){
     DB.movimientos.push(movEfectivo);
     fbSave('movimientos',movId,movEfectivo);
     cierreObj.recibidoPor=recibidoPor;cierreObj.movId=movId;
-    toast('✅ Recepción en efectivo registrada — S/. '+monto.toFixed(2));
+    toast((esEdicion?'✅ Cierre actualizado → Efectivo':'✅ Recepción en efectivo registrada')+' — S/. '+monto.toFixed(2));
   }
+
   if(!DB.cierres)DB.cierres=[];
   DB.cierres.push(cierreObj);
   sd();
