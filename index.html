@@ -870,12 +870,20 @@ body.contador-mode .modal-ft .btn-d {
     </div>
     <div class="fr">
       <div class="fld"><label>Fecha</label><input type="date" id="m-fecha"></div>
-      <div class="fld" style="position:relative">
+      <div class="fld">
         <label>Categoría</label>
-        <input type="text" id="m-cat-search" placeholder="Clique aquí o escriba para buscar..." autocomplete="off" style="width:100%"
-          oninput="filterCats(this.value)" onkeydown="catKeyNav(event)" onclick="showCatList()" onfocus="showCatList()">
+        <select id="m-cat-select" onchange="onCatSelect()" style="width:100%">
+          <option value="">— Seleccionar categoría —</option>
+        </select>
         <input type="hidden" id="m-cat" value="">
-        <div id="m-cat-list" style="display:none;position:absolute;top:100%;left:0;right:0;background:#0D1B2A;border:1px solid rgba(201,168,76,.3);border-radius:0 0 6px 6px;max-height:200px;overflow-y:auto;z-index:999;box-shadow:0 4px 12px rgba(0,0,0,.4)"></div>
+      </div>
+    </div>
+    <div class="fr fr1" id="m-subcat-row" style="display:none">
+      <div class="fld">
+        <label>Subcategoría <span style="color:rgba(247,243,233,.4);font-weight:normal">(opcional)</span></label>
+        <select id="m-subcat-select" onchange="onSubcatSelect()" style="width:100%">
+          <option value="">— Sin subcategoría —</option>
+        </select>
       </div>
     </div>
     <div class="fr fr1">
@@ -1622,134 +1630,107 @@ function onTipoChange(){
 }
 
 function updCats(resetCat){
-  const tipo=document.getElementById('m-tipo').value;
-  catList=(tipo==='ingreso'?DB.cats.ing:DB.cats.eg).slice().sort(function(a,b){return a.localeCompare(b,'es');});
-  var hidden=document.getElementById('m-cat');
-  var search=document.getElementById('m-cat-search');
-  var list=document.getElementById('m-cat-list');
-  // Always reset when tipo changes
-  if(resetCat){
-    if(hidden)hidden.value='';
-    if(search)search.value='';
-    if(list)list.style.display='none';
-  }
-  renderCatList(catList);
+  if(resetCat){var hidden=document.getElementById('m-cat');if(hidden)hidden.value='';}
+  popCatDropdown();
   checkBancoNote();
   autoFillDesc();
 }
 
-function renderCatList(cats){
-  var list=document.getElementById('m-cat-list');
-  if(!list)return;
-  list.innerHTML='';
-  cats.forEach(function(c,i){
-    var div=document.createElement('div');
-    div.setAttribute('data-cat',c);
-    div.style.cssText='padding:8px 12px;cursor:pointer;border-bottom:1px solid rgba(201,168,76,.1);font-size:12px';
-    div.onmouseover=function(){this.style.background='rgba(201,168,76,.1)';};
-    div.onmouseout=function(){this.style.background=catIdx===i?'rgba(201,168,76,.2)':'';};
-    div.onclick=function(){selectCat(this.getAttribute('data-cat'));};
-    div.textContent=c;
-    list.appendChild(div);
+function renderCatList(){}
+
+
+// Pobla el dropdown de categoría principal según tipo (ingreso/egreso)
+function popCatDropdown(){
+  var tipo=document.getElementById('m-tipo');
+  var sel=document.getElementById('m-cat-select');
+  if(!sel||!tipo)return;
+  var arr=tipo.value==='ingreso'?DB.cats.ing:DB.cats.eg;
+  // Obtener solo categorías base (sin subcategorías)
+  var bases=[];
+  (arr||[]).forEach(function(c){
+    var base=c.includes(' > ')?c.split(' > ')[0].trim():c;
+    if(bases.indexOf(base)<0)bases.push(base);
   });
+  bases.sort(function(a,b){return a.localeCompare(b,'es');});
+  sel.innerHTML='<option value="">— Seleccionar categoría —</option>';
+  bases.forEach(function(b){
+    var opt=document.createElement('option');
+    opt.value=b; opt.textContent=b;
+    sel.appendChild(opt);
+  });
+  // Resetear subcategoría
+  document.getElementById('m-cat').value='';
+  document.getElementById('m-subcat-row').style.display='none';
+  document.getElementById('m-subcat-select').innerHTML='<option value="">— Sin subcategoría —</option>';
 }
 
-function showCatList(){
-  var list=document.getElementById('m-cat-list');
-  var search=document.getElementById('m-cat-search');
-  if(!list)return;
-  // Re-render full list if search is empty
-  if(search&&!search.value)renderCatList(catList);
-  list.style.display='block';
-  catIdx=-1;
-}
-
-function filterCats(q){
-  var filtered=q?catList.filter(function(c){return c.toLowerCase().includes(q.toLowerCase());}):catList;
-  renderCatList(filtered);
-  var list=document.getElementById('m-cat-list');
-  if(list)list.style.display='block';
-  catIdx=-1;
-}
-
-function catKeyNav(e){
-  var list=document.getElementById('m-cat-list');
-  if(!list||list.style.display==='none')return;
-  var items=list.querySelectorAll('div[data-cat]');
-  if(!items.length)return;
-  if(e.key==='ArrowDown'){
-    e.preventDefault();
-    catIdx=Math.min(catIdx+1,items.length-1);
-    items.forEach(function(it,i){it.style.background=i===catIdx?'rgba(201,168,76,.2)':'';});
-    items[catIdx].scrollIntoView({block:'nearest'});
-  } else if(e.key==='ArrowUp'){
-    e.preventDefault();
-    catIdx=Math.max(catIdx-1,0);
-    items.forEach(function(it,i){it.style.background=i===catIdx?'rgba(201,168,76,.2)':'';});
-    items[catIdx].scrollIntoView({block:'nearest'});
-  } else if(e.key==='Enter'){
-    e.preventDefault();
-    if(catIdx>=0&&items[catIdx]){
-      selectCat(items[catIdx].getAttribute('data-cat'));
-    } else if(items.length>0){
-      selectCat(items[0].getAttribute('data-cat'));
+function onCatSelect(){
+  var tipo=document.getElementById('m-tipo');
+  var sel=document.getElementById('m-cat-select');
+  var subRow=document.getElementById('m-subcat-row');
+  var subSel=document.getElementById('m-subcat-select');
+  var hidden=document.getElementById('m-cat');
+  if(!sel)return;
+  var base=sel.value;
+  if(!base){hidden.value='';subRow.style.display='none';return;}
+  // Buscar subcategorías
+  var arr=tipo&&tipo.value==='ingreso'?DB.cats.ing:DB.cats.eg;
+  var subs=[];
+  (arr||[]).forEach(function(c){
+    if(c.startsWith(base+' > ')){
+      subs.push(c.split(' > ').slice(1).join(' > ').trim());
     }
-  } else if(e.key==='Escape'){
-    if(list)list.style.display='none';
-  } else if(e.key==='Tab'){
-    if(list)list.style.display='none';
-    // If no item selected with arrows but list was open, select first item
-    if(catIdx<0&&items.length>0){
-      var hidden2=document.getElementById('m-cat');
-      if(hidden2&&!hidden2.value){
-        selectCat(items[0].getAttribute('data-cat'));
-        e.preventDefault();
-        return;
-      }
-    }
-    e.preventDefault();
-    // After category, go to miembro if Diezmos, otherwise monto
-    var catVal=document.getElementById('m-cat');
-    var isDiezmoTab=catVal&&catVal.value.toLowerCase().indexOf('diezmo')>-1;
-    if(isDiezmoTab){
-      var miemS=document.getElementById('m-miem-search');
-      if(miemS){miemS.focus();return;}
-    }
-    var monto=document.getElementById('m-monto');
-    if(monto)monto.focus();
+  });
+  if(subs.length>0){
+    subSel.innerHTML='<option value="">— Sin subcategoría —</option>';
+    subs.sort(function(a,b){return a.localeCompare(b,'es');});
+    subs.forEach(function(s){
+      var opt=document.createElement('option');
+      opt.value=s; opt.textContent=s;
+      subSel.appendChild(opt);
+    });
+    subRow.style.display='';
+    hidden.value=base; // por defecto solo la base hasta que elija sub
+  } else {
+    subRow.style.display='none';
+    hidden.value=base;
   }
+  checkBancoNote();
+  autoFillDesc();
 }
 
+function onSubcatSelect(){
+  var base=document.getElementById('m-cat-select').value;
+  var sub=document.getElementById('m-subcat-select').value;
+  var hidden=document.getElementById('m-cat');
+  hidden.value=sub?base+' > '+sub:base;
+}
+
+// Compatibilidad: funciones antiguas que pueden llamarse desde otros lugares
+function showCatList(){popCatDropdown();}
+function filterCats(){}
+function catKeyNav(){}
 function selectCat(cat){
   var hidden=document.getElementById('m-cat');
-  var search=document.getElementById('m-cat-search');
-  var list=document.getElementById('m-cat-list');
+  var sel=document.getElementById('m-cat-select');
+  if(!cat)return;
+  var base=cat.includes(' > ')?cat.split(' > ')[0].trim():cat;
+  var sub=cat.includes(' > ')?cat.split(' > ').slice(1).join(' > ').trim():'';
   if(hidden)hidden.value=cat;
-  if(search)search.value=cat;
-  if(list)list.style.display='none';
-  catIdx=-1;
+  if(sel)sel.value=base;
+  onCatSelect();
+  if(sub){
+    setTimeout(function(){
+      var subSel=document.getElementById('m-subcat-select');
+      if(subSel)subSel.value=sub;
+      onSubcatSelect();
+    },50);
+  }
   checkBancoNote();
   autoFillDesc();
-  // After selecting category, focus miembro if Diezmos else monto
-  setTimeout(function(){
-    var hidden=document.getElementById('m-cat');
-    var isDiezmo=hidden&&hidden.value.toLowerCase().indexOf('diezmo')>-1;
-    if(isDiezmo){
-      var miemS=document.getElementById('m-miem-search');
-      if(miemS)miemS.focus();
-    } else {
-      var monto=document.getElementById('m-monto');
-      if(monto)monto.focus();
-    }
-  },50);
 }
 
-// Close cat list on outside click
-document.addEventListener('click',function(e){
-  var list=document.getElementById('m-cat-list');
-  var inp=document.getElementById('m-cat-search');
-  if(list&&inp&&!list.contains(e.target)&&e.target!==inp)list.style.display='none';
-});
+document.addEventListener('click',function(e){});
 
 function popMiem(sid){
   const sel=document.getElementById(sid);if(!sel)return;
@@ -2121,12 +2102,11 @@ function openMovModal(id){
     const m=DB.movimientos.find(x=>x.id===id);
     document.getElementById('mov-tit').textContent='Editar Movimiento';
     document.getElementById('m-tipo').value=m.tipo;
-    // Load categories without resetting values
-    const tipoEdit=m.tipo;
-    catList=(tipoEdit==='ingreso'?DB.cats.ing:DB.cats.eg).slice().sort(function(a,b){return a.localeCompare(b,'es');});
-    renderCatList(catList);
+    // Load categories with dropdowns
+    popCatDropdown();
     document.getElementById('m-cat').value=m.cat;
-    var csEdit=document.getElementById('m-cat-search');if(csEdit)csEdit.value=m.cat||'';
+    // Pre-select categoria and subcategoria
+    if(m.cat)selectCat(m.cat);
     document.getElementById('m-fecha').value=m.fec;
     document.getElementById('m-monto').value=m.mon;
     document.getElementById('m-desc').value=m.desc;
@@ -2274,8 +2254,7 @@ function savMov(keepOpen){
     // Restore common fields
     document.getElementById('m-tipo').value=tipoVal;
     updCats();
-    document.getElementById('m-cat').value=catVal;
-    var csEl=document.getElementById('m-cat-search');if(csEl)csEl.value=catVal;
+    if(catVal)selectCat(catVal);
     document.getElementById('m-fil').value=filVal;
     document.getElementById('m-met').value=metVal;
     // Set today's date
