@@ -3121,6 +3121,7 @@ function genCaja(){
     // Calcular todos los movimientos ANTERIORES al mes seleccionado
     var movsPrevios=gAccMov().filter(function(m){
       if(m.fil!==fil)return false;
+      if(m.esBancario||m.origen==='cierre_filial_efectivo')return false;
       var y=parseInt(m.fec.split('-')[0]);
       var mo=parseInt(m.fec.split('-')[1]);
       return (y<anio)||(y===anio&&mo<mes);
@@ -3142,6 +3143,7 @@ function genCaja(){
     var todasFilIds=DB.filiales.filter(function(f){return (f.tipo||'filial')!=='departamento';}).map(function(f){return f.id;});
     var movsPrevSede=gAccMov().filter(function(m){
       if(todasFilIds.indexOf(m.fil)<0)return false;
+      if(m.esBancario||m.origen==='cierre_filial_efectivo')return false;
       var y=parseInt(m.fec.split('-')[0]);
       var mo=parseInt(m.fec.split('-')[1]);
       return (y<anio)||(y===anio&&mo<mes);
