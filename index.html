@@ -3382,7 +3382,7 @@ function genCons(){
   const per=document.getElementById('rcon-per').value;
   const anio=parseInt(document.getElementById('rcon-anio').value);
   const fil=document.getElementById('rcon-fil').value;
-  let movs=gAccMov().filter(m=>{const y=parseInt(m.fec.split('-')[0]);return y===anio&&(fil==='all'||m.fil===fil);});
+  let movs=gAccMov().filter(m=>{const y=parseInt(m.fec.split('-')[0]);return y===anio&&(fil==='all'||m.fil===fil)&&!m.esBancario;});
   let ti=0,te=0,tiUSD=0,teUSD=0,rows='';
   if(per==='mensual'||per==='trimestral'){
     const gs=per==='mensual'?MESES.map((n,i)=>({n,ms:[i+1]})):[{n:'1er Trimestre',ms:[1,2,3]},{n:'2do Trimestre',ms:[4,5,6]},{n:'3er Trimestre',ms:[7,8,9]},{n:'4to Trimestre',ms:[10,11,12]}];
@@ -3420,7 +3420,7 @@ function genComp(){
   var a1=parseInt(document.getElementById('rcomp-a1').value);
   var a2=parseInt(document.getElementById('rcomp-a2').value);
   if(a1===a2){toast('Seleccione años diferentes','err');return;}
-  var movs=gAccMov();
+  var movs=gAccMov().filter(function(m){return !m.esBancario;});
   function gd(y){
     return MESES.map(function(_,i){
       var mm=movs.filter(function(m){var yr=parseInt(m.fec.split('-')[0]),mo=parseInt(m.fec.split('-')[1]);return yr===y&&mo===i+1;});
