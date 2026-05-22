@@ -5761,6 +5761,8 @@ function genEjecutivo(){
 
   var html='<div class="rpt-wrap">'+rptHd('RESUMEN EJECUTIVO MENSUAL — SEDES',mesNom.toUpperCase()+' '+anio);
   html+='<div class="rpt-body">';
+  // ---- HOJA 1: bloques de resumen ----
+  html+='<div style="page-break-after:always">';
 
   // BLOQUE 1 — EFECTIVO FILIALES Y SEDE CENTRAL
   html+=rptCard('Efectivo · Filiales y Sede Central — '+mesNom+' '+anio,
@@ -5788,7 +5790,13 @@ function genEjecutivo(){
   html+='<div style="font-size:24px;font-weight:bold;color:'+(saldoTotal>=0?'#1A7A4A':'#C0392B')+'">'+fs(saldoTotal)+'</div>';
   html+='</div>';
 
-  // Comparativo mes anterior  // Comparativo mes anterior
+  // ---- HOJA 2: comparativo + detalle por sede ----
+  html+='</div><div>';
+  // Mini encabezado hoja 2
+  html+='<div style="text-align:center;margin-bottom:14px;padding-bottom:10px;border-bottom:2px solid #0D1B2A">';
+  html+='<div style="font-size:12px;font-weight:bold;color:#0D1B2A">RESUMEN EJECUTIVO — '+mesNom.toUpperCase()+' '+anio+' &nbsp;|&nbsp; Detalle por Sede/Filial</div>';
+  html+='</div>';
+  // Comparativo mes anterior
   html+='<div style="background:#f8f5ef;border:1px solid #C9A84C;border-radius:6px;padding:10px 14px;margin-bottom:16px">';
   html+='<div style="font-size:11px;font-weight:bold;color:#8B6914;margin-bottom:8px">📊 COMPARATIVO: '+mesNom.toUpperCase()+' vs '+mesPrevNom.toUpperCase()+' '+anioPrev+'</div>';
   html+='<table style="width:100%;font-size:11px"><tr>';
@@ -5858,6 +5866,7 @@ function genEjecutivo(){
 
   html+='<div style="font-size:10px;color:#888;margin-bottom:16px">* Saldo Anterior = arrastre acumulado de todas las sedes hasta fin de '+mesPrevNom+'. &nbsp; Saldo en Caja = Saldo Anterior + Ingresos Totales − Egresos Totales. &nbsp; Saldo Mensual = Neto bancario del mes (depósitos − retiros).</div>';
   html+=rptSign('Tesorero Principal','Pastor Principal');
+  html+='</div>'; // cierre hoja 2
   html+='</div></div>';
   document.getElementById('rej-prev').innerHTML=html;
   toast('Resumen Ejecutivo generado ✅');
