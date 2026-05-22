@@ -5737,35 +5737,56 @@ function genEjecutivo(){
   }).join('');
 
   var grandBal=grandTi-grandTe;
+  var saldoTotal=grandSaldo+saldoFinalBanco;
+
+  function rptCard(title,items,accentColor,icon){
+    var html='<div style="border-radius:8px;border:2px solid '+accentColor+';overflow:hidden;margin-bottom:14px">';
+    html+='<div style="padding:8px 14px;background:'+accentColor+';display:flex;align-items:center;gap:8px">';
+    html+='<span style="font-size:14px">'+icon+'</span>';
+    html+='<span style="font-size:11px;font-weight:bold;letter-spacing:.8px;text-transform:uppercase;color:#fff">'+title+'</span>';
+    html+='</div><div style="padding:10px 14px;display:grid;grid-template-columns:repeat('+items.length+',1fr);gap:8px;background:#fff">';
+    items.forEach(function(it){
+      var bg=it.bg?'background:'+it.bg+';border-radius:6px;padding:8px 6px;':'padding:6px 0;';
+      html+='<div style="text-align:center;'+bg+'">';
+      html+='<div style="font-size:9px;color:#666;font-weight:bold;text-transform:uppercase;letter-spacing:.7px;margin-bottom:4px">'+it.lbl+'</div>';
+      html+='<div style="font-size:'+(it.big?'19':'15')+'px;font-weight:bold;color:'+it.col+'">'+it.val+'</div>';
+      if(it.sub)html+='<div style="font-size:10px;color:#999;margin-top:2px">'+it.sub+'</div>';
+      html+='</div>';
+    });
+    html+='</div></div>';
+    return html;
+  }
+
+  function fs(v){return'S/. '+Math.abs(v).toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2});}
 
   var html='<div class="rpt-wrap">'+rptHd('RESUMEN EJECUTIVO MENSUAL — SEDES',mesNom.toUpperCase()+' '+anio);
   html+='<div class="rpt-body">';
 
-  // KPI Cards
-  html+='<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:18px">';
-  [{lbl:'Saldo Anterior',val:'S/. '+grandSA.toFixed(2),col:'#8B6914',bg:'#fffde7',sub:'Arrastre hasta fin de '+mesPrevNom+' '+anioPrev},
-   {lbl:'Ingresos Totales',val:'S/. '+ingTotales.toFixed(2),col:'#1A7A4A',bg:'#e8f5e9',sub:fmtC(varIng,true)+' vs '+mesPrevNom},
-   {lbl:'Egresos Totales',val:'S/. '+grandTe.toFixed(2),col:'#C0392B',bg:'#ffebee',sub:fmtC(-varEg,true)+' vs '+mesPrevNom},
-   {lbl:'Saldo en Caja',val:'S/. '+grandSaldo.toFixed(2),col:grandSaldo>=0?'#1A7A4A':'#C0392B',bg:grandSaldo>=0?'#e8f5e9':'#ffebee',sub:grandSaldo>=0?'✅ Superávit':'⚠️ Déficit'}
-  ].forEach(function(c){
-    html+='<div style="padding:12px;background:'+c.bg+';border-radius:6px;border-left:4px solid '+c.col+'">';
-    html+='<div style="font-size:9px;color:#666;font-weight:bold;text-transform:uppercase;letter-spacing:1px">'+c.lbl+'</div>';
-    html+='<div style="font-size:18px;font-weight:bold;color:'+c.col+';margin:4px 0">'+c.val+'</div>';
-    html+='<div style="font-size:10px;color:#888">'+c.sub+'</div>';
-    html+='</div>';
-  });
-  html+='</div>';
+  // BLOQUE 1 — EFECTIVO FILIALES Y SEDE CENTRAL
+  html+=rptCard('Efectivo · Filiales y Sede Central — '+mesNom+' '+anio,
+    [
+      {lbl:'Saldo Anterior',   val:fs(grandSA),     col:'#8B6914'},
+      {lbl:'Ingresos Totales', val:fs(grandTi),     col:'#1A7A4A', sub:fmtC(varIng,true)+' vs '+mesPrevNom},
+      {lbl:'Egresos Totales',  val:fs(grandTe),     col:'#C0392B', sub:fmtC(-varEg,true)+' vs '+mesPrevNom},
+      {lbl:'Balance del Mes',  val:(grandBal>=0?'+':'-')+fs(grandBal), col:grandBal>=0?'#1A7A4A':'#C0392B'},
+      {lbl:'Saldo en Caja',    val:fs(grandSaldo),  col:grandSaldo>=0?'#1A7A4A':'#C0392B', bg:grandSaldo>=0?'#e8f5e9':'#ffebee', big:true, sub:grandSaldo>=0?'✅ Superávit':'⚠️ Déficit'}
+    ],'#8B6914','🏛️');
 
-  // RESUMEN DEL BANCO
-  html+='<div style="background:#e3f2fd;border:1px solid #1565C0;border-radius:6px;padding:12px 14px;margin-bottom:16px">';
-  html+='<div style="font-size:11px;font-weight:bold;color:#1565C0;margin-bottom:10px">🏦 RESUMEN BANCARIO — '+mesNom.toUpperCase()+' '+anio+'</div>';
-  html+='<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px">';
-  html+='<div style="text-align:center;padding:8px;background:rgba(255,255,255,.6);border-radius:5px"><div style="font-size:9px;color:#555;font-weight:bold;text-transform:uppercase;margin-bottom:3px">Saldo Anterior</div><div style="font-size:17px;font-weight:bold;color:#8B6914">S/. '+saldoAntBanco.toFixed(2)+'</div><div style="font-size:10px;color:#888">Al cierre de '+mesPrevNom+'</div></div>';
-  html+='<div style="text-align:center;padding:8px;background:rgba(255,255,255,.6);border-radius:5px"><div style="font-size:9px;color:#555;font-weight:bold;text-transform:uppercase;margin-bottom:3px">Entradas del Mes</div><div style="font-size:17px;font-weight:bold;color:#1A7A4A">S/. '+bancoDep.toFixed(2)+'</div><div style="font-size:10px;color:#888">'+bancoMes.filter(function(b){return b.tipo==='deposito';}).length+' depósitos</div></div>';
-  html+='<div style="text-align:center;padding:8px;background:rgba(255,255,255,.6);border-radius:5px"><div style="font-size:9px;color:#555;font-weight:bold;text-transform:uppercase;margin-bottom:3px">Salidas del Mes</div><div style="font-size:17px;font-weight:bold;color:#C0392B">S/. '+bancoRet.toFixed(2)+'</div><div style="font-size:10px;color:#888">'+bancoMes.filter(function(b){return b.tipo==='retiro';}).length+' retiros</div></div>';
-  html+='<div style="text-align:center;padding:8px;background:rgba(46,134,171,.1);border-radius:5px;border:1px solid rgba(46,134,171,.3)"><div style="font-size:9px;color:#1565C0;font-weight:bold;text-transform:uppercase;margin-bottom:3px">Saldo Mensual</div><div style="font-size:17px;font-weight:bold;color:#1565C0">S/. '+saldoBanco.toFixed(2)+'</div><div style="font-size:10px;color:#888">Neto del mes</div></div>';
-  html+='<div style="text-align:center;padding:8px;background:'+(saldoFinalBanco>=0?'rgba(26,122,74,.15)':'rgba(192,57,43,.15)')+';border-radius:5px;border:2px solid '+(saldoFinalBanco>=0?'#1A7A4A':'#C0392B')+'"><div style="font-size:9px;color:#555;font-weight:bold;text-transform:uppercase;margin-bottom:3px">Saldo Total en Banco</div><div style="font-size:17px;font-weight:bold;color:'+(saldoFinalBanco>=0?'#1A7A4A':'#C0392B')+'">S/. '+saldoFinalBanco.toFixed(2)+'</div><div style="font-size:10px;color:#888">'+(saldoFinalBanco>=0?'✅ Positivo':'⚠️ Negativo')+'</div></div>';
-  html+='</div></div>';
+  // BLOQUE 2 — RESUMEN BANCARIO
+  html+=rptCard('Resumen Bancario — '+mesNom+' '+anio,
+    [
+      {lbl:'Saldo Anterior',       val:fs(saldoAntBanco),   col:'#8B6914',  sub:'Al cierre de '+mesPrevNom},
+      {lbl:'Ingresos del Mes',     val:fs(bancoDep),        col:'#1A7A4A',  sub:bancoMes.filter(function(b){return b.tipo==='deposito';}).length+' depósitos'},
+      {lbl:'Egresos del Mes',      val:fs(bancoRet),        col:'#C0392B',  sub:bancoMes.filter(function(b){return b.tipo==='retiro';}).length+' retiros'},
+      {lbl:'Saldo Mensual',        val:(saldoBanco>=0?'+':'-')+fs(saldoBanco), col:'#1565C0', bg:'#e3f2fd'},
+      {lbl:'Saldo Total en Banco', val:fs(saldoFinalBanco), col:saldoFinalBanco>=0?'#1A7A4A':'#C0392B', bg:saldoFinalBanco>=0?'#e8f5e9':'#ffebee', big:true, sub:saldoFinalBanco>=0?'✅ Positivo':'⚠️ Negativo'}
+    ],'#1565C0','🏦');
+
+  // TOTAL GENERAL — Saldo en Caja + Saldo Total en Banco
+  html+='<div style="background:#fffde7;border:2px solid #C9A84C;border-radius:8px;padding:12px 20px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between">';
+  html+='<div style="font-size:12px;font-weight:bold;color:#8B6914;text-transform:uppercase;letter-spacing:.8px">💰 Total General — Caja + Banco</div>';
+  html+='<div style="font-size:24px;font-weight:bold;color:'+(saldoTotal>=0?'#1A7A4A':'#C0392B')+'">'+fs(saldoTotal)+'</div>';
+  html+='</div>';
 
   // Comparativo mes anterior  // Comparativo mes anterior
   html+='<div style="background:#f8f5ef;border:1px solid #C9A84C;border-radius:6px;padding:10px 14px;margin-bottom:16px">';
@@ -5799,15 +5820,40 @@ function genEjecutivo(){
   var allPrevUSD=allMovs.filter(function(m){var esF=filiales.some(function(f){return f.id===m.fil;});var y=parseInt(m.fec.split('-')[0]),mo=parseInt(m.fec.split('-')[1]);return esF&&m.moneda==='USD'&&((y<anio)||(y===anio&&mo<mes));});
   var saldoAntUSDej=siUSDej+allPrevUSD.filter(function(m){return m.tipo==='ingreso';}).reduce(function(a,m){return a+Number(m.mon);},0)-allPrevUSD.filter(function(m){return m.tipo==='egreso';}).reduce(function(a,m){return a+Number(m.mon);},0);
   var saldoTotalUSDej=saldoAntUSDej+tiUSDej-teUSDej;
+
+  // BLOQUE 3 — DEPARTAMENTOS (si existen)
+  var deptosEj=DB.filiales.filter(function(f){return f.tipo==='departamento';});
+  if(deptosEj.length>0){
+    var allMovsDeptEj=allMovs.filter(function(m){return deptosEj.some(function(f){return f.id===m.fil;});});
+    var ingDeptEj=allMovsDeptEj.filter(function(m){var y=parseInt(m.fec.split('-')[0]),mo=parseInt(m.fec.split('-')[1]);return m.tipo==='ingreso'&&(m.moneda||'PEN')==='PEN'&&y===anio&&mo===mes&&!m.esBancario;}).reduce(function(a,m){return a+Number(m.mon);},0);
+    var egDeptEj=allMovsDeptEj.filter(function(m){var y=parseInt(m.fec.split('-')[0]),mo=parseInt(m.fec.split('-')[1]);return m.tipo==='egreso'&&(m.moneda||'PEN')==='PEN'&&y===anio&&mo===mes&&!m.esBancario;}).reduce(function(a,m){return a+Number(m.mon);},0);
+    var siDeptTotalEj=deptosEj.reduce(function(s,f){return s+(Number(f.saldo_inicial)||0);},0);
+    var prevDeptEj=allMovsDeptEj.filter(function(m){var y=parseInt(m.fec.split('-')[0]),mo=parseInt(m.fec.split('-')[1]);return (m.moneda||'PEN')==='PEN'&&((y<anio)||(y===anio&&mo<mes));});
+    var saldoAntDeptEj=siDeptTotalEj+prevDeptEj.filter(function(m){return m.tipo==='ingreso';}).reduce(function(a,m){return a+Number(m.mon);},0)-prevDeptEj.filter(function(m){return m.tipo==='egreso';}).reduce(function(a,m){return a+Number(m.mon);},0);
+    var saldoTotalDeptEj=saldoAntDeptEj+ingDeptEj-egDeptEj;
+    var balDeptEj=ingDeptEj-egDeptEj;
+    html+=rptCard('Departamentos — '+mesNom+' '+anio,
+      [
+        {lbl:'Saldo Anterior',    val:fs(saldoAntDeptEj),  col:'#8B6914'},
+        {lbl:'Ingresos del Mes',  val:fs(ingDeptEj),       col:'#1A7A4A'},
+        {lbl:'Egresos del Mes',   val:fs(egDeptEj),        col:'#C0392B'},
+        {lbl:'Saldo Mensual',     val:(balDeptEj>=0?'+':'-')+fs(balDeptEj), col:balDeptEj>=0?'#1A7A4A':'#C0392B'},
+        {lbl:'Saldo Total Depto.',val:fs(saldoTotalDeptEj),col:'#6C3483', bg:'#f3e5f5', big:true}
+      ],'#6C3483','⛪');
+  }
+
+  // BLOQUE 4 — USD (si existen)
   if(siUSDej>0||tiUSDej>0||teUSDej>0){
-    html+='<div style="margin-top:14px;padding:12px 14px;background:rgba(52,152,219,.08);border:1px solid rgba(52,152,219,.3);border-radius:6px">';
-    html+='<div style="font-size:11px;font-weight:bold;color:#5DADE2;margin-bottom:10px">🇺🇸 MOVIMIENTOS EN DÓLARES (USD) — '+mesNom.toUpperCase()+' '+anio+'</div>';
-    html+='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">';
-    html+='<div style="text-align:center"><div style="font-size:9px;color:#888;margin-bottom:4px">Saldo Anterior</div><div style="font-size:17px;font-weight:bold;color:#5DADE2">$ '+saldoAntUSDej.toFixed(2)+'</div></div>';
-    html+='<div style="text-align:center"><div style="font-size:9px;color:#888;margin-bottom:4px">Entradas</div><div style="font-size:17px;font-weight:bold;color:#1A7A4A">$ '+tiUSDej.toFixed(2)+'</div></div>';
-    html+='<div style="text-align:center"><div style="font-size:9px;color:#888;margin-bottom:4px">Salidas</div><div style="font-size:17px;font-weight:bold;color:#C0392B">$ '+teUSDej.toFixed(2)+'</div></div>';
-    html+='<div style="text-align:center;background:rgba(52,152,219,.1);border-radius:6px;padding:8px"><div style="font-size:9px;color:#888;margin-bottom:4px">Saldo Total</div><div style="font-size:17px;font-weight:bold;color:'+(saldoTotalUSDej>=0?'#5DADE2':'#C0392B')+'">$ '+saldoTotalUSDej.toFixed(2)+'</div></div>';
-    html+='</div></div>';
+    var balUSDej=tiUSDej-teUSDej;
+    function fu(v){return'$ '+Math.abs(v).toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2});}
+    html+=rptCard('US Dólares (USD) — '+mesNom+' '+anio,
+      [
+        {lbl:'Saldo Anterior',  val:fu(saldoAntUSDej),   col:'#1565C0'},
+        {lbl:'Ingresos del Mes',val:fu(tiUSDej),         col:'#1A7A4A'},
+        {lbl:'Egresos del Mes', val:fu(teUSDej),         col:'#C0392B'},
+        {lbl:'Saldo Mensual',   val:(balUSDej>=0?'+':'-')+fu(balUSDej), col:balUSDej>=0?'#1A7A4A':'#C0392B'},
+        {lbl:'Saldo Total USD', val:fu(saldoTotalUSDej), col:saldoTotalUSDej>=0?'#1565C0':'#C0392B', bg:'#e3f2fd', big:true}
+      ],'#1565C0','🇺🇸');
   }
 
   html+='<div style="font-size:10px;color:#888;margin-bottom:16px">* Saldo Anterior = arrastre acumulado de todas las sedes hasta fin de '+mesPrevNom+'. &nbsp; Saldo en Caja = Saldo Anterior + Ingresos Totales − Egresos Totales. &nbsp; Saldo Mensual = Neto bancario del mes (depósitos − retiros).</div>';
