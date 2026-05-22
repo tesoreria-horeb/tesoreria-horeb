@@ -1779,12 +1779,12 @@ function renderDash(){
 
   // Filter movements by month
   var cm2=movs.filter(function(m){var p=m.fec.split('-').map(Number);return p[0]===curY&&p[1]===curM;});
-  var cm2fil=cm2.filter(function(m){return filIds.indexOf(m.fil)>-1;});
-  var cm2dept=cm2.filter(function(m){return deptIds.indexOf(m.fil)>-1;});
+  var cm2fil=cm2.filter(function(m){return filIds.indexOf(m.fil)>-1&&!m.esBancario;});
+  var cm2dept=cm2.filter(function(m){return deptIds.indexOf(m.fil)>-1&&!m.esBancario;});
 
   // FIX 2: For filial users (niv>=3), filter only their filial
   var myFil=CU&&CU.fil&&CU.fil!=='all'?CU.fil:null;
-  var cm2myFil=myFil?cm2.filter(function(m){return m.fil===myFil;}):cm2fil;
+  var cm2myFil=myFil?cm2.filter(function(m){return m.fil===myFil&&!m.esBancario;}):cm2fil;
 
   // Filiales totals current month (admin view)
   var ing=cm2fil.filter(function(m){return m.tipo==='ingreso'&&(m.moneda||'PEN')==='PEN';}).reduce(function(a,m){return a+Number(m.mon);},0);
