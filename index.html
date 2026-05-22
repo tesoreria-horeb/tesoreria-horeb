@@ -5744,17 +5744,17 @@ function genEjecutivo(){
   var saldoTotal=grandSaldo+saldoFinalBanco;
 
   function rptCard(title,items,accentColor,icon){
-    var html='<div style="border-radius:8px;border:2px solid '+accentColor+';overflow:hidden;margin-bottom:14px">';
-    html+='<div style="padding:8px 14px;background:'+accentColor+';display:flex;align-items:center;gap:8px">';
-    html+='<span style="font-size:14px">'+icon+'</span>';
-    html+='<span style="font-size:11px;font-weight:bold;letter-spacing:.8px;text-transform:uppercase;color:#fff">'+title+'</span>';
-    html+='</div><div style="padding:10px 14px;display:grid;grid-template-columns:repeat('+items.length+',1fr);gap:8px;background:#fff">';
+    var html='<div style="border-radius:6px;border:2px solid '+accentColor+';overflow:hidden;margin-bottom:8px">';
+    html+='<div style="padding:5px 12px;background:'+accentColor+';display:flex;align-items:center;gap:6px">';
+    html+='<span style="font-size:12px">'+icon+'</span>';
+    html+='<span style="font-size:10px;font-weight:bold;letter-spacing:.6px;text-transform:uppercase;color:#fff">'+title+'</span>';
+    html+='</div><div style="padding:7px 12px;display:grid;grid-template-columns:repeat('+items.length+',1fr);gap:6px;background:#fff">';
     items.forEach(function(it){
-      var bg=it.bg?'background:'+it.bg+';border-radius:6px;padding:8px 6px;':'padding:6px 0;';
+      var bg=it.bg?'background:'+it.bg+';border-radius:5px;padding:6px 4px;':'padding:4px 0;';
       html+='<div style="text-align:center;'+bg+'">';
-      html+='<div style="font-size:9px;color:#666;font-weight:bold;text-transform:uppercase;letter-spacing:.7px;margin-bottom:4px">'+it.lbl+'</div>';
-      html+='<div style="font-size:'+(it.big?'19':'15')+'px;font-weight:bold;color:'+it.col+'">'+it.val+'</div>';
-      if(it.sub)html+='<div style="font-size:10px;color:#999;margin-top:2px">'+it.sub+'</div>';
+      html+='<div style="font-size:8px;color:#666;font-weight:bold;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">'+it.lbl+'</div>';
+      html+='<div style="font-size:'+(it.big?'16':'13')+'px;font-weight:bold;color:'+it.col+'">'+it.val+'</div>';
+      if(it.sub)html+='<div style="font-size:9px;color:#999;margin-top:1px">'+it.sub+'</div>';
       html+='</div>';
     });
     html+='</div></div>';
@@ -5833,28 +5833,28 @@ function genEjecutivo(){
   }
 
   // TOTAL GENERAL
-  html+='<div style="background:#fffde7;border:2px solid #C9A84C;border-radius:8px;padding:12px 20px;display:flex;align-items:center;justify-content:space-between">';
-  html+='<div style="font-size:12px;font-weight:bold;color:#8B6914;text-transform:uppercase;letter-spacing:.8px">💰 Total General — Caja + Banco</div>';
-  html+='<div style="font-size:24px;font-weight:bold;color:'+(saldoTotal>=0?'#1A7A4A':'#C0392B')+'">'+fs(saldoTotal)+'</div>';
+  html+='<div style="background:#fffde7;border:2px solid #C9A84C;border-radius:6px;padding:8px 16px;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">';
+  html+='<div style="font-size:11px;font-weight:bold;color:#8B6914;text-transform:uppercase;letter-spacing:.8px">💰 Total General — Caja + Banco</div>';
+  html+='<div style="font-size:20px;font-weight:bold;color:'+(saldoTotal>=0?'#1A7A4A':'#C0392B')+'">'+fs(saldoTotal)+'</div>';
   html+='</div>';
+
+  // COMPARATIVO — también en hoja 1
+  html+='<div style="background:#f8f5ef;border:1px solid #C9A84C;border-radius:6px;padding:8px 12px">';
+  html+='<div style="font-size:10px;font-weight:bold;color:#8B6914;margin-bottom:6px">📊 COMPARATIVO: '+mesNom.toUpperCase()+' vs '+mesPrevNom.toUpperCase()+' '+anioPrev+'</div>';
+  html+='<table style="width:100%;font-size:10px"><tr>';
+  html+='<td style="width:25%;text-align:center;padding:4px"><div style="color:#666;margin-bottom:2px">Ingresos '+mesPrevNom+'</div><div style="font-size:14px;font-weight:bold;color:#1A7A4A">S/. '+tiPrev.toFixed(2)+'</div></td>';
+  html+='<td style="width:25%;text-align:center;padding:4px"><div style="color:#666;margin-bottom:2px">Ingresos '+mesNom+'</div><div style="font-size:14px;font-weight:bold;color:#1A7A4A">S/. '+tiMes.toFixed(2)+'</div><div style="margin-top:1px">'+fmtC(varIng,true)+'</div></td>';
+  html+='<td style="width:25%;text-align:center;padding:4px"><div style="color:#666;margin-bottom:2px">Egresos '+mesPrevNom+'</div><div style="font-size:14px;font-weight:bold;color:#C0392B">S/. '+tePrev.toFixed(2)+'</div></td>';
+  html+='<td style="width:25%;text-align:center;padding:4px"><div style="color:#666;margin-bottom:2px">Egresos '+mesNom+'</div><div style="font-size:14px;font-weight:bold;color:#C0392B">S/. '+teMes.toFixed(2)+'</div><div style="margin-top:1px">'+fmtC(-varEg,true)+'</div></td>';
+  html+='</tr></table></div>';
 
   html+='</div>'; // fin hoja 1
 
-  // ===== HOJA 2 =====
+  // ===== HOJA 2 — tabla filiales + firmas =====
   html+='<div>';
-  html+='<div style="text-align:center;margin-bottom:14px;padding-bottom:10px;border-bottom:2px solid #0D1B2A">';
-  html+='<div style="font-size:12px;font-weight:bold;color:#0D1B2A">RESUMEN EJECUTIVO — '+mesNom.toUpperCase()+' '+anio+' &nbsp;|&nbsp; Detalle por Sede/Filial</div>';
+  html+='<div style="text-align:center;margin-bottom:10px;padding-bottom:8px;border-bottom:2px solid #0D1B2A">';
+  html+='<div style="font-size:11px;font-weight:bold;color:#0D1B2A">RESUMEN EJECUTIVO — '+mesNom.toUpperCase()+' '+anio+' &nbsp;|&nbsp; Detalle por Sede/Filial</div>';
   html+='</div>';
-
-  // Comparativo
-  html+='<div style="background:#f8f5ef;border:1px solid #C9A84C;border-radius:6px;padding:10px 14px;margin-bottom:16px">';
-  html+='<div style="font-size:11px;font-weight:bold;color:#8B6914;margin-bottom:8px">📊 COMPARATIVO: '+mesNom.toUpperCase()+' vs '+mesPrevNom.toUpperCase()+' '+anioPrev+'</div>';
-  html+='<table style="width:100%;font-size:11px"><tr>';
-  html+='<td style="width:25%;text-align:center;padding:6px"><div style="color:#666;margin-bottom:3px">Ingresos '+mesPrevNom+'</div><div style="font-size:16px;font-weight:bold;color:#1A7A4A">S/. '+tiPrev.toFixed(2)+'</div></td>';
-  html+='<td style="width:25%;text-align:center;padding:6px"><div style="color:#666;margin-bottom:3px">Ingresos '+mesNom+'</div><div style="font-size:16px;font-weight:bold;color:#1A7A4A">S/. '+tiMes.toFixed(2)+'</div><div style="margin-top:2px">'+fmtC(varIng,true)+'</div></td>';
-  html+='<td style="width:25%;text-align:center;padding:6px"><div style="color:#666;margin-bottom:3px">Egresos '+mesPrevNom+'</div><div style="font-size:16px;font-weight:bold;color:#C0392B">S/. '+tePrev.toFixed(2)+'</div></td>';
-  html+='<td style="width:25%;text-align:center;padding:6px"><div style="color:#666;margin-bottom:3px">Egresos '+mesNom+'</div><div style="font-size:16px;font-weight:bold;color:#C0392B">S/. '+teMes.toFixed(2)+'</div><div style="margin-top:2px">'+fmtC(-varEg,true)+'</div></td>';
-  html+='</tr></table></div>';
 
   // Tabla detalle filiales
   html+='<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:14px">';
