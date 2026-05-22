@@ -2562,14 +2562,21 @@ function savMiemCont(){
   if(!EID&&DB.miembros.find(function(m){return m.cod===cod;})){
     toast('Ya existe un miembro con ese código RI','err');return;
   }
-  const obj={id:EID||cod,cod,fil:document.getElementById('mi-fil').value,nom,ape,dni:document.getElementById('mi-dni').value,tel:document.getElementById('mi-tel').value,nac:document.getElementById('mi-nac').value,ing:document.getElementById('mi-ing').value,dir:document.getElementById('mi-dir').value};
+  const filUsada=document.getElementById('mi-fil').value;
+  const obj={id:EID||cod,cod,fil:filUsada,nom,ape,dni:document.getElementById('mi-dni').value,tel:document.getElementById('mi-tel').value,nac:document.getElementById('mi-nac').value,ing:document.getElementById('mi-ing').value,dir:document.getElementById('mi-dir').value};
   if(EID){const i=DB.miembros.findIndex(x=>x.id===EID);DB.miembros[i]=obj;}else DB.miembros.push(obj);
   sd();
   fbSave('miembros', obj.id, obj);
   renderMiem();
   toast('Miembro registrado ✅ — puede registrar el próximo');
-  // Limpiar el formulario para el próximo miembro
+  // Limpiar formulario pero mantener la filial usada
   openMiemModal();
+  document.getElementById('mi-fil').value=filUsada;
+  // Foco en DNI
+  setTimeout(function(){
+    var dni=document.getElementById('mi-dni');
+    if(dni)dni.focus();
+  },80);
 }
 function edMiem(id){openMiemModal(id);}
 function delMiem(id){
