@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VERSION: 2026-06-09-V11 -->
+<!-- VERSION: 2026-06-09-V12 -->
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -6741,22 +6741,53 @@ function onChangeTrfDir(){
 }
 
 function updTrfSaldos(){
-  // Usar el mismo cálculo que el dashboard — saldo acumulado total hasta hoy
-  var siCaja=Number((DB.saldos_iniciales||{}).filiales)||0;
-  var saldoCaja=siCaja;
-  (DB.movimientos||[]).forEach(function(m){
-    if(m.esBancario||(m.moneda||'PEN')!=='PEN')return;
-    // Solo filiales (no departamentos) — incluir siempre sede
+  var now=new Date();
+  var curY=now.getFullYear();
+  var curM=now.getMonth()+1;
+  var selectedYM=curY+'-'+String(curM).padStart(2,'0');
+
+  // Mismo cálculo que el dashboard — saldo anterior + movimientos del mes actual
+  var siFiliales=Number((DB.saldos_iniciales||{}).filiales)||0;
+
+  var allMovsFil=gAccMov().filter(function(m){
     var f=DB.filiales.find(function(x){return x.id===m.fil;});
-    var esFilial=m.fil==='sede'||!f||(f.tipo||'filial')!=='departamento';
-    if(!esFilial)return;
-    if(m.tipo==='ingreso')saldoCaja+=Number(m.mon);
-    else if(m.tipo==='egreso')saldoCaja-=Number(m.mon);
-    else if(m.tipo==='transferencia'){
-      var esSalida=m.subtipo==='salida_caja_banco'||(m.desc&&m.desc.indexOf('Caja → Banco')>-1);
-      saldoCaja+=(esSalida?-Number(m.mon):Number(m.mon));
-    }
+    return m.fil==='sede'||!f||(f.tipo||'filial')!=='departamento';
   });
+
+  // Movimientos anteriores al mes actual (sin transferencias)
+  var prevMovsFil=allMovsFil.filter(function(m){
+    return m.fec.substring(0,7)<selectedYM&&(m.moneda||'PEN')==='PEN'&&!m.esBancario&&m.origen!=='cierre_filial_efectivo'&&m.tipo!=='transferencia';
+  });
+  var saldoAnt=siFiliales
+    +prevMovsFil.filter(function(m){return m.tipo==='ingreso';}).reduce(function(a,m){return a+Number(m.mon);},0)
+    -prevMovsFil.filter(function(m){return m.tipo==='egreso';}).reduce(function(a,m){return a+Number(m.mon);},0);
+
+  // Transferencias anteriores al mes actual
+  var trfsPrev=allMovsFil.filter(function(m){
+    return m.tipo==='transferencia'&&m.fec.substring(0,7)<selectedYM&&(m.moneda||'PEN')==='PEN';
+  });
+  trfsPrev.forEach(function(m){
+    var esSalida=m.subtipo==='salida_caja_banco'||(m.desc&&m.desc.indexOf('Caja → Banco')>-1);
+    saldoAnt+=(esSalida?-Number(m.mon):Number(m.mon));
+  });
+
+  // Movimientos del mes actual (sin transferencias)
+  var movsMes=allMovsFil.filter(function(m){
+    return m.fec.substring(0,7)===selectedYM&&(m.moneda||'PEN')==='PEN'&&!m.esBancario&&m.origen!=='cierre_filial_efectivo'&&m.tipo!=='transferencia';
+  });
+  var ing=movsMes.filter(function(m){return m.tipo==='ingreso';}).reduce(function(a,m){return a+Number(m.mon);},0);
+  var eg=movsMes.filter(function(m){return m.tipo==='egreso';}).reduce(function(a,m){return a+Number(m.mon);},0);
+
+  // Transferencias del mes actual
+  var trfsMes=allMovsFil.filter(function(m){
+    return m.tipo==='transferencia'&&m.fec.substring(0,7)===selectedYM&&(m.moneda||'PEN')==='PEN';
+  });
+  var trfImpacto=trfsMes.reduce(function(a,m){
+    var esSalida=m.subtipo==='salida_caja_banco'||(m.desc&&m.desc.indexOf('Caja → Banco')>-1);
+    return a+(esSalida?-Number(m.mon):Number(m.mon));
+  },0);
+
+  var saldoCaja=saldoAnt+ing-eg+trfImpacto;
 
   // Saldo banco total acumulado
   var siBanco=Number((DB.saldos_iniciales||{}).banco)||0;
