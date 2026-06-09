@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VERSION: 2026-06-09-V12 -->
+<!-- VERSION: 2026-06-09-V13 -->
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -6618,23 +6618,24 @@ function renderAuditoria(){
     var d=new Date(a.fecha);
     var fechaFmt=d.toLocaleDateString('es-PE')+' '+d.toLocaleTimeString('es-PE',{hour:'2-digit',minute:'2-digit'});
     var detalle='';
-    if(a.datos){
-      if(a.datos.desc)detalle+='<strong>'+a.datos.desc+'</strong> ';
-      if(a.datos.mon)detalle+='<span style="color:#2ECC71;font-weight:bold">S/. '+Number(a.datos.mon).toFixed(2)+'</span> ';
-      if(a.datos.dir){var dirTxt=a.datos.dir==='caja_banco'?'💰→🏦':'🏦→💰';detalle+=dirTxt+' ';}
-      if(a.datos.subtipo){var stxt=a.datos.subtipo==='salida_caja_banco'?'💰→🏦 Caja→Banco':'🏦→💰 Banco→Caja';detalle+=stxt+' ';}
-      if(a.datos.tipo&&!a.datos.subtipo)detalle+='<span style="color:rgba(247,243,233,.4)">'+a.datos.tipo+'</span> ';
-      if(a.datos.fec)detalle+='<span style="color:rgba(247,243,233,.4)">'+fd2(a.datos.fec)+'</span>';
-      if(a.datos.obs&&!a.datos.desc)detalle+='<span style="color:rgba(247,243,233,.4)"> — '+a.datos.obs+'</span>';
-      if(a.datos.ref)detalle+='<span style="color:rgba(247,243,233,.3)"> Ref:'+a.datos.ref+'</span>';
-    }
+    var dat=a.datos||{};
+    if(dat.desc)detalle+='<strong style="color:var(--cream)">'+dat.desc+'</strong><br>';
+    if(dat.mon!=null)detalle+='<span style="color:#2ECC71;font-weight:bold">S/. '+Number(dat.mon).toFixed(2)+'</span> ';
+    if(dat.tipo)detalle+='<span style="color:rgba(247,243,233,.5);font-size:10px">'+dat.tipo+'</span> ';
+    if(dat.subtipo){var stxt=dat.subtipo==='salida_caja_banco'?'💰→🏦':'🏦→💰';detalle+=stxt+' ';}
+    if(dat.dir){var dirTxt=dat.dir==='caja_banco'?'💰→🏦':'🏦→💰';detalle+=dirTxt+' ';}
+    if(dat.fec)detalle+='<span style="color:rgba(247,243,233,.4);font-size:10px">'+fd2(dat.fec)+'</span>';
+    if(dat.obs&&!dat.desc)detalle+='<span style="color:rgba(247,243,233,.4)"> — '+dat.obs+'</span>';
+    if(dat.ref)detalle+='<span style="color:rgba(247,243,233,.3)"> Ref:'+dat.ref+'</span>';
+    if(!detalle)detalle='<span style="color:rgba(247,243,233,.2)">—</span>';
     var accionColor=a.accion.includes('elimin')?'#E74C3C':a.accion.includes('edit')?'#F39C12':'#2ECC71';
+    var rolNom=ROLES[a.rol]||a.rol||'';
     return '<tr>'
-      +'<td style="font-size:10px;color:rgba(247,243,233,.5)">'+fechaFmt+'</td>'
+      +'<td style="font-size:10px;color:rgba(247,243,233,.5);white-space:nowrap">'+fechaFmt+'</td>'
       +'<td><span style="color:'+accionColor+';font-size:11px;font-weight:700">'+(ANAMES[a.accion]||a.accion)+'</span></td>'
-      +'<td><strong style="color:var(--gold-light)">'+a.usuario+'</strong><div style="font-size:10px;color:rgba(247,243,233,.4)">'+ROLES[a.rol]||a.rol+'</div></td>'
-      +'<td style="font-size:11px;color:rgba(247,243,233,.6)">'+detalle+'</td>'
-      +'<td style="font-size:10px;color:rgba(247,243,233,.3);font-family:monospace">'+(a.datos&&a.datos.id?a.datos.id:'')+'</td>'
+      +'<td><strong style="color:var(--gold-light)">'+a.usuario+'</strong><div style="font-size:10px;color:rgba(247,243,233,.4)">'+rolNom+'</div></td>'
+      +'<td style="font-size:11px">'+detalle+'</td>'
+      +'<td style="font-size:10px;color:rgba(247,243,233,.3);font-family:monospace">'+(dat.id||'')+'</td>'
       +'</tr>';
   }).join('');
 
