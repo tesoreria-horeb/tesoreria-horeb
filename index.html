@@ -2516,11 +2516,12 @@ function savMov(keepOpen){
   if(!keepOpen){
     cm('ov-mov');
   } else {
-    // Keep open - reset form for next entry but keep tipo, cat and fil
+    // Keep open - reset form for next entry but keep tipo, cat, fil, met y mes
     var tipoVal=document.getElementById('m-tipo').value;
     var catVal=document.getElementById('m-cat').value;
     var filVal=document.getElementById('m-fil').value;
     var metVal=document.getElementById('m-met').value;
+    var mesVal=document.getElementById('m-mes-sel')?document.getElementById('m-mes-sel').value:'';
     openMovModal();
     // Restore common fields
     document.getElementById('m-tipo').value=tipoVal;
@@ -2528,8 +2529,14 @@ function savMov(keepOpen){
     if(catVal)selectCat(catVal);
     document.getElementById('m-fil').value=filVal;
     document.getElementById('m-met').value=metVal;
-    // Set today's date
-    document.getElementById('m-fecha').value=today();
+    // Restore mes and update date range accordingly
+    if(mesVal){
+      var mSel=document.getElementById('m-mes-sel');
+      if(mSel&&Array.from(mSel.options).some(function(o){return o.value===mesVal;})){
+        mSel.value=mesVal;
+        onMesSelChange(false);
+      }
+    }
     // Force clear member search fields
     var ms=document.getElementById('m-miem-search');
     var mh=document.getElementById('m-miem');
