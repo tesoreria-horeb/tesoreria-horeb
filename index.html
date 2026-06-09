@@ -1934,12 +1934,12 @@ function renderDash(){
 
   // Filter movements by month
   var cm2=movs.filter(function(m){var p=m.fec.split('-').map(Number);return p[0]===curY&&p[1]===curM;});
-  var cm2fil=cm2.filter(function(m){return filIds.indexOf(m.fil)>-1&&!m.esBancario&&m.origen!=='cierre_filial_efectivo';});
-  var cm2dept=cm2.filter(function(m){return deptIds.indexOf(m.fil)>-1&&!m.esBancario&&m.origen!=='cierre_filial_efectivo';});
+  var cm2fil=cm2.filter(function(m){return filIds.indexOf(m.fil)>-1&&!m.esBancario&&m.origen!=='cierre_filial_efectivo'&&m.tipo!=='transferencia';});
+  var cm2dept=cm2.filter(function(m){return deptIds.indexOf(m.fil)>-1&&!m.esBancario&&m.origen!=='cierre_filial_efectivo'&&m.tipo!=='transferencia';});
 
   // FIX 2: For filial users (niv>=3), filter only their filial
   var myFil=CU&&CU.fil&&CU.fil!=='all'?CU.fil:null;
-  var cm2myFil=myFil?cm2.filter(function(m){return m.fil===myFil&&!m.esBancario&&m.origen!=='cierre_filial_efectivo';}):cm2fil;
+  var cm2myFil=myFil?cm2.filter(function(m){return m.fil===myFil&&!m.esBancario&&m.origen!=='cierre_filial_efectivo'&&m.tipo!=='transferencia';}):cm2fil;
 
   // Filiales totals current month (admin view)
   var ing=cm2fil.filter(function(m){return m.tipo==='ingreso'&&(m.moneda||'PEN')==='PEN';}).reduce(function(a,m){return a+Number(m.mon);},0);
@@ -1969,7 +1969,7 @@ function renderDash(){
   var allMovsDept=gAccMov().filter(function(m){var f=DB.filiales.find(function(x){return x.id===m.fil;});return f&&f.tipo==='departamento';});
   var allMovsMyFil=myFil?gAccMov().filter(function(m){return m.fil===myFil;}):allMovsFil;
 
-  var prevMovsFil=allMovsFil.filter(function(m){return m.fec.substring(0,7)<selectedYM&&(m.moneda||'PEN')==='PEN'&&!m.esBancario&&m.origen!=='cierre_filial_efectivo';});
+  var prevMovsFil=allMovsFil.filter(function(m){return m.fec.substring(0,7)<selectedYM&&(m.moneda||'PEN')==='PEN'&&!m.esBancario&&m.origen!=='cierre_filial_efectivo'&&m.tipo!=='transferencia';});
   var prevSaldoTotalFil=siFiliales
     +prevMovsFil.filter(function(m){return m.tipo==='ingreso';}).reduce(function(a,m){return a+Number(m.mon);},0)
     -prevMovsFil.filter(function(m){return m.tipo==='egreso';}).reduce(function(a,m){return a+Number(m.mon);},0);
@@ -1984,7 +1984,7 @@ function renderDash(){
   var saldoCajaFil=saldoTotalFil;
 
   // USD calculations
-  var prevMovsFilUSD=allMovsFil.filter(function(m){return m.fec.substring(0,7)<selectedYM&&m.moneda==='USD'&&!m.esBancario&&m.origen!=='cierre_filial_efectivo';});
+  var prevMovsFilUSD=allMovsFil.filter(function(m){return m.fec.substring(0,7)<selectedYM&&m.moneda==='USD'&&!m.esBancario&&m.origen!=='cierre_filial_efectivo'&&m.tipo!=='transferencia';});
   var saldoAntUSD=siFilUSD
     +prevMovsFilUSD.filter(function(m){return m.tipo==='ingreso';}).reduce(function(a,m){return a+Number(m.mon);},0)
     -prevMovsFilUSD.filter(function(m){return m.tipo==='egreso';}).reduce(function(a,m){return a+Number(m.mon);},0);
@@ -1992,13 +1992,13 @@ function renderDash(){
   var hasUSD=siFilUSD>0||ingUSD>0||egUSD>0||saldoAntUSD!==0;
 
   // My filial saldo anterior
-  var prevMovsMyFil=allMovsMyFil.filter(function(m){return m.fec.substring(0,7)<selectedYM&&(m.moneda||'PEN')==='PEN';});
+  var prevMovsMyFil=allMovsMyFil.filter(function(m){return m.fec.substring(0,7)<selectedYM&&(m.moneda||'PEN')==='PEN'&&m.tipo!=='transferencia';});
   var saldoAntMy=prevMovsMyFil.filter(function(m){return m.tipo==='ingreso';}).reduce(function(a,m){return a+Number(m.mon);},0)
                 -prevMovsMyFil.filter(function(m){return m.tipo==='egreso';}).reduce(function(a,m){return a+Number(m.mon);},0);
   var saldoTotalMy=saldoAntMy+(ingMy-egMy);
 
   // Departamentos - calculate per individual dept saldo_inicial
-  var prevMovsDept=allMovsDept.filter(function(m){return m.fec.substring(0,7)<selectedYM&&(m.moneda||'PEN')==='PEN'&&!m.esBancario&&m.origen!=='cierre_filial_efectivo';});
+  var prevMovsDept=allMovsDept.filter(function(m){return m.fec.substring(0,7)<selectedYM&&(m.moneda||'PEN')==='PEN'&&!m.esBancario&&m.origen!=='cierre_filial_efectivo'&&m.tipo!=='transferencia';});
   var siDeptTotal=DB.filiales.filter(function(f){return f.tipo==='departamento';})
     .reduce(function(s,f){return s+(Number(f.saldo_inicial)||0);},0);
   var saldoAntDept=siDeptTotal
@@ -3317,7 +3317,7 @@ function genCaja(){
     // Calcular todos los movimientos ANTERIORES al mes seleccionado
     var movsPrevios=gAccMov().filter(function(m){
       if(m.fil!==fil)return false;
-      if(m.esBancario||m.origen==='cierre_filial_efectivo')return false;
+      if(m.esBancario||m.origen==='cierre_filial_efectivo'||m.tipo==='transferencia')return false;
       var y=parseInt(m.fec.split('-')[0]);
       var mo=parseInt(m.fec.split('-')[1]);
       return (y<anio)||(y===anio&&mo<mes);
@@ -3339,7 +3339,7 @@ function genCaja(){
     var todasFilIds=DB.filiales.filter(function(f){return (f.tipo||'filial')!=='departamento';}).map(function(f){return f.id;});
     var movsPrevSede=gAccMov().filter(function(m){
       if(todasFilIds.indexOf(m.fil)<0)return false;
-      if(m.esBancario||m.origen==='cierre_filial_efectivo')return false;
+      if(m.esBancario||m.origen==='cierre_filial_efectivo'||m.tipo==='transferencia')return false;
       var y=parseInt(m.fec.split('-')[0]);
       var mo=parseInt(m.fec.split('-')[1]);
       return (y<anio)||(y===anio&&mo<mes);
@@ -3356,8 +3356,8 @@ function genCaja(){
 
   var movs=gAccMov().filter(function(m){
     var y=parseInt(m.fec.split('-')[0]),mo=parseInt(m.fec.split('-')[1]);
-    // Excluir movimientos bancarios del Libro Caja
-    if(m.esBancario||m.origen==='cierre_filial_efectivo')return false;
+    // Excluir movimientos bancarios y transferencias del Libro Caja
+    if(m.esBancario||m.origen==='cierre_filial_efectivo'||m.tipo==='transferencia')return false;
     return y===anio&&mo===mes&&(fil==='all'||m.fil===fil);
   });
   movs.sort(function(a,b){return a.fec.localeCompare(b.fec);});
@@ -5876,14 +5876,14 @@ function genEjecutivo(){
   var movsMes=allMovs.filter(function(m){
     var y=parseInt(m.fec.split('-')[0]),mo=parseInt(m.fec.split('-')[1]);
     var esFilial=filiales.some(function(f){return f.id===m.fil;});
-    return y===anio&&mo===mes&&(m.moneda||'PEN')==='PEN'&&esFilial&&!m.esBancario&&m.origen!=='cierre_filial_efectivo';
+    return y===anio&&mo===mes&&(m.moneda||'PEN')==='PEN'&&esFilial&&!m.esBancario&&m.origen!=='cierre_filial_efectivo'&&m.tipo!=='transferencia';
   });
 
   // Movimientos mes anterior — solo filiales (para comparativo)
   var movsPrev=allMovs.filter(function(m){
     var y=parseInt(m.fec.split('-')[0]),mo=parseInt(m.fec.split('-')[1]);
     var esFilial=filiales.some(function(f){return f.id===m.fil;});
-    return y===anioPrev&&mo===mesPrev&&(m.moneda||'PEN')==='PEN'&&esFilial;
+    return y===anioPrev&&mo===mesPrev&&(m.moneda||'PEN')==='PEN'&&esFilial&&m.tipo!=='transferencia';
   });
 
   var tiMes=movsMes.filter(function(m){return m.tipo==='ingreso';}).reduce(function(a,m){return a+Number(m.mon);},0);
@@ -5899,7 +5899,7 @@ function genEjecutivo(){
   var todosPrevios=allMovs.filter(function(m){
     var y=parseInt(m.fec.split('-')[0]),mo=parseInt(m.fec.split('-')[1]);
     var esFilial=filiales.some(function(f){return f.id===m.fil;});
-    return esFilial&&(m.moneda||'PEN')==='PEN'&&!m.esBancario&&m.origen!=='cierre_filial_efectivo'&&((y<anio)||(y===anio&&mo<mes));
+    return esFilial&&(m.moneda||'PEN')==='PEN'&&!m.esBancario&&m.origen!=='cierre_filial_efectivo'&&m.tipo!=='transferencia'&&((y<anio)||(y===anio&&mo<mes));
   });
   var grandSA=siFiliales
     +todosPrevios.filter(function(m){return m.tipo==='ingreso';}).reduce(function(a,m){return a+Number(m.mon);},0)
@@ -5924,7 +5924,7 @@ function genEjecutivo(){
   // Por cada filial: Saldo en Caja = todos sus movimientos hasta fin del mes actual
   var rowsFiliales=filiales.map(function(f){
     var todosHasta=allMovs.filter(function(m){
-      if(m.fil!==f.id||(m.moneda||'PEN')!=='PEN')return false;
+      if(m.fil!==f.id||(m.moneda||'PEN')!=='PEN'||m.tipo==='transferencia'||m.esBancario)return false;
       var y=parseInt(m.fec.split('-')[0]),mo=parseInt(m.fec.split('-')[1]);
       return (y<anio)||(y===anio&&mo<=mes);
     });
