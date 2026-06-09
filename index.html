@@ -358,6 +358,9 @@ body.contador-mode .modal-ft .btn-d {
       <div class="nav-item" onclick="sm('rpt-fidelidad')"><span class="ic">⭐</span>Fidelidad</div>
       <div class="nav-item nav-no-contador" onclick="sm('rpt-votos')"><span class="ic">📜</span>Votos y Cumplimiento</div>
       <div class="nav-item nav-admin" onclick="sm('rpt-banco')"><span class="ic">🏦</span>Informe Bancario</div>
+      <div class="nav-item nav-no-contador" style="display:none" id="nav-transferencias" onclick="sm('transferencias')"><span class="ic">💸</span>Transferencias</div>
+      <div class="nav-item nav-admin" onclick="sm('rpt-transferencias')"><span class="ic">📋</span>Informe Transferencias</div>
+      <div class="nav-item nav-super" onclick="sm('auditoria')"><span class="ic">🔍</span>Auditoría</div>
       <div class="nav-sec" style="margin-top:6px;color:rgba(201,168,76,.7)">— Directiva —</div>
       <div class="nav-item nav-directiva" onclick="sm('rpt-ejecutivo')"><span class="ic">📑</span>Resumen Ejecutivo</div>
       <div class="nav-item nav-directiva" onclick="sm('rpt-departamentos')"><span class="ic">🏛️</span>Estado Departamentos</div>
@@ -441,7 +444,7 @@ body.contador-mode .modal-ft .btn-d {
         </div>
         <div class="card">
           <div class="card-title">Registro de Movimientos <span id="mov-tot" style="font-size:11px;color:rgba(247,243,233,.45);font-family:'Lato',sans-serif;font-weight:400"></span></div>
-          <div class="tw"><table><thead><tr><th><input type="checkbox" id="mov-chk-all" onchange="toggleAllMov(this)" style="cursor:pointer"></th><th>#</th><th>Fecha</th><th>Descripción</th><th>Categoría</th><th class="hide-mobile">Miembro</th><th class="hide-mobile">Método</th><th>Tipo</th><th>Monto</th><th class="hide-mobile">Comprobante</th><th class="hide-mobile">Sede/Filial</th><th>Acciones</th></tr></thead><tbody id="mov-body"></tbody></table></div>
+          <div class="tw"><table><thead><tr><th><input type="checkbox" id="mov-chk-all" onchange="toggleAllMov(this)" style="cursor:pointer"></th><th>#</th><th>Fecha</th><th>Descripción</th><th>Categoría</th><th class="hide-mobile">Miembro</th><th class="hide-mobile">Método</th><th>Tipo</th><th>Monto</th><th class="hide-mobile">Registrado Por</th><th class="hide-mobile">Comprobante</th><th class="hide-mobile">Sede/Filial</th><th>Acciones</th></tr></thead><tbody id="mov-body"></tbody></table></div>
           <div class="pag" id="mov-pag"></div>
         </div>
       </div>
@@ -856,9 +859,140 @@ body.contador-mode .modal-ft .btn-d {
         <div id="rcat-prev"></div>
       </div>
 
+      <!-- RPT TRANSFERENCIAS -->
+      <div class="mod" id="mod-rpt-transferencias">
+        <div class="tb">
+          <select class="fs" id="rtrfmes">
+            <option value="1">Enero</option><option value="2">Febrero</option>
+            <option value="3">Marzo</option><option value="4">Abril</option>
+            <option value="5">Mayo</option><option value="6">Junio</option>
+            <option value="7">Julio</option><option value="8">Agosto</option>
+            <option value="9">Septiembre</option><option value="10">Octubre</option>
+            <option value="11">Noviembre</option><option value="12">Diciembre</option>
+          </select>
+          <select class="fs" id="rtrfanio"></select>
+          <button class="btn btn-p" onclick="genRptTransferencias()">💸 Generar</button>
+          <button class="btn btn-pr" onclick="prtRpt('rtrf-prev')">🖨️ Imprimir</button>
+        </div>
+        <div id="rtrf-prev"></div>
+      </div>
+
+      <!-- TRANSFERENCIAS (acceso rápido al modal) -->
+      <div class="mod" id="mod-transferencias">
+        <div class="card" style="max-width:540px;margin:0 auto">
+          <div class="card-title">💸 Transferencias Caja ↔ Banco</div>
+          <p style="font-size:13px;color:rgba(247,243,233,.6);margin-bottom:18px;line-height:1.7">
+            Registra movimientos internos entre la <strong>Caja (Sede Central)</strong> y la <strong>Cuenta Bancaria</strong>.
+            Estas transferencias <strong>no afectan</strong> el balance de ingresos/egresos del Libro Caja.
+          </p>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px">
+            <button class="btn btn-g" style="padding:16px;font-size:13px;justify-content:center;flex-direction:column;gap:6px;height:80px" onclick="document.getElementById('trf-dir').value='caja_banco';onChangeTrfDir();updTrfSaldos();om('ov-transferencia')">
+              <span style="font-size:22px">💰→🏦</span>
+              <span>Caja → Banco</span>
+            </button>
+            <button class="btn btn-pr" style="padding:16px;font-size:13px;justify-content:center;flex-direction:column;gap:6px;height:80px" onclick="document.getElementById('trf-dir').value='banco_caja';onChangeTrfDir();updTrfSaldos();om('ov-transferencia')">
+              <span style="font-size:22px">🏦→💰</span>
+              <span>Banco → Caja</span>
+            </button>
+          </div>
+          <div class="alert alert-info" style="margin-bottom:12px">
+            💡 Para ver el historial e informe de transferencias, usa <strong>Informe Transferencias</strong> en el menú lateral.
+          </div>
+          <div class="card" style="margin-top:6px">
+            <div class="card-title">Últimas Transferencias</div>
+            <div class="tw"><table><thead><tr><th>Fecha</th><th>Dirección</th><th>Monto</th><th>Referencia</th><th>Registrado Por</th></tr></thead>
+            <tbody id="trf-recent-body"></tbody>
+            </table></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AUDITORIA -->
+      <div class="mod" id="mod-auditoria">
+        <div class="tb">
+          <input class="sb" id="aud-s" placeholder="🔍 Buscar acción, usuario..." oninput="renderAuditoria()">
+          <input type="date" class="fs" id="aud-fa" onchange="renderAuditoria()" title="Filtrar por fecha">
+          <select class="fs" id="aud-fu" onchange="renderAuditoria()">
+            <option value="">Todos los usuarios</option>
+          </select>
+          <button class="btn btn-s" onclick="loadAuditoriaFromFirebase()">☁️ Cargar desde Firebase</button>
+          <span id="aud-tot" style="font-size:11px;color:rgba(247,243,233,.35)"></span>
+        </div>
+        <div class="card">
+          <div class="card-title">🔍 Registro de Auditoría del Sistema <span style="font-size:11px;color:rgba(247,243,233,.4);font-family:'Lato',sans-serif;font-weight:400">(Solo lectura — no se puede modificar)</span></div>
+          <div class="alert alert-info" style="margin-bottom:12px">
+            📋 Cada acción realizada por cualquier usuario queda registrada aquí con fecha, hora y datos del movimiento.
+          </div>
+          <div class="tw"><table><thead><tr>
+            <th>Fecha y Hora</th><th>Acción</th><th>Usuario</th><th>Detalle</th><th>ID Registro</th>
+          </tr></thead><tbody id="aud-body"></tbody></table></div>
+          <div class="pag" id="aud-pag"></div>
+        </div>
+      </div>
+
     </div><!-- end pg -->
   </main>
 </div><!-- end app -->
+
+<!-- MODAL TRANSFERENCIA CAJA ↔ BANCO -->
+<div class="ov" id="ov-transferencia">
+  <div class="modal">
+    <div class="modal-hd">
+      <div class="modal-tit">💸 Transferencia Caja ↔ Banco</div>
+      <button class="modal-x" onclick="cm('ov-transferencia')">✕</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+      <div style="padding:12px;background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.2);border-radius:6px;text-align:center">
+        <div style="font-size:9px;color:#888;text-transform:uppercase;font-weight:700">Saldo Caja Actual</div>
+        <div style="font-size:20px;font-weight:bold;color:var(--gold-light)" id="trf-saldo-caja">S/. 0.00</div>
+        <div style="font-size:10px;color:rgba(247,243,233,.35)">Sede Central</div>
+      </div>
+      <div style="padding:12px;background:rgba(46,134,171,.08);border:1px solid rgba(46,134,171,.2);border-radius:6px;text-align:center">
+        <div style="font-size:9px;color:#888;text-transform:uppercase;font-weight:700">Saldo Banco Actual</div>
+        <div style="font-size:20px;font-weight:bold;color:#5DADE2" id="trf-saldo-banco">S/. 0.00</div>
+      </div>
+    </div>
+    <div class="fr fr1">
+      <div class="fld">
+        <label>Dirección de la Transferencia</label>
+        <select id="trf-dir" onchange="onChangeTrfDir()">
+          <option value="caja_banco">💰 → 🏦 Caja → Banco (depositar exceso de caja)</option>
+          <option value="banco_caja">🏦 → 💰 Banco → Caja (retirar para cubrir caja)</option>
+        </select>
+      </div>
+    </div>
+    <div id="trf-dir-info" style="padding:8px 12px;border-radius:6px;border:1px solid rgba(46,204,113,.4);color:#2ECC71;font-size:12px;margin-bottom:10px">
+      💰→🏦 El efectivo sale de Caja y entra al Banco
+    </div>
+    <div class="fr">
+      <div class="fld">
+        <label>Fecha</label>
+        <input type="date" id="trf-fecha">
+      </div>
+      <div class="fld">
+        <label>Monto (S/.)</label>
+        <input type="number" id="trf-monto" placeholder="0.00" step="0.01" min="0.01">
+      </div>
+    </div>
+    <div class="fr">
+      <div class="fld">
+        <label>N° Referencia / Voucher</label>
+        <input type="text" id="trf-ref" placeholder="Código de operación (opcional)">
+      </div>
+      <div class="fld">
+        <label>Observación</label>
+        <input type="text" id="trf-obs" placeholder="Descripción adicional (opcional)">
+      </div>
+    </div>
+    <div style="font-size:11px;color:rgba(247,243,233,.4);background:rgba(52,152,219,.06);border:1px solid rgba(52,152,219,.15);border-radius:6px;padding:9px 12px;margin-bottom:6px">
+      ℹ️ Esta transferencia <strong>no aparecerá</strong> en los Ingresos ni Egresos del Libro Caja. Se registra como movimiento interno vinculado al banco.
+    </div>
+    <div class="modal-ft">
+      <button class="btn btn-s" onclick="cm('ov-transferencia')">Cancelar</button>
+      <button class="btn btn-p" onclick="savTransferencia()">💾 Registrar Transferencia</button>
+    </div>
+  </div>
+</div>
 
 <!-- MODAL MOVIMIENTO -->
 <div class="ov" id="ov-mov">
@@ -1275,7 +1409,8 @@ function initDB(){
       ing:['Diezmos','Ofrendas','Primicias','Donaciones','Otros Ingresos'],
       eg:['Depósito Bancario','Servicios Básicos','Mantenimiento','Evangelismo','Material de Oficina','Transporte','Alimentación','Construcción','Donaciones','Gastos Administrativos']
     },
-    usuarios:[]
+    usuarios:[],
+    auditoria:[]
   };
   return data;
 }
@@ -1397,6 +1532,11 @@ function _finishLogin(usr){
   }
   document.getElementById('curdate').textContent=new Date().toLocaleDateString('es-PE',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
   popFil();popYrs();
+  // Show/hide transferencias nav
+  var navTrf=document.getElementById('nav-transferencias');
+  if(navTrf){
+    navTrf.style.display=(usr.niv<=2||usr.rol==='tesorero_sede'||usr.rol==='auxiliar_central')?'':'none';
+  }
   // Apply read-only mode for contador
   if(CU.niv===5){
     document.body.classList.add('contador-mode');
@@ -1418,7 +1558,7 @@ function _finishLogin(usr){
 function doLogout(){CU=null;try{localStorage.removeItem('horeb_session');}catch(e){}document.getElementById('app').style.display='none';document.getElementById('login-screen').style.display='flex';document.getElementById('lu').value='';document.getElementById('lp').value='';}
 
 // ===================== NAV =====================
-const TITLES={dashboard:'Menú Principal',usuarios:'Gestion de Usuarios',backup:'Sistema de Backup',banco:'Control Bancario','rpt-banco':'Informe Bancario',movimientos:'Movimientos',filiales:'Filiales',miembros:'Miembros',votos:'Votos',categorias:'Categorías y Usuarios','rpt-caja':'Informe: Libro Caja Mensual','rpt-consolidado':'Informe: Consolidado General','rpt-comparativo':'Informe: Comparativo Anual','rpt-diezmos':'Informe: Diezmos por Filial','rpt-fidelidad':'Informe: Fidelidad Individual','rpt-votos':'Informe: Votos y Cumplimiento','rpt-ejecutivo':'Informe: Resumen Ejecutivo Mensual','rpt-departamentos':'Informe: Estado de Cuenta — Departamentos','rpt-categorias':'Informe: Gastos por Categoría','cierre-filiales':'Cierre de Filiales — Transferencia de Saldos'};
+const TITLES={dashboard:'Menú Principal',usuarios:'Gestion de Usuarios',backup:'Sistema de Backup',banco:'Control Bancario','rpt-banco':'Informe Bancario',movimientos:'Movimientos',filiales:'Filiales',miembros:'Miembros',votos:'Votos',categorias:'Categorías y Usuarios','rpt-caja':'Informe: Libro Caja Mensual','rpt-consolidado':'Informe: Consolidado General','rpt-comparativo':'Informe: Comparativo Anual','rpt-diezmos':'Informe: Diezmos por Filial','rpt-fidelidad':'Informe: Fidelidad Individual','rpt-votos':'Informe: Votos y Cumplimiento','rpt-ejecutivo':'Informe: Resumen Ejecutivo Mensual','rpt-departamentos':'Informe: Estado de Cuenta — Departamentos','rpt-categorias':'Informe: Gastos por Categoría','cierre-filiales':'Cierre de Filiales — Transferencia de Saldos','transferencias':'Transferencias Caja ↔ Banco','rpt-transferencias':'Informe: Transferencias Caja ↔ Banco','auditoria':'Registro de Auditoría del Sistema'};
 
 function sm(n){
   // Save current module to restore after F5
@@ -1471,6 +1611,35 @@ function sm(n){
       var rbanAnio=document.getElementById('rban-anio');
       if(rbanAnio&&!rbanAnio.value)rbanAnio.value=new Date().getFullYear();
     } else {toast('Sin acceso','err');sm('dashboard');}
+  }
+  else if(n==='transferencias'){
+    if(canDoTransferencia()){
+      updTrfSaldos();
+      renderTrfRecent();
+    } else {toast('Sin acceso','err');sm('dashboard');}
+  }
+  else if(n==='rpt-transferencias'){
+    if(CU&&(CU.niv<=2||canDoTransferencia())){
+      var rtrfAnio=document.getElementById('rtrfanio');
+      var rtrfMes=document.getElementById('rtrfmes');
+      if(rtrfAnio&&!rtrfAnio.value){popYrsEl(rtrfAnio);rtrfAnio.value=new Date().getFullYear();}
+      if(rtrfMes&&!rtrfMes._init){rtrfMes.value=new Date().getMonth()+1;rtrfMes._init=true;}
+    } else {toast('Sin acceso','err');sm('dashboard');}
+  }
+  else if(n==='auditoria'){
+    if(CU&&CU.niv<=1){
+      // Populate user filter
+      var audFu=document.getElementById('aud-fu');
+      if(audFu){
+        audFu.innerHTML='<option value="">Todos los usuarios</option>';
+        DB.usuarios.forEach(function(u){
+          var o=document.createElement('option');o.value=u.user;o.textContent=u.nom+' ('+u.user+')';
+          audFu.appendChild(o);
+        });
+      }
+      if(!DB.auditoria||DB.auditoria.length===0){loadAuditoriaFromFirebase();}
+      else{renderAuditoria();}
+    } else {toast('Solo el Administrador puede acceder','err');sm('dashboard');}
   }
   else if(n==='rpt-ejecutivo'||n==='rpt-departamentos'||n==='rpt-categorias'){
     if(CU&&(CU.niv<=2||CU.niv===5)){
@@ -1556,7 +1725,7 @@ function popRcatFil(){
 
 function popYrs(){
   const yrs=[];for(let y=2020;y<=new Date().getFullYear()+1;y++)yrs.push(y);
-  ['ch-year','rc-anio','rcon-anio','rcomp-a1','rcomp-a2','rdz-anio','rfid-anio','mov-fa','rban-anio','dash-anio','rej-anio','rdept-anio','rcat-anio','cf-anio'].forEach(sid=>{
+  ['ch-year','rc-anio','rcon-anio','rcomp-a1','rcomp-a2','rdz-anio','rfid-anio','mov-fa','rban-anio','dash-anio','rej-anio','rdept-anio','rcat-anio','cf-anio','rtrfanio'].forEach(sid=>{
     const sel=document.getElementById(sid);if(!sel)return;
     sel.innerHTML='';yrs.forEach(y=>{const o=document.createElement('option');o.value=y;o.textContent=y;sel.appendChild(o);});
     sel.value=new Date().getFullYear();
@@ -1569,6 +1738,7 @@ function popYrs(){
   var rejM=document.getElementById('rej-mes');if(rejM)rejM.value=nowMo;
   var rdM=document.getElementById('rdept-mes');if(rdM)rdM.value=nowMo;
   var rcM=document.getElementById('rcat-mes');if(rcM)rcM.value=nowMo;
+  var rtrfM=document.getElementById('rtrfmes');if(rtrfM)rtrfM.value=nowMo;
   popRcatFil();
 }
 
@@ -2179,6 +2349,8 @@ function savMov(keepOpen){
 
   var esBancoToggle=!!(document.getElementById('m-es-banco')&&document.getElementById('m-es-banco').checked);
 
+  var ahora=new Date().toISOString();
+  var existingMov=EID?DB.movimientos.find(function(x){return x.id===EID;}):null;
   var obj={
     id:movId,tipo:tipo,fec:fec,mon:mon,desc:desc,cat:cat,fil:fil,
     met:document.getElementById('m-met').value||'efectivo',
@@ -2187,9 +2359,16 @@ function savMov(keepOpen){
     miem:document.getElementById('m-miem').value||'',
     obs:document.getElementById('m-obs').value||'',
     esBancario:esBancoToggle,
-    ts:EID?((DB.movimientos.find(function(x){return x.id===EID;})||{}).ts||Date.now()):Date.now(),
-    compFile:compFile
+    ts:EID?((existingMov||{}).ts||Date.now()):Date.now(),
+    compFile:compFile,
+    regBy:EID?((existingMov||{}).regBy||(CU?CU.nom:'')):(CU?CU.nom:''),
+    regAt:EID?((existingMov||{}).regAt||ahora):ahora,
+    editBy:EID?(CU?CU.nom:''):undefined,
+    editAt:EID?ahora:undefined
   };
+  // Remove undefined keys
+  if(!obj.editBy)delete obj.editBy;
+  if(!obj.editAt)delete obj.editAt;
 
   if(EID){
     var i=DB.movimientos.findIndex(function(x){return x.id===EID;});
@@ -2198,6 +2377,8 @@ function savMov(keepOpen){
     DB.movimientos.push(obj);
   }
   try{sd();}catch(e){}
+  // Auditoría
+  auditLog(EID?'editar_movimiento':'crear_movimiento',{id:obj.id,desc:obj.desc,mon:obj.mon,tipo:obj.tipo,fil:obj.fil,fec:obj.fec});
 
   // Save to Firebase - split file if needed
   if(compFile&&compFile.length>900000){
@@ -2311,9 +2492,11 @@ function delMov(b){
     DB.banco=DB.banco.filter(function(b){return b.movId!==id;});
     fbDelete('banco',linkedBanco.id);
   }
+  var movDel=DB.movimientos.find(function(m){return m.id===id;});
   DB.movimientos=DB.movimientos.filter(function(m){return m.id!==id;});
   try{sd();}catch(e){}
   fbDelete('movimientos',id);
+  auditLog('eliminar_movimiento',{id:id,desc:movDel?movDel.desc:'',mon:movDel?movDel.mon:0,tipo:movDel?movDel.tipo:'',fec:movDel?movDel.fec:''});
   renderMov();
   toast('Movimiento eliminado','err');
 }
@@ -2359,26 +2542,32 @@ function renderMov(){
   var sl=movs.slice((movPg-1)*MPP,movPg*MPP);
   var tb=document.getElementById('mov-body');
   if(!tb)return;
-  if(!sl.length){tb.innerHTML='<tr><td colspan="10"><div class="empty"><span class="ic">📋</span><p>No hay movimientos</p></div></td></tr>';return;}
+  if(!sl.length){tb.innerHTML='<tr><td colspan="13"><div class="empty"><span class="ic">📋</span><p>No hay movimientos</p></div></td></tr>';return;}
 
   tb.innerHTML=sl.map(function(m,i){
     var cur=(m.moneda==='USD')?'$ ':'S/. ';
     var amtCell='<span class="amt-'+(m.tipo==='ingreso'?'i':'e')+'">'+cur+Number(m.mon).toFixed(2)+'</span>';
+    if(m.tipo==='transferencia')amtCell='<span style="color:#5DADE2;font-weight:700">'+cur+Number(m.mon).toFixed(2)+'</span>';
     var miemNom='—';
     if(m.miem){var miemObj=DB.miembros.find(function(x){return x.id===m.miem;});if(miemObj)miemNom=miemObj.nom+(miemObj.ape?' '+miemObj.ape:'');}
     var compCell=m.comp||'—';
-    var btns='<button class="btn btn-sm btn-s" onclick="edMov(this)" data-id="'+m.id+'" title="Editar">✏️</button>'
-      +' <button class="btn btn-sm btn-d" onclick="delMov(this)" data-id="'+m.id+'" title="Eliminar">🗑️</button>';
-    return '<tr>'
+    var tipoBadge=m.tipo==='ingreso'?'<span class="badge b-act">INGRESO</span>':m.tipo==='transferencia'?'<span class="badge" style="background:rgba(52,152,219,.15);color:#5DADE2;border:1px solid rgba(52,152,219,.3)">TRANSFER.</span>':'<span class="badge b-ven">EGRESO</span>';
+    var regByCell='<span style="font-size:10px;color:rgba(247,243,233,.45)">'+(m.regBy||'—')+'</span>'+(m.editBy?'<div style="font-size:9px;color:#F39C12" title="Editado por '+m.editBy+'">✏️ '+m.editBy+'</div>':'');
+    var canEdit=m.tipo!=='transferencia';
+    var btns=canEdit?('<button class="btn btn-sm btn-s" onclick="edMov(this)" data-id="'+m.id+'" title="Editar">✏️</button>'
+      +' <button class="btn btn-sm btn-d" onclick="delMov(this)" data-id="'+m.id+'" title="Eliminar">🗑️</button>')
+      :'<span style="font-size:10px;color:rgba(247,243,233,.3)">—</span>';
+    return '<tr'+(m.tipo==='transferencia'?' style="background:rgba(52,152,219,.04)"':'')+'>'
       +'<td><input type="checkbox" class="mov-chk" data-id="'+m.id+'" onchange="updBulkBtn(&quot;mov&quot;)" style="cursor:pointer"></td>'
       +'<td style="color:rgba(247,243,233,.4);font-size:11px">'+(((movPg-1)*MPP)+i+1)+'</td>'
       +'<td>'+fd2(m.fec)+'</td>'
       +'<td>'+m.desc+'</td>'
       +'<td style="font-size:11px">'+m.cat+'</td>'
-      +'<td style="font-size:11px">'+miemNom+'</td>'
-      +'<td style="font-size:11px">'+m.met+'</td>'
-      +'<td><span class="badge '+(m.tipo==='ingreso'?'b-act':'b-ven')+'">'+(m.tipo==='ingreso'?'INGRESO':'EGRESO')+'</span></td>'
+      +'<td class="hide-mobile" style="font-size:11px">'+miemNom+'</td>'
+      +'<td class="hide-mobile" style="font-size:11px">'+m.met+'</td>'
+      +'<td>'+tipoBadge+'</td>'
       +'<td>'+amtCell+'</td>'
+      +'<td class="hide-mobile">'+regByCell+'</td>'
       +'<td class="hide-mobile">'+compCell+'</td>'
       +'<td class="hide-mobile" style="font-size:11px">'+gfn(m.fil)+'</td>'
       +'<td>'+btns+'</td>'
@@ -4015,11 +4204,17 @@ function savBanco(){
   var obj={id:EID||gid('BC'),tipo:tipo,fec:fec,mon:mon,desc:desc,fil:fil,
     comp:document.getElementById('banco-comp').value||'',
     obs:document.getElementById('banco-obs').value||'',
-    compFile:compFile,reg:CU?CU.nom:'',regFec:today()};
+    compFile:compFile,reg:CU?CU.nom:'',regFec:today(),
+    regBy:EID?((DB.banco.find(function(x){return x.id===EID;})||{}).regBy||(CU?CU.nom:'')):(CU?CU.nom:''),
+    regAt:EID?((DB.banco.find(function(x){return x.id===EID;})||{}).regAt||new Date().toISOString()):new Date().toISOString(),
+    editBy:EID?(CU?CU.nom:''):undefined,
+    editAt:EID?new Date().toISOString():undefined};
+  if(!obj.editBy)delete obj.editBy;if(!obj.editAt)delete obj.editAt;
   if(EID){var i=DB.banco.findIndex(function(x){return x.id===EID;});if(i>-1)DB.banco[i]=obj;}
   else DB.banco.push(obj);
   try{sd();}catch(e){}
   fbSave('banco',obj.id,obj);
+  auditLog(EID?'editar_banco':'crear_banco',{id:obj.id,tipo:obj.tipo,mon:obj.mon,desc:obj.desc,fil:obj.fil,fec:obj.fec});
   cm('ov-banco');renderBanco();
   toast(tipo==='deposito'?'Depósito registrado':'Retiro registrado');
 }
@@ -4033,9 +4228,11 @@ function edBanco(b){
 function delBanco(b){
   var id=b&&b.getAttribute?b.getAttribute('data-id'):b;
   if(!confirm('¿Eliminar este movimiento bancario?'))return;
+  var bancoDel=DB.banco.find(function(m){return m.id===id;});
   DB.banco=DB.banco.filter(function(m){return m.id!==id;});
   try{sd();}catch(e){}
   fbDelete('banco',id);
+  auditLog('eliminar_banco',{id:id,tipo:bancoDel?bancoDel.tipo:'',mon:bancoDel?bancoDel.mon:0,desc:bancoDel?bancoDel.desc:'',fec:bancoDel?bancoDel.fec:''});
   renderBanco();
   toast('Movimiento eliminado','err');
 }
@@ -4783,7 +4980,7 @@ function startRealtimeSync(){
   _fbListeners.forEach(function(unsub){try{unsub();}catch(e){}});
   _fbListeners = [];
 
-  var collections = ['movimientos','filiales','miembros','votos','banco','cierres','categorias','usuarios','config'];
+  var collections = ['movimientos','filiales','miembros','votos','banco','cierres','categorias','usuarios','config','auditoria'];
 
   collections.forEach(function(col){
     var unsub = window.FB_DB.collection(col).onSnapshot(function(snap){
@@ -4831,6 +5028,13 @@ function startRealtimeSync(){
           DB.usuarios=fbUsers;
         }
         try{sd();}catch(e){}
+      } else if(col === 'auditoria'){
+        var items=[];snap.forEach(function(d){items.push(d.data());});
+        // Merge — never delete audit entries
+        if(!DB.auditoria)DB.auditoria=[];
+        var existIds=new Set(DB.auditoria.map(function(a){return a.id;}));
+        items.forEach(function(a){if(!existIds.has(a.id))DB.auditoria.push(a);});
+        try{sd();}catch(e){}
       }
 
       // Refresh current active module
@@ -4845,9 +5049,26 @@ function startRealtimeSync(){
   hideSyncMsg();
 }
 
+function renderTrfRecent(){
+  var tbody=document.getElementById('trf-recent-body');
+  if(!tbody)return;
+  var trfs=(DB.movimientos||[]).filter(function(m){return m.tipo==='transferencia';})
+    .sort(function(a,b){return b.fec.localeCompare(a.fec)||((b.ts||0)-(a.ts||0));}).slice(0,8);
+  if(!trfs.length){tbody.innerHTML='<tr><td colspan="5" style="text-align:center;padding:16px;color:rgba(247,243,233,.3)">Sin transferencias registradas</td></tr>';return;}
+  tbody.innerHTML=trfs.map(function(t){
+    var esCajaBanco=t.subtipo==='salida_caja_banco';
+    return '<tr>'
+      +'<td>'+fd2(t.fec)+'</td>'
+      +'<td style="font-weight:bold;color:'+(esCajaBanco?'#2ECC71':'#5DADE2')+'">'+(esCajaBanco?'💰→🏦 Caja→Banco':'🏦→💰 Banco→Caja')+'</td>'
+      +'<td style="font-weight:bold">S/. '+Number(t.mon).toFixed(2)+'</td>'
+      +'<td style="font-size:11px">'+(t.comp||'—')+'</td>'
+      +'<td style="font-size:11px">'+(t.regBy||'—')+'</td>'
+      +'</tr>';
+  }).join('');
+}
+
 function refreshCurrentModule(){
   try{
-    // Don't refresh if any modal is open - would disrupt user input
     var openModal=document.querySelector('.ov.open');
     if(openModal)return;
     var active=document.querySelector('.mod.active');
@@ -4861,6 +5082,8 @@ function refreshCurrentModule(){
     else if(n==='categorias')renderCats();
     else if(n==='usuarios')renderUsrs();
     else if(n==='cierre-filiales')renderCierreFiliales();
+    else if(n==='transferencias')renderTrfRecent();
+    else if(n==='banco')renderBanco();
   }catch(e){}
 }
 
@@ -4980,11 +5203,17 @@ function savBanco(){
   var obj={id:EID||gid('BC'),tipo:tipo,fec:fec,mon:mon,desc:desc,fil:fil,
     comp:document.getElementById('banco-comp').value||'',
     obs:document.getElementById('banco-obs').value||'',
-    compFile:compFile,reg:CU?CU.nom:'',regFec:today()};
+    compFile:compFile,reg:CU?CU.nom:'',regFec:today(),
+    regBy:EID?((DB.banco.find(function(x){return x.id===EID;})||{}).regBy||(CU?CU.nom:'')):(CU?CU.nom:''),
+    regAt:EID?((DB.banco.find(function(x){return x.id===EID;})||{}).regAt||new Date().toISOString()):new Date().toISOString(),
+    editBy:EID?(CU?CU.nom:''):undefined,
+    editAt:EID?new Date().toISOString():undefined};
+  if(!obj.editBy)delete obj.editBy;if(!obj.editAt)delete obj.editAt;
   if(EID){var i=DB.banco.findIndex(function(x){return x.id===EID;});if(i>-1)DB.banco[i]=obj;}
   else DB.banco.push(obj);
   try{sd();}catch(e){}
   fbSave('banco',obj.id,obj);
+  auditLog(EID?'editar_banco':'crear_banco',{id:obj.id,tipo:obj.tipo,mon:obj.mon,desc:obj.desc,fil:obj.fil,fec:obj.fec});
   cm('ov-banco');renderBanco();
   toast(tipo==='deposito'?'Depósito registrado':'Retiro registrado');
 }
@@ -4998,9 +5227,11 @@ function edBanco(b){
 function delBanco(b){
   var id=b&&b.getAttribute?b.getAttribute('data-id'):b;
   if(!confirm('¿Eliminar este movimiento bancario?'))return;
+  var bancoDel=DB.banco.find(function(m){return m.id===id;});
   DB.banco=DB.banco.filter(function(m){return m.id!==id;});
   try{sd();}catch(e){}
   fbDelete('banco',id);
+  auditLog('eliminar_banco',{id:id,tipo:bancoDel?bancoDel.tipo:'',mon:bancoDel?bancoDel.mon:0,desc:bancoDel?bancoDel.desc:'',fec:bancoDel?bancoDel.fec:''});
   renderBanco();
   toast('Movimiento eliminado','err');
 }
@@ -6124,8 +6355,366 @@ function closeSidebar(){
   ov.classList.remove('open');
 }
 
-document.addEventListener('DOMContentLoaded',()=>{
-  // File reader for comprobante
+
+// ===================== AUDITORIA =====================
+function auditLog(accion, datos){
+  try{
+    var entrada={
+      id:'AUD'+Date.now().toString(36).toUpperCase(),
+      accion:accion,
+      usuario:CU?CU.nom:'Sistema',
+      userLogin:CU?CU.user:'sistema',
+      rol:CU?CU.rol:'',
+      fecha:new Date().toISOString(),
+      datos:datos||{}
+    };
+    // Save locally
+    if(!DB.auditoria)DB.auditoria=[];
+    DB.auditoria.push(entrada);
+    try{sd();}catch(e){}
+    // Save to Firebase (no delete — append only)
+    if(window.FB_DB){
+      window.FB_DB.collection('auditoria').doc(entrada.id).set(entrada).catch(function(){});
+    }
+  }catch(e){}
+}
+
+var auditPg=1;
+function renderAuditoria(){
+  if(!CU||CU.niv>1){toast('Solo el Administrador puede ver la auditoría','err');sm('dashboard');return;}
+  var s=(document.getElementById('aud-s')||{value:''}).value.toLowerCase();
+  var fu=(document.getElementById('aud-fu')||{value:''}).value;
+  var fa=(document.getElementById('aud-fa')||{value:''}).value;
+  var logs=(DB.auditoria||[]).slice();
+  logs.sort(function(a,b){return b.fecha.localeCompare(a.fecha);});
+  if(s)logs=logs.filter(function(a){return (a.accion+a.usuario+(a.datos&&a.datos.desc?a.datos.desc:'')).toLowerCase().includes(s);});
+  if(fu)logs=logs.filter(function(a){return a.userLogin===fu||a.usuario===fu;});
+  if(fa)logs=logs.filter(function(a){return a.fecha&&a.fecha.slice(0,10)===fa;});
+
+  var tbody=document.getElementById('aud-body');
+  if(!tbody)return;
+  if(!logs.length){tbody.innerHTML='<tr><td colspan="6" style="text-align:center;padding:20px;color:rgba(247,243,233,.3)">Sin registros de auditoría</td></tr>';return;}
+
+  var ANAMES={
+    crear_movimiento:'📝 Creó movimiento',editar_movimiento:'✏️ Editó movimiento',eliminar_movimiento:'🗑️ Eliminó movimiento',
+    crear_banco:'📝 Creó banco',editar_banco:'✏️ Editó banco',eliminar_banco:'🗑️ Eliminó banco',
+    transferencia_caja_banco:'💸 Transferencia Caja→Banco',transferencia_banco_caja:'💸 Transferencia Banco→Caja'
+  };
+  var APP=25;
+  var pgs=Math.ceil(logs.length/APP)||1;
+  if(auditPg>pgs)auditPg=1;
+  var page=logs.slice((auditPg-1)*APP,auditPg*APP);
+
+  tbody.innerHTML=page.map(function(a){
+    var d=new Date(a.fecha);
+    var fechaFmt=d.toLocaleDateString('es-PE')+' '+d.toLocaleTimeString('es-PE',{hour:'2-digit',minute:'2-digit'});
+    var detalle='';
+    if(a.datos){
+      if(a.datos.desc)detalle+='"'+a.datos.desc+'" ';
+      if(a.datos.mon)detalle+='S/. '+Number(a.datos.mon).toFixed(2)+' ';
+      if(a.datos.tipo)detalle+=a.datos.tipo+' ';
+      if(a.datos.fec)detalle+=fd2(a.datos.fec);
+    }
+    var accionColor=a.accion.includes('elimin')?'#E74C3C':a.accion.includes('edit')?'#F39C12':'#2ECC71';
+    return '<tr>'
+      +'<td style="font-size:10px;color:rgba(247,243,233,.5)">'+fechaFmt+'</td>'
+      +'<td><span style="color:'+accionColor+';font-size:11px;font-weight:700">'+(ANAMES[a.accion]||a.accion)+'</span></td>'
+      +'<td><strong style="color:var(--gold-light)">'+a.usuario+'</strong><div style="font-size:10px;color:rgba(247,243,233,.4)">'+ROLES[a.rol]||a.rol+'</div></td>'
+      +'<td style="font-size:11px;color:rgba(247,243,233,.6)">'+detalle+'</td>'
+      +'<td style="font-size:10px;color:rgba(247,243,233,.3);font-family:monospace">'+(a.datos&&a.datos.id?a.datos.id:'')+'</td>'
+      +'</tr>';
+  }).join('');
+
+  // Pagination
+  var pagEl=document.getElementById('aud-pag');
+  if(pagEl){
+    var btns='';
+    if(pgs>1){
+      btns+='<button class="pg-btn'+(auditPg===1?' active':'')+'" onclick="auditPg=1;renderAuditoria()">«</button>';
+      for(var p=Math.max(1,auditPg-2);p<=Math.min(pgs,auditPg+2);p++){
+        btns+='<button class="pg-btn'+(p===auditPg?' active':'')+'" onclick="auditPg='+p+';renderAuditoria()">'+p+'</button>';
+      }
+      btns+='<button class="pg-btn'+(auditPg===pgs?' active':'')+'" onclick="auditPg='+pgs+';renderAuditoria()">»</button>';
+    }
+    pagEl.innerHTML=btns;
+  }
+  // Summary
+  var tot=document.getElementById('aud-tot');
+  if(tot)tot.textContent=logs.length+' registros';
+}
+
+function loadAuditoriaFromFirebase(){
+  if(!window.FB_DB)return;
+  showSyncMsg('Cargando auditoría...');
+  window.FB_DB.collection('auditoria').orderBy('fecha','desc').limit(500).get()
+    .then(function(snap){
+      var items=[];
+      snap.forEach(function(d){items.push(d.data());});
+      if(!DB.auditoria)DB.auditoria=[];
+      // Merge: Firebase is source of truth for auditoria
+      var localIds=new Set(DB.auditoria.map(function(a){return a.id;}));
+      items.forEach(function(a){if(!localIds.has(a.id))DB.auditoria.push(a);});
+      try{sd();}catch(e){}
+      hideSyncMsg();
+      renderAuditoria();
+    }).catch(function(){hideSyncMsg();renderAuditoria();});
+}
+
+// ===================== TRANSFERENCIAS CAJA ↔ BANCO =====================
+function canDoTransferencia(){
+  if(!CU)return false;
+  // Nivel 1=Admin, 2=Tesorero Principal, 3=Tesorero Sede, 4=Auxiliar Central
+  return CU.niv<=2||CU.rol==='tesorero_sede'||CU.rol==='auxiliar_central';
+}
+
+function openTransferenciaCajaBanco(){
+  if(!canDoTransferencia()){toast('Sin acceso a esta función','err');return;}
+  // Reset form
+  var fechaEl=document.getElementById('trf-fecha');
+  if(fechaEl)fechaEl.value=today();
+  var montoEl=document.getElementById('trf-monto');
+  if(montoEl)montoEl.value='';
+  var obsEl=document.getElementById('trf-obs');
+  if(obsEl)obsEl.value='';
+  var refEl=document.getElementById('trf-ref');
+  if(refEl)refEl.value='';
+  // Set direction default
+  var dirEl=document.getElementById('trf-dir');
+  if(dirEl)dirEl.value='caja_banco';
+  onChangeTrfDir();
+  // Show current balances
+  updTrfSaldos();
+  om('ov-transferencia');
+}
+
+function onChangeTrfDir(){
+  var dir=document.getElementById('trf-dir');
+  if(!dir)return;
+  var info=document.getElementById('trf-dir-info');
+  if(info){
+    if(dir.value==='caja_banco'){
+      info.innerHTML='💰→🏦 El efectivo <strong>sale de Caja</strong> y entra al <strong>Banco</strong>';
+      info.style.borderColor='rgba(46,204,113,.4)';info.style.color='#2ECC71';
+    } else {
+      info.innerHTML='🏦→💰 El dinero <strong>sale del Banco</strong> y entra a <strong>Caja (Sede Central)</strong>';
+      info.style.borderColor='rgba(52,152,219,.4)';info.style.color='#5DADE2';
+    }
+  }
+  updTrfSaldos();
+}
+
+function updTrfSaldos(){
+  // Calcular saldo caja sede central (ingresos - egresos de movimientos normales, sin transferencias)
+  var movsCaja=DB.movimientos.filter(function(m){
+    return m.fil==='sede' && m.tipo!=='transferencia' && !m.esBancario && (m.moneda||'PEN')==='PEN';
+  });
+  var saldoCaja=movsCaja.reduce(function(a,m){return a+(m.tipo==='ingreso'?Number(m.mon):-Number(m.mon));},0);
+  var siCaja=Number((DB.saldos_iniciales||{}).filiales)||0;
+  saldoCaja+=siCaja;
+
+  // Calcular saldo banco
+  var siBanco=Number((DB.saldos_iniciales||{}).banco)||0;
+  var saldoBanco=siBanco;
+  (DB.banco||[]).forEach(function(b){
+    saldoBanco+=(b.tipo==='deposito'?Number(b.mon):-Number(b.mon));
+  });
+
+  var cajEl=document.getElementById('trf-saldo-caja');
+  var banEl=document.getElementById('trf-saldo-banco');
+  if(cajEl)cajEl.textContent='S/. '+saldoCaja.toFixed(2);
+  if(banEl)banEl.textContent='S/. '+saldoBanco.toFixed(2);
+}
+
+function savTransferencia(){
+  if(!canDoTransferencia()){toast('Sin acceso','err');return;}
+  var dir=document.getElementById('trf-dir').value;
+  var fecha=document.getElementById('trf-fecha').value;
+  var monStr=document.getElementById('trf-monto').value;
+  var mon=parseFloat(monStr);
+  var obs=document.getElementById('trf-obs').value.trim();
+  var ref=document.getElementById('trf-ref').value.trim();
+
+  if(!fecha){toast('Seleccione la fecha','err');return;}
+  if(!monStr||isNaN(mon)||mon<=0){toast('Ingrese un monto válido mayor a 0','err');return;}
+
+  var trfId='TRF'+Date.now().toString(36).toUpperCase();
+  var ahora=new Date().toISOString();
+
+  // Calcular saldos ANTES
+  var movsCaja=DB.movimientos.filter(function(m){
+    return m.fil==='sede' && m.tipo!=='transferencia' && !m.esBancario && (m.moneda||'PEN')==='PEN';
+  });
+  var siCaja=Number((DB.saldos_iniciales||{}).filiales)||0;
+  var saldoCajaAntes=siCaja+movsCaja.reduce(function(a,m){return a+(m.tipo==='ingreso'?Number(m.mon):-Number(m.mon));},0);
+  // Incluir transferencias anteriores para saldo real
+  DB.movimientos.filter(function(m){return m.tipo==='transferencia'&&m.fil==='sede'&&(m.moneda||'PEN')==='PEN';}).forEach(function(m){
+    saldoCajaAntes+=(m.subtipo==='entrada_banco_caja'?Number(m.mon):-Number(m.mon));
+  });
+
+  var siBanco=Number((DB.saldos_iniciales||{}).banco)||0;
+  var saldoBancoAntes=siBanco;
+  (DB.banco||[]).forEach(function(b){saldoBancoAntes+=(b.tipo==='deposito'?Number(b.mon):-Number(b.mon));});
+
+  // Crear movimiento en colección movimientos (tipo:'transferencia', nunca aparece en ingresos/egresos)
+  var movObj={
+    id:'M'+trfId,
+    tipo:'transferencia',
+    subtipo:dir==='caja_banco'?'salida_caja_banco':'entrada_banco_caja',
+    fec:fecha,
+    mon:mon,
+    moneda:'PEN',
+    desc:dir==='caja_banco'
+      ?('Transferencia Caja → Banco'+(obs?' — '+obs:''))
+      :('Transferencia Banco → Caja'+(obs?' — '+obs:'')),
+    cat:'Transferencia',
+    fil:'sede',
+    met:'transferencia',
+    comp:ref||'',
+    obs:obs,
+    trfId:trfId,
+    regBy:CU?CU.nom:'',
+    regAt:ahora,
+    ts:Date.now()
+  };
+
+  // Crear movimiento bancario vinculado
+  var bancoObj={
+    id:'B'+trfId,
+    tipo:dir==='caja_banco'?'deposito':'retiro',
+    fec:fecha,
+    mon:mon,
+    desc:dir==='caja_banco'
+      ?('Depósito desde Caja — Sede Central'+(obs?' — '+obs:''))
+      :('Retiro para Caja — Sede Central'+(obs?' — '+obs:'')),
+    fil:'sede',
+    comp:ref||'',
+    obs:obs,
+    origen:'transferencia_caja_banco',
+    trfId:trfId,
+    movId:movObj.id,
+    regBy:CU?CU.nom:'',
+    regAt:ahora,
+    reg:CU?CU.nom:'',
+    regFec:today()
+  };
+
+  if(!DB.movimientos)DB.movimientos=[];
+  if(!DB.banco)DB.banco=[];
+  DB.movimientos.push(movObj);
+  DB.banco.push(bancoObj);
+  try{sd();}catch(e){}
+  fbSave('movimientos',movObj.id,movObj);
+  fbSave('banco',bancoObj.id,bancoObj);
+
+  // Auditoría
+  var accionAud=dir==='caja_banco'?'transferencia_caja_banco':'transferencia_banco_caja';
+  auditLog(accionAud,{
+    trfId:trfId,mon:mon,dir:dir,
+    saldoCajaAntes:saldoCajaAntes,saldoBancoAntes:saldoBancoAntes,
+    fec:fecha,obs:obs,ref:ref
+  });
+
+  cm('ov-transferencia');
+  renderMov();
+  if(document.getElementById('mod-banco').classList.contains('active'))renderBanco();
+  toast(dir==='caja_banco'?'✅ Transferencia Caja → Banco registrada':'✅ Transferencia Banco → Caja registrada');
+}
+
+function genRptTransferencias(){
+  if(!CU||(CU.niv>2&&CU.rol!=='tesorero_sede'&&CU.rol!=='auxiliar_central')){toast('Sin acceso','err');return;}
+  var mes=parseInt(document.getElementById('rtrfmes').value);
+  var anio=parseInt(document.getElementById('rtrfanio').value);
+  if(!anio||!mes){toast('Seleccione mes y año','err');return;}
+
+  // Movimientos de transferencia del período
+  var trfs=DB.movimientos.filter(function(m){
+    return m.tipo==='transferencia'
+      && parseInt(m.fec.split('-')[0])===anio
+      && parseInt(m.fec.split('-')[1])===mes;
+  }).sort(function(a,b){return a.fec.localeCompare(b.fec);});
+
+  // Calcular saldos
+  var siCaja=Number((DB.saldos_iniciales||{}).filiales)||0;
+  var siBanco=Number((DB.saldos_iniciales||{}).banco)||0;
+
+  var cutoff=anio+'-'+String(mes).padStart(2,'0')+'-01';
+
+  // Saldo caja antes del período
+  var movsCajaAntes=DB.movimientos.filter(function(m){return m.fil==='sede'&&m.tipo!=='transferencia'&&!m.esBancario&&(m.moneda||'PEN')==='PEN'&&m.fec<cutoff;});
+  var trfsCajaAntes=DB.movimientos.filter(function(m){return m.tipo==='transferencia'&&m.fil==='sede'&&m.fec<cutoff;});
+  var saldoCajaInicio=siCaja+movsCajaAntes.reduce(function(a,m){return a+(m.tipo==='ingreso'?Number(m.mon):-Number(m.mon));},0)
+    +trfsCajaAntes.reduce(function(a,m){return a+(m.subtipo==='entrada_banco_caja'?Number(m.mon):-Number(m.mon));},0);
+
+  // Saldo banco antes del período
+  var bancosAntes=(DB.banco||[]).filter(function(b){return b.fec<cutoff;});
+  var saldoBancoInicio=siBanco+bancosAntes.reduce(function(a,b){return a+(b.tipo==='deposito'?Number(b.mon):-Number(b.mon));},0);
+
+  var totalCajaBanco=0,totalBancoCaja=0;
+  var runCaja=saldoCajaInicio,runBanco=saldoBancoInicio;
+
+  var rows=trfs.map(function(t){
+    var esCajaBanco=t.subtipo==='salida_caja_banco';
+    var dir=esCajaBanco?'💰→🏦 Caja → Banco':'🏦→💰 Banco → Caja';
+    var mon=Number(t.mon);
+    var cajAntes=runCaja,banAntes=runBanco;
+    if(esCajaBanco){runCaja-=mon;runBanco+=mon;totalCajaBanco+=mon;}
+    else{runBanco-=mon;runCaja+=mon;totalBancoCaja+=mon;}
+    return '<tr>'
+      +'<td style="border:1px solid #eee;padding:5px 8px;font-size:11px">'+fd2(t.fec)+'</td>'
+      +'<td style="border:1px solid #eee;padding:5px 8px;font-size:11px;font-weight:bold;color:'+(esCajaBanco?'#1A7A4A':'#2E86AB')+'">'+dir+'</td>'
+      +'<td style="border:1px solid #eee;padding:5px 8px;font-size:11px;font-weight:bold">S/. '+mon.toFixed(2)+'</td>'
+      +'<td style="border:1px solid #eee;padding:5px 8px;font-size:11px">'+(t.comp||'—')+'</td>'
+      +'<td style="border:1px solid #eee;padding:5px 8px;font-size:11px">'+(t.obs||'—')+'</td>'
+      +'<td style="border:1px solid #eee;padding:5px 8px;font-size:11px">'+(t.regBy||'—')+'</td>'
+      +'<td style="border:1px solid #eee;padding:5px 8px;font-size:11px;text-align:right">S/. '+cajAntes.toFixed(2)+'</td>'
+      +'<td style="border:1px solid #eee;padding:5px 8px;font-size:11px;text-align:right;font-weight:bold">S/. '+runCaja.toFixed(2)+'</td>'
+      +'<td style="border:1px solid #eee;padding:5px 8px;font-size:11px;text-align:right">S/. '+banAntes.toFixed(2)+'</td>'
+      +'<td style="border:1px solid #eee;padding:5px 8px;font-size:11px;text-align:right;font-weight:bold">S/. '+runBanco.toFixed(2)+'</td>'
+      +'</tr>';
+  }).join('');
+
+  if(!rows)rows='<tr><td colspan="10" style="text-align:center;padding:20px;color:#888">No hay transferencias en este período</td></tr>';
+
+  var mesNom=MESES[mes-1]+' '+anio;
+  var html='<div class="rpt-wrap">'+rptHd('Informe de Transferencias Caja ↔ Banco',mesNom)
+    +'<div class="rpt-body">'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:14px">'
+    +'<div style="padding:10px;background:#fffde7;border:1px solid #C9A84C;border-radius:5px;text-align:center"><div style="font-size:9px;color:#888;font-weight:bold">Saldo Caja Inicio</div><div style="font-size:17px;font-weight:bold;color:#8B6914">S/. '+saldoCajaInicio.toFixed(2)+'</div></div>'
+    +'<div style="padding:10px;background:#f0f7f0;border:1px solid #2ECC71;border-radius:5px;text-align:center"><div style="font-size:9px;color:#888;font-weight:bold">Caja → Banco</div><div style="font-size:17px;font-weight:bold;color:#1A7A4A">S/. '+totalCajaBanco.toFixed(2)+'</div></div>'
+    +'<div style="padding:10px;background:#e8f4f8;border:1px solid #2E86AB;border-radius:5px;text-align:center"><div style="font-size:9px;color:#888;font-weight:bold">Banco → Caja</div><div style="font-size:17px;font-weight:bold;color:#2E86AB">S/. '+totalBancoCaja.toFixed(2)+'</div></div>'
+    +'<div style="padding:10px;background:#fffde7;border:1px solid #C9A84C;border-radius:5px;text-align:center"><div style="font-size:9px;color:#888;font-weight:bold">Saldo Caja Final</div><div style="font-size:17px;font-weight:bold;color:'+(runCaja>=0?'#1A7A4A':'#C0392B')+'">S/. '+runCaja.toFixed(2)+'</div></div>'
+    +'</div>'
+    +'<div style="overflow-x:auto"><table><thead><tr>'
+    +'<th style="background:#0D1B2A;color:#C9A84C;padding:6px 8px">Fecha</th>'
+    +'<th style="background:#0D1B2A;color:#C9A84C;padding:6px 8px">Dirección</th>'
+    +'<th style="background:#0D1B2A;color:#C9A84C;padding:6px 8px">Monto</th>'
+    +'<th style="background:#0D1B2A;color:#C9A84C;padding:6px 8px">Referencia</th>'
+    +'<th style="background:#0D1B2A;color:#C9A84C;padding:6px 8px">Observación</th>'
+    +'<th style="background:#0D1B2A;color:#C9A84C;padding:6px 8px">Registrado Por</th>'
+    +'<th style="background:#0D1B2A;color:#C9A84C;padding:6px 8px">Caja Antes</th>'
+    +'<th style="background:#0D1B2A;color:#C9A84C;padding:6px 8px">Caja Después</th>'
+    +'<th style="background:#0D1B2A;color:#C9A84C;padding:6px 8px">Banco Antes</th>'
+    +'<th style="background:#0D1B2A;color:#C9A84C;padding:6px 8px">Banco Después</th>'
+    +'</tr></thead><tbody>'+rows+'</tbody>'
+    +'<tfoot><tr>'
+    +'<td colspan="2" style="background:#f8f5ef;border:1px solid #C9A84C;padding:6px 8px;font-weight:bold">TOTALES DEL MES</td>'
+    +'<td colspan="8" style="background:#f8f5ef;border:1px solid #C9A84C;padding:6px 8px;font-size:11px">'
+    +'<strong>'+trfs.length+'</strong> transferencias &nbsp;|&nbsp; Caja→Banco: <strong style="color:#1A7A4A">S/. '+totalCajaBanco.toFixed(2)+'</strong> &nbsp;|&nbsp; Banco→Caja: <strong style="color:#2E86AB">S/. '+totalBancoCaja.toFixed(2)+'</strong>'
+    +'</td></tr></tfoot>'
+    +'</table></div>'
+    +'<div style="font-size:10px;color:#888;margin-top:8px">* Las transferencias no afectan el total de Ingresos o Egresos del Libro Caja — son movimientos internos.</div>'
+    +rptSign('Tesorero Principal','Pastor Principal')
+    +'</div></div>';
+
+  document.getElementById('rtrf-prev').innerHTML=html;
+  toast('Informe de Transferencias generado ✅');
+}
+
+document.addEventListener('DOMContentLoaded',function(){
+  // Init auditoria array in DB
+  if(!DB.auditoria)DB.auditoria=[];
+});
+
   document.addEventListener('change', function(e){
     if(e.target && e.target.id === 'm-comp-file'){
       var file = e.target.files[0];
