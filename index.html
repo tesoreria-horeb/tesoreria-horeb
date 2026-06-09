@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VERSION: 2026-06-09-V7 -->
+<!-- VERSION: 2026-06-09-V8 -->
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -880,13 +880,13 @@ body.contador-mode .modal-ft .btn-d {
 
       <!-- TRANSFERENCIAS (acceso rápido al modal) -->
       <div class="mod" id="mod-transferencias">
-        <div class="card" style="max-width:540px;margin:0 auto">
+        <div class="card" style="margin:0 auto">
           <div class="card-title">💸 Transferencias Caja ↔ Banco</div>
           <p style="font-size:13px;color:rgba(247,243,233,.6);margin-bottom:18px;line-height:1.7">
             Registra movimientos internos entre la <strong>Caja (Sede Central)</strong> y la <strong>Cuenta Bancaria</strong>.
             Estas transferencias <strong>no afectan</strong> el balance de ingresos/egresos del Libro Caja.
           </p>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px;max-width:540px">
             <button class="btn btn-g" style="padding:16px;font-size:13px;justify-content:center;flex-direction:column;gap:6px;height:80px" onclick="document.getElementById('trf-dir').value='caja_banco';onChangeTrfDir();updTrfSaldos();om('ov-transferencia')">
               <span style="font-size:22px">💰→🏦</span>
               <span>Caja → Banco</span>
@@ -896,7 +896,7 @@ body.contador-mode .modal-ft .btn-d {
               <span>Banco → Caja</span>
             </button>
           </div>
-          <div class="alert alert-info" style="margin-bottom:12px">
+          <div class="alert alert-info" style="margin-bottom:12px;max-width:540px">
             💡 Para ver el historial e informe de transferencias, usa <strong>Informe Transferencias</strong> en el menú lateral.
           </div>
           <div class="card" style="margin-top:6px">
@@ -5173,6 +5173,7 @@ function startRealtimeSync(){
 
       // Refresh current active module
       refreshCurrentModule();
+      migrarTransferencias();
 
     }, function(err){console.warn('Listener error '+col+':', err);});
 
@@ -5293,6 +5294,7 @@ async function syncFromFirebase(){
     try{sd();}catch(e){}
     hideSyncMsg();
     refreshCurrentModule();
+    migrarTransferencias();
   }catch(e){hideSyncMsg();console.warn('Sync error:',e);}
 }
 
@@ -6668,6 +6670,30 @@ function loadAuditoriaFromFirebase(){
       hideSyncMsg();
       renderAuditoria();
     }).catch(function(){hideSyncMsg();renderAuditoria();});
+}
+
+// ===================== MIGRACIÓN: reparar transferencias sin subtipo =====================
+function migrarTransferencias(){
+  var reparadas=0;
+  (DB.movimientos||[]).forEach(function(m){
+    if(m.tipo!=='transferencia')return;
+    if(!m.subtipo){
+      // Inferir subtipo por descripción
+      if(m.desc&&m.desc.indexOf('Caja → Banco')>-1){
+        m.subtipo='salida_caja_banco';
+      } else if(m.desc&&m.desc.indexOf('Banco → Caja')>-1){
+        m.subtipo='entrada_banco_caja';
+      } else {
+        m.subtipo='salida_caja_banco'; // default
+      }
+      fbSave('movimientos',m.id,m);
+      reparadas++;
+    }
+  });
+  if(reparadas>0){
+    try{sd();}catch(e){}
+    console.log('[MIGRACIÓN] Reparadas '+reparadas+' transferencias sin subtipo');
+  }
 }
 
 // ===================== TRANSFERENCIAS CAJA ↔ BANCO =====================
