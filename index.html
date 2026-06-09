@@ -1003,7 +1003,16 @@ body.contador-mode .modal-ft .btn-d {
       <div class="fld"><label>Tipo</label><select id="m-tipo" onchange="onTipoChange()"><option value="ingreso">Ingreso</option><option value="egreso">Egreso</option></select></div>
     </div>
     <div class="fr">
-      <div class="fld"><label>Fecha</label><input type="date" id="m-fecha"></div>
+      <div class="fld">
+        <label>Mes del Movimiento</label>
+        <select id="m-mes-sel" onchange="onMesSelChange()" style="width:100%"></select>
+      </div>
+      <div class="fld">
+        <label>Día <span id="m-fecha-rango" style="font-weight:normal;color:rgba(247,243,233,.4);font-size:10px"></span></label>
+        <input type="date" id="m-fecha">
+      </div>
+    </div>
+    <div class="fr">
       <div class="fld">
         <label>Categoría</label>
         <select id="m-cat-select" onchange="onCatSelect()" style="width:100%">
@@ -2253,9 +2262,73 @@ function delMov(btn){
   toast('Movimiento eliminado','err');
 }
 
+// ===================== CONTROL DE MES EN MODAL MOVIMIENTO =====================
+function popMesSel(){
+  var sel=document.getElementById('m-mes-sel');
+  if(!sel)return;
+  sel.innerHTML='';
+  var now=new Date();
+  var curM=now.getMonth()+1;
+  var curY=now.getFullYear();
+  // Niv 1 y 2: acceso completo (24 meses atrás); todos los demás: mes actual + 2 anteriores
+  var mesesAtras=CU&&CU.niv<=2?23:2;
+  for(var i=mesesAtras;i>=0;i--){
+    var d=new Date(curY,curM-1-i,1);
+    var m=d.getMonth()+1;
+    var y=d.getFullYear();
+    var o=document.createElement('option');
+    o.value=y+'-'+String(m).padStart(2,'0');
+    var lbl=MESES[m-1]+' '+y;
+    if(i===0)lbl+=' (mes actual)';
+    else if(i===1)lbl+=' (mes anterior)';
+    o.textContent=lbl;
+    sel.appendChild(o);
+  }
+  // Default = mes actual
+  sel.value=curY+'-'+String(curM).padStart(2,'0');
+  onMesSelChange(true);
+}
+
+function onMesSelChange(keepDay){
+  var sel=document.getElementById('m-mes-sel');
+  var fechaEl=document.getElementById('m-fecha');
+  var rangoEl=document.getElementById('m-fecha-rango');
+  if(!sel||!fechaEl)return;
+  var parts=sel.value.split('-');
+  var y=parseInt(parts[0]);
+  var m=parseInt(parts[1]);
+  var now=new Date();
+  var curY=now.getFullYear();
+  var curM=now.getMonth()+1;
+  // Min = día 1 del mes seleccionado
+  var minDate=y+'-'+String(m).padStart(2,'0')+'-01';
+  // Max = último día del mes; si es mes actual, max = hoy
+  var lastDay=new Date(y,m,0).getDate();
+  var maxDate;
+  if(y===curY&&m===curM){
+    maxDate=now.toISOString().split('T')[0];
+  } else {
+    maxDate=y+'-'+String(m).padStart(2,'0')+'-'+String(lastDay).padStart(2,'0');
+  }
+  fechaEl.min=minDate;
+  fechaEl.max=maxDate;
+  if(rangoEl)rangoEl.textContent='(01 al '+String(y===curY&&m===curM?now.getDate():lastDay).padStart(2,'0')+')';
+  // Ajustar fecha si está fuera del rango
+  if(!keepDay||!fechaEl.value||fechaEl.value<minDate||fechaEl.value>maxDate){
+    // Default: hoy si es mes actual, o último día si es mes pasado
+    if(y===curY&&m===curM){
+      fechaEl.value=maxDate;
+    } else {
+      fechaEl.value=maxDate;
+    }
+  }
+}
+
 function openMovModal(id){
   if(CU&&CU.niv===5){toast('Acceso solo lectura','err');return;}
   EID=id||null;updCats();popMiem('m-miem');
+  // Populate month selector
+  popMesSel();
   var fs=document.getElementById('m-fil');
   fs.innerHTML='';
   var filsToShow=gAccFil();
@@ -2277,6 +2350,22 @@ function openMovModal(id){
     document.getElementById('m-cat').value=m.cat;
     // Pre-select categoria and subcategoria
     if(m.cat)selectCat(m.cat);
+    // Sync month selector to the record's date
+    var mSel=document.getElementById('m-mes-sel');
+    if(mSel&&m.fec){
+      var ymVal=m.fec.substring(0,7);
+      // Add option if not present (editing old record)
+      var hasOpt=Array.from(mSel.options).some(function(o){return o.value===ymVal;});
+      if(!hasOpt){
+        var oExtra=document.createElement('option');
+        oExtra.value=ymVal;
+        var parts=ymVal.split('-');
+        oExtra.textContent=MESES[parseInt(parts[1])-1]+' '+parts[0]+' ⚠️';
+        mSel.insertBefore(oExtra,mSel.firstChild);
+      }
+      mSel.value=ymVal;
+      onMesSelChange(true);
+    }
     document.getElementById('m-fecha').value=m.fec;
     document.getElementById('m-monto').value=m.mon;
     document.getElementById('m-desc').value=m.desc;
@@ -2305,7 +2394,7 @@ function openMovModal(id){
   }else{
     document.getElementById('mov-tit').textContent='Nuevo Movimiento';
     document.getElementById('m-tipo').value='ingreso';updCats();
-    document.getElementById('m-fecha').value=today();
+    // fecha ya fue seteada por popMesSel → onMesSelChange
     ['m-monto','m-desc','m-comp','m-obs'].forEach(id=>document.getElementById(id).value='');
     document.getElementById('m-met').value='efectivo';
     // Reset banco toggle
@@ -2328,12 +2417,13 @@ function savMov(keepOpen){
   var fil=document.getElementById('m-fil').value;
 
   if(!fec){toast('Seleccione la fecha','err');return;}
+  // Validar que la fecha esté dentro del rango permitido (solo en nuevos, no en edición)
+  if(!EID){
+    var fechaEl2=document.getElementById('m-fecha');
+    if(fechaEl2&&fechaEl2.min&&fec<fechaEl2.min){toast('Fecha fuera del rango permitido — use el selector de Mes','err');return;}
+    if(fechaEl2&&fechaEl2.max&&fec>fechaEl2.max){toast('No se puede registrar una fecha futura','err');return;}
+  }
   if(!desc){toast('Ingrese una descripcion','err');return;}
-  if(!monStr||isNaN(mon)||mon<=0){toast('Ingrese un monto valido mayor a 0','err');return;}
-  if(!cat){toast('Seleccione una categoria','err');return;}
-  if(!fil){toast('Seleccione la sede o filial','err');return;}
-
-  var movId=EID||gid('M');
 
   // Get file data
   var fileInput=document.getElementById('m-comp-file');
