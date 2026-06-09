@@ -1990,7 +1990,22 @@ function renderDash(){
   var prevBanco=(DB.banco||[]).filter(function(m){return m.fec.substring(0,7)===prevYM;})
     .reduce(function(s,m){return s+(m.tipo==='deposito'?Number(m.mon):-Number(m.mon));},0);
   var saldoAntFil=prevSaldoTotalFil;
-  var saldoTotalFil=saldoAntFil+(ing-eg);
+  // Transferencias del mes actual (afectan saldo caja pero no aparecen en ing/eg)
+  var trfsMes=allMovsFil.filter(function(m){
+    return m.tipo==='transferencia'&&m.fec.substring(0,7)===selectedYM&&(m.moneda||'PEN')==='PEN';
+  });
+  var trfsMesImpacto=trfsMes.reduce(function(a,m){
+    return a+(m.subtipo==='entrada_banco_caja'?Number(m.mon):-Number(m.mon));
+  },0);
+  // Transferencias de meses anteriores (para el saldo anterior)
+  var trfsPrev=allMovsFil.filter(function(m){
+    return m.tipo==='transferencia'&&m.fec.substring(0,7)<selectedYM&&(m.moneda||'PEN')==='PEN';
+  });
+  var trfsPrevImpacto=trfsPrev.reduce(function(a,m){
+    return a+(m.subtipo==='entrada_banco_caja'?Number(m.mon):-Number(m.mon));
+  },0);
+  var saldoAntFilConTrf=saldoAntFil+trfsPrevImpacto;
+  var saldoTotalFil=saldoAntFilConTrf+(ing-eg)+trfsMesImpacto;
   var saldoCajaFil=saldoTotalFil;
 
   // USD calculations
@@ -2043,8 +2058,8 @@ function renderDash(){
   var saldoAntBanco=siBanco+(DB.banco||[]).filter(function(b){return b.fec<cutoffBanco;})
     .reduce(function(s,b){return s+(b.tipo==='deposito'?Number(b.mon):-Number(b.mon));},0);
   var saldoTotalBanco=saldoAntBanco+bancoDep-bancoRet;
-  var balanceMes=ing-eg;
-  var saldoCaja=saldoAntFil+ing-eg;
+  var balanceMes=ing-eg+trfsMesImpacto;
+  var saldoCaja=saldoAntFilConTrf+ing-eg+trfsMesImpacto;
 
   var citas=[
     '"Honra al Señor con tus riquezas." — Prov. 3:9',
@@ -2088,7 +2103,7 @@ function renderDash(){
   adminHtml+='<div style="grid-column:1/-1">'+mkCard(
     'Efectivo · Filiales y Sede Central — '+mesLabel,
     [
-      {lbl:'Saldo Anterior',   val:fs(saldoAntFil), color:'#C9A84C'},
+      {lbl:'Saldo Anterior',   val:fs(saldoAntFilConTrf), color:'#C9A84C'},
       {lbl:'Ingresos Totales', val:fs(ing),         color:'#2ECC71'},
       {lbl:'Egresos Totales',  val:fs(eg),          color:'#E74C3C'},
       {lbl:'Balance del Mes',  val:(balanceMes>=0?'+':'-')+fs(balanceMes), color:balanceMes>=0?'#2ECC71':'#E74C3C'},
@@ -6054,6 +6069,26 @@ function genEjecutivo(){
     +todosPrevios.filter(function(m){return m.tipo==='ingreso';}).reduce(function(a,m){return a+Number(m.mon);},0)
     -todosPrevios.filter(function(m){return m.tipo==='egreso';}).reduce(function(a,m){return a+Number(m.mon);},0);
 
+  // Impacto de transferencias ANTERIORES al mes en el saldo anterior
+  var trfsPrevEj=allMovs.filter(function(m){
+    var y=parseInt(m.fec.split('-')[0]),mo=parseInt(m.fec.split('-')[1]);
+    var esFilial=filiales.some(function(f){return f.id===m.fil;});
+    return esFilial&&m.tipo==='transferencia'&&(m.moneda||'PEN')==='PEN'&&((y<anio)||(y===anio&&mo<mes));
+  });
+  var grandSAconTrf=grandSA+trfsPrevEj.reduce(function(a,m){
+    return a+(m.subtipo==='entrada_banco_caja'?Number(m.mon):-Number(m.mon));
+  },0);
+
+  // Impacto de transferencias DEL MES en el saldo final de caja
+  var trfsMesEj=allMovs.filter(function(m){
+    var y=parseInt(m.fec.split('-')[0]),mo=parseInt(m.fec.split('-')[1]);
+    var esFilial=filiales.some(function(f){return f.id===m.fil;});
+    return esFilial&&m.tipo==='transferencia'&&(m.moneda||'PEN')==='PEN'&&y===anio&&mo===mes;
+  });
+  var trfsMesImpactoEj=trfsMesEj.reduce(function(a,m){
+    return a+(m.subtipo==='entrada_banco_caja'?Number(m.mon):-Number(m.mon));
+  },0);
+
   // Transferido a Banco = solo movimientos bancarios DEL MES seleccionado
   var bancoMes=(DB.banco||[]).filter(function(b){
     var y=parseInt(b.fec.split('-')[0]),mo=parseInt(b.fec.split('-')[1]);
@@ -6091,8 +6126,8 @@ function genEjecutivo(){
   // Ingresos Totales = solo ingresos de caja (igual que Libro Caja)
   var ingTotales=grandTi;
 
-  // Saldo en caja total = Saldo Anterior + ingresos del mes − egresos del mes − transferido a banco del mes
-  var grandSaldo=grandSA+grandTi-grandTe;
+  // Saldo en caja total = Saldo Anterior (con transferencias previas) + ingresos − egresos + impacto transferencias del mes
+  var grandSaldo=grandSAconTrf+grandTi-grandTe+trfsMesImpactoEj;
 
   function fmtC(v,pg){
     var col=v>=0?(pg?'#1A7A4A':'#C0392B'):(pg?'#C0392B':'#1A7A4A');
@@ -6164,7 +6199,7 @@ function genEjecutivo(){
 
   // BLOQUE 1 — EFECTIVO
   html+=rptCard('Efectivo · Filiales y Sede Central — '+mesNom+' '+anio,[
-    {lbl:'Saldo Anterior',   val:fs(grandSA),   col:'#8B6914'},
+    {lbl:'Saldo Anterior',   val:fs(grandSAconTrf),   col:'#8B6914'},
     {lbl:'Ingresos Totales', val:fs(grandTi),   col:'#1A7A4A', sub:fmtC(varIng,true)+' vs '+mesPrevNom},
     {lbl:'Egresos Totales',  val:fs(grandTe),   col:'#C0392B', sub:fmtC(-varEg,true)+' vs '+mesPrevNom},
     {lbl:'Balance del Mes',  val:(grandBal>=0?'+':'-')+fs(grandBal), col:grandBal>=0?'#1A7A4A':'#C0392B'},
