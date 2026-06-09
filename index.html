@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VERSION: 2026-06-09-V9 -->
+<!-- VERSION: 2026-06-09-V10 -->
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -5133,7 +5133,7 @@ function startRealtimeSync(){
         DB.movimientos=items;try{sd();}catch(e){}
       } else if(col === 'filiales'){
         var items=[];snap.forEach(function(d){items.push(d.data());});
-        if(items.length>0){DB.filiales=items;try{sd();}catch(e){}}
+        if(items.length>0){DB.filiales=items;if(!DB.filiales.find(function(f){return f.id==='sede';}))DB.filiales.unshift({id:'sede',cod:'S000',nom:'Sede Central',tipo:'filial'});try{sd();}catch(e){}}
       } else if(col === 'miembros'){
         var items=[];snap.forEach(function(d){items.push(d.data());});
         if(items.length>0){DB.miembros=items;try{sd();}catch(e){}}
@@ -5279,7 +5279,7 @@ async function syncFromFirebase(){
     var cols=['movimientos','filiales','miembros','votos','banco','cierres','categorias','usuarios'];
     var results=await Promise.all(cols.map(function(c){return fbLoadAll(c);}));
     if(results[0]&&results[0].length>0)DB.movimientos=results[0];
-    if(results[1]&&results[1].length>0)DB.filiales=results[1];
+    if(results[1]&&results[1].length>0){DB.filiales=results[1];if(!DB.filiales.find(function(f){return f.id==='sede';}))DB.filiales.unshift({id:'sede',cod:'S000',nom:'Sede Central',tipo:'filial'});}
     if(results[2]&&results[2].length>0)DB.miembros=results[2];
     if(results[3]&&results[3].length>0)DB.votos=results[3];
     if(results[4]&&results[4].length>0)DB.banco=results[4];
@@ -6062,14 +6062,14 @@ function genEjecutivo(){
   // Movimientos del mes — solo filiales
   var movsMes=allMovs.filter(function(m){
     var y=parseInt(m.fec.split('-')[0]),mo=parseInt(m.fec.split('-')[1]);
-    var esFilial=filiales.some(function(f){return f.id===m.fil;});
+    var esFilial=m.fil==='sede'||filiales.some(function(f){return f.id===m.fil;});
     return y===anio&&mo===mes&&(m.moneda||'PEN')==='PEN'&&esFilial&&!m.esBancario&&m.origen!=='cierre_filial_efectivo'&&m.tipo!=='transferencia';
   });
 
   // Movimientos mes anterior — solo filiales (para comparativo)
   var movsPrev=allMovs.filter(function(m){
     var y=parseInt(m.fec.split('-')[0]),mo=parseInt(m.fec.split('-')[1]);
-    var esFilial=filiales.some(function(f){return f.id===m.fil;});
+    var esFilial=m.fil==='sede'||filiales.some(function(f){return f.id===m.fil;});
     return y===anioPrev&&mo===mesPrev&&(m.moneda||'PEN')==='PEN'&&esFilial&&m.tipo!=='transferencia';
   });
 
@@ -6085,7 +6085,7 @@ function genEjecutivo(){
   var siFiliales=Number((DB.saldos_iniciales||{}).filiales)||0;
   var todosPrevios=allMovs.filter(function(m){
     var y=parseInt(m.fec.split('-')[0]),mo=parseInt(m.fec.split('-')[1]);
-    var esFilial=filiales.some(function(f){return f.id===m.fil;});
+    var esFilial=m.fil==='sede'||filiales.some(function(f){return f.id===m.fil;});
     return esFilial&&(m.moneda||'PEN')==='PEN'&&!m.esBancario&&m.origen!=='cierre_filial_efectivo'&&m.tipo!=='transferencia'&&((y<anio)||(y===anio&&mo<mes));
   });
   var grandSA=siFiliales
@@ -6095,7 +6095,7 @@ function genEjecutivo(){
   // Impacto de transferencias ANTERIORES al mes en el saldo anterior
   var trfsPrevEj=allMovs.filter(function(m){
     var y=parseInt(m.fec.split('-')[0]),mo=parseInt(m.fec.split('-')[1]);
-    var esFilial=filiales.some(function(f){return f.id===m.fil;});
+    var esFilial=m.fil==='sede'||filiales.some(function(f){return f.id===m.fil;});
     return esFilial&&m.tipo==='transferencia'&&(m.moneda||'PEN')==='PEN'&&((y<anio)||(y===anio&&mo<mes));
   });
   var grandSAconTrf=grandSA+trfsPrevEj.reduce(function(a,m){
@@ -6105,7 +6105,7 @@ function genEjecutivo(){
   // Impacto de transferencias DEL MES en el saldo final de caja
   var trfsMesEj=allMovs.filter(function(m){
     var y=parseInt(m.fec.split('-')[0]),mo=parseInt(m.fec.split('-')[1]);
-    var esFilial=filiales.some(function(f){return f.id===m.fil;});
+    var esFilial=m.fil==='sede'||filiales.some(function(f){return f.id===m.fil;});
     return esFilial&&m.tipo==='transferencia'&&(m.moneda||'PEN')==='PEN'&&y===anio&&mo===mes;
   });
   var trfsMesImpactoEj=trfsMesEj.reduce(function(a,m){
