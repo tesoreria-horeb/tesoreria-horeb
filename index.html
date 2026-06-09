@@ -900,7 +900,7 @@ body.contador-mode .modal-ft .btn-d {
           </div>
           <div class="card" style="margin-top:6px">
             <div class="card-title">Últimas Transferencias</div>
-            <div class="tw"><table><thead><tr><th>Fecha</th><th>Dirección</th><th>Monto</th><th>Referencia</th><th>Registrado Por</th></tr></thead>
+            <div class="tw"><table><thead><tr><th>Fecha</th><th>Dirección</th><th>Monto</th><th>Referencia</th><th>Registrado Por</th><th>Acciones</th></tr></thead>
             <tbody id="trf-recent-body"></tbody>
             </table></div>
           </div>
@@ -938,9 +938,10 @@ body.contador-mode .modal-ft .btn-d {
 <div class="ov" id="ov-transferencia">
   <div class="modal">
     <div class="modal-hd">
-      <div class="modal-tit">💸 Transferencia Caja ↔ Banco</div>
-      <button class="modal-x" onclick="cm('ov-transferencia')">✕</button>
+      <div class="modal-tit" id="trf-modal-tit">💸 Transferencia Caja ↔ Banco</div>
+      <button class="modal-x" onclick="document.getElementById('trf-edit-id').value='';var t=document.getElementById('trf-modal-tit');if(t)t.textContent='💸 Transferencia Caja ↔ Banco';cm('ov-transferencia')">✕</button>
     </div>
+    <input type="hidden" id="trf-edit-id" value="">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
       <div style="padding:12px;background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.2);border-radius:6px;text-align:center">
         <div style="font-size:9px;color:#888;text-transform:uppercase;font-weight:700">Saldo Caja Actual</div>
@@ -988,7 +989,7 @@ body.contador-mode .modal-ft .btn-d {
       ℹ️ Esta transferencia <strong>no aparecerá</strong> en los Ingresos ni Egresos del Libro Caja. Se registra como movimiento interno vinculado al banco.
     </div>
     <div class="modal-ft">
-      <button class="btn btn-s" onclick="cm('ov-transferencia')">Cancelar</button>
+      <button class="btn btn-s" onclick="document.getElementById('trf-edit-id').value='';var t=document.getElementById('trf-modal-tit');if(t)t.textContent='💸 Transferencia Caja ↔ Banco';cm('ov-transferencia')">Cancelar</button>
       <button class="btn btn-p" onclick="savTransferencia()">💾 Registrar Transferencia</button>
     </div>
   </div>
@@ -5146,22 +5147,73 @@ function startRealtimeSync(){
   hideSyncMsg();
 }
 
+function canEditTransferencia(){
+  if(!CU)return false;
+  return CU.niv<=2||CU.rol==='auxiliar_central';
+}
+
 function renderTrfRecent(){
   var tbody=document.getElementById('trf-recent-body');
   if(!tbody)return;
   var trfs=(DB.movimientos||[]).filter(function(m){return m.tipo==='transferencia';})
-    .sort(function(a,b){return b.fec.localeCompare(a.fec)||((b.ts||0)-(a.ts||0));}).slice(0,8);
-  if(!trfs.length){tbody.innerHTML='<tr><td colspan="5" style="text-align:center;padding:16px;color:rgba(247,243,233,.3)">Sin transferencias registradas</td></tr>';return;}
+    .sort(function(a,b){return b.fec.localeCompare(a.fec)||((b.ts||0)-(a.ts||0));}).slice(0,20);
+  if(!trfs.length){tbody.innerHTML='<tr><td colspan="6" style="text-align:center;padding:16px;color:rgba(247,243,233,.3)">Sin transferencias registradas</td></tr>';return;}
+  var puedeEditar=canEditTransferencia();
   tbody.innerHTML=trfs.map(function(t){
     var esCajaBanco=t.subtipo==='salida_caja_banco';
+    var btns=puedeEditar
+      ?('<button class="btn btn-sm btn-s" onclick="editTransferencia(\''+t.trfId+'\')" title="Editar">✏️</button>'
+        +' <button class="btn btn-sm btn-d" onclick="delTransferencia(\''+t.trfId+'\')" title="Eliminar">🗑️</button>')
+      :'<span style="font-size:10px;color:rgba(247,243,233,.3)">—</span>';
     return '<tr>'
       +'<td>'+fd2(t.fec)+'</td>'
       +'<td style="font-weight:bold;color:'+(esCajaBanco?'#2ECC71':'#5DADE2')+'">'+(esCajaBanco?'💰→🏦 Caja→Banco':'🏦→💰 Banco→Caja')+'</td>'
       +'<td style="font-weight:bold">S/. '+Number(t.mon).toFixed(2)+'</td>'
       +'<td style="font-size:11px">'+(t.comp||'—')+'</td>'
       +'<td style="font-size:11px">'+(t.regBy||'—')+'</td>'
+      +'<td>'+btns+'</td>'
       +'</tr>';
   }).join('');
+}
+
+function editTransferencia(trfId){
+  if(!canEditTransferencia()){toast('Sin acceso para editar transferencias','err');return;}
+  var mov=DB.movimientos.find(function(m){return m.tipo==='transferencia'&&m.trfId===trfId;});
+  if(!mov){toast('Transferencia no encontrada','err');return;}
+  // Populate modal with existing data
+  var titEl=document.getElementById('trf-modal-tit');
+  if(titEl)titEl.textContent='✏️ Editar Transferencia';
+  document.getElementById('trf-edit-id').value=trfId;
+  document.getElementById('trf-dir').value=mov.subtipo==='salida_caja_banco'?'caja_banco':'banco_caja';
+  document.getElementById('trf-fecha').value=mov.fec;
+  document.getElementById('trf-monto').value=mov.mon;
+  document.getElementById('trf-ref').value=mov.comp||'';
+  document.getElementById('trf-obs').value=mov.obs||'';
+  onChangeTrfDir();
+  updTrfSaldos();
+  om('ov-transferencia');
+}
+
+function delTransferencia(trfId){
+  if(!canEditTransferencia()){toast('Sin acceso para eliminar transferencias','err');return;}
+  var mov=DB.movimientos.find(function(m){return m.tipo==='transferencia'&&m.trfId===trfId;});
+  if(!mov){toast('Transferencia no encontrada','err');return;}
+  var dir=mov.subtipo==='salida_caja_banco'?'Caja → Banco':'Banco → Caja';
+  if(!confirm('¿Eliminar la transferencia '+dir+' de S/. '+Number(mov.mon).toFixed(2)+' del '+fd2(mov.fec)+'?\n\nSe eliminarán los dos registros vinculados.'))return;
+  // Delete movimiento
+  DB.movimientos=DB.movimientos.filter(function(m){return !(m.tipo==='transferencia'&&m.trfId===trfId);});
+  fbDelete('movimientos',mov.id);
+  // Delete banco vinculado
+  var bancoId='B'+trfId;
+  var bancObj=DB.banco.find(function(b){return b.trfId===trfId;});
+  DB.banco=DB.banco.filter(function(b){return b.trfId!==trfId;});
+  if(bancObj)fbDelete('banco',bancObj.id);
+  else fbDelete('banco',bancoId);
+  try{sd();}catch(e){}
+  auditLog('eliminar_transferencia',{trfId:trfId,mon:mov.mon,subtipo:mov.subtipo,fec:mov.fec});
+  renderTrfRecent();
+  renderMov();
+  toast('Transferencia eliminada','err');
 }
 
 function refreshCurrentModule(){
@@ -6495,7 +6547,8 @@ function renderAuditoria(){
   var ANAMES={
     crear_movimiento:'📝 Creó movimiento',editar_movimiento:'✏️ Editó movimiento',eliminar_movimiento:'🗑️ Eliminó movimiento',
     crear_banco:'📝 Creó banco',editar_banco:'✏️ Editó banco',eliminar_banco:'🗑️ Eliminó banco',
-    transferencia_caja_banco:'💸 Transferencia Caja→Banco',transferencia_banco_caja:'💸 Transferencia Banco→Caja'
+    transferencia_caja_banco:'💸 Transferencia Caja→Banco',transferencia_banco_caja:'💸 Transferencia Banco→Caja',
+    editar_transferencia:'✏️ Editó transferencia',eliminar_transferencia:'🗑️ Eliminó transferencia'
   };
   var APP=25;
   var pgs=Math.ceil(logs.length/APP)||1;
@@ -6630,12 +6683,61 @@ function savTransferencia(){
   var mon=parseFloat(monStr);
   var obs=document.getElementById('trf-obs').value.trim();
   var ref=document.getElementById('trf-ref').value.trim();
+  var editId=document.getElementById('trf-edit-id').value||'';
 
   if(!fecha){toast('Seleccione la fecha','err');return;}
   if(!monStr||isNaN(mon)||mon<=0){toast('Ingrese un monto válido mayor a 0','err');return;}
 
-  var trfId='TRF'+Date.now().toString(36).toUpperCase();
   var ahora=new Date().toISOString();
+
+  if(editId){
+    // ===== MODO EDICIÓN =====
+    if(!canEditTransferencia()){toast('Sin acceso para editar','err');return;}
+    var movExist=DB.movimientos.find(function(m){return m.tipo==='transferencia'&&m.trfId===editId;});
+    var bancoExist=DB.banco.find(function(b){return b.trfId===editId;});
+    if(!movExist){toast('Transferencia no encontrada','err');return;}
+    // Update movimiento
+    movExist.fec=fecha;
+    movExist.mon=mon;
+    movExist.comp=ref;
+    movExist.obs=obs;
+    movExist.subtipo=dir==='caja_banco'?'salida_caja_banco':'entrada_banco_caja';
+    movExist.desc=dir==='caja_banco'
+      ?('Transferencia Caja → Banco'+(obs?' — '+obs:''))
+      :('Transferencia Banco → Caja'+(obs?' — '+obs:''));
+    movExist.editBy=CU?CU.nom:'';
+    movExist.editAt=ahora;
+    // Update banco vinculado
+    if(bancoExist){
+      bancoExist.fec=fecha;
+      bancoExist.mon=mon;
+      bancoExist.comp=ref;
+      bancoExist.obs=obs;
+      bancoExist.tipo=dir==='caja_banco'?'deposito':'retiro';
+      bancoExist.desc=dir==='caja_banco'
+        ?('Depósito desde Caja — Sede Central'+(obs?' — '+obs:''))
+        :('Retiro para Caja — Sede Central'+(obs?' — '+obs:''));
+      bancoExist.editBy=CU?CU.nom:'';
+      bancoExist.editAt=ahora;
+      fbSave('banco',bancoExist.id,bancoExist);
+    }
+    try{sd();}catch(e){}
+    fbSave('movimientos',movExist.id,movExist);
+    auditLog('editar_transferencia',{trfId:editId,mon:mon,dir:dir,fec:fecha,obs:obs,ref:ref});
+    // Reset modal
+    document.getElementById('trf-edit-id').value='';
+    var titEl=document.getElementById('trf-modal-tit');
+    if(titEl)titEl.textContent='💸 Transferencia Caja ↔ Banco';
+    cm('ov-transferencia');
+    renderTrfRecent();
+    renderMov();
+    if(document.getElementById('mod-banco').classList.contains('active'))renderBanco();
+    toast('✅ Transferencia actualizada');
+    return;
+  }
+
+  // ===== MODO NUEVO =====
+  var trfId='TRF'+Date.now().toString(36).toUpperCase();
 
   // Calcular saldos ANTES
   var movsCaja=DB.movimientos.filter(function(m){
@@ -6643,7 +6745,6 @@ function savTransferencia(){
   });
   var siCaja=Number((DB.saldos_iniciales||{}).filiales)||0;
   var saldoCajaAntes=siCaja+movsCaja.reduce(function(a,m){return a+(m.tipo==='ingreso'?Number(m.mon):-Number(m.mon));},0);
-  // Incluir transferencias anteriores para saldo real
   DB.movimientos.filter(function(m){return m.tipo==='transferencia'&&m.fil==='sede'&&(m.moneda||'PEN')==='PEN';}).forEach(function(m){
     saldoCajaAntes+=(m.subtipo==='entrada_banco_caja'?Number(m.mon):-Number(m.mon));
   });
@@ -6652,47 +6753,31 @@ function savTransferencia(){
   var saldoBancoAntes=siBanco;
   (DB.banco||[]).forEach(function(b){saldoBancoAntes+=(b.tipo==='deposito'?Number(b.mon):-Number(b.mon));});
 
-  // Crear movimiento en colección movimientos (tipo:'transferencia', nunca aparece en ingresos/egresos)
   var movObj={
     id:'M'+trfId,
     tipo:'transferencia',
     subtipo:dir==='caja_banco'?'salida_caja_banco':'entrada_banco_caja',
-    fec:fecha,
-    mon:mon,
-    moneda:'PEN',
+    fec:fecha,mon:mon,moneda:'PEN',
     desc:dir==='caja_banco'
       ?('Transferencia Caja → Banco'+(obs?' — '+obs:''))
       :('Transferencia Banco → Caja'+(obs?' — '+obs:'')),
-    cat:'Transferencia',
-    fil:'sede',
-    met:'transferencia',
-    comp:ref||'',
-    obs:obs,
-    trfId:trfId,
-    regBy:CU?CU.nom:'',
-    regAt:ahora,
-    ts:Date.now()
+    cat:'Transferencia',fil:'sede',met:'transferencia',
+    comp:ref||'',obs:obs,trfId:trfId,
+    regBy:CU?CU.nom:'',regAt:ahora,ts:Date.now()
   };
 
-  // Crear movimiento bancario vinculado
   var bancoObj={
     id:'B'+trfId,
     tipo:dir==='caja_banco'?'deposito':'retiro',
-    fec:fecha,
-    mon:mon,
+    fec:fecha,mon:mon,
     desc:dir==='caja_banco'
       ?('Depósito desde Caja — Sede Central'+(obs?' — '+obs:''))
       :('Retiro para Caja — Sede Central'+(obs?' — '+obs:'')),
-    fil:'sede',
-    comp:ref||'',
-    obs:obs,
+    fil:'sede',comp:ref||'',obs:obs,
     origen:'transferencia_caja_banco',
-    trfId:trfId,
-    movId:movObj.id,
-    regBy:CU?CU.nom:'',
-    regAt:ahora,
-    reg:CU?CU.nom:'',
-    regFec:today()
+    trfId:trfId,movId:movObj.id,
+    regBy:CU?CU.nom:'',regAt:ahora,
+    reg:CU?CU.nom:'',regFec:today()
   };
 
   if(!DB.movimientos)DB.movimientos=[];
@@ -6703,15 +6788,11 @@ function savTransferencia(){
   fbSave('movimientos',movObj.id,movObj);
   fbSave('banco',bancoObj.id,bancoObj);
 
-  // Auditoría
   var accionAud=dir==='caja_banco'?'transferencia_caja_banco':'transferencia_banco_caja';
-  auditLog(accionAud,{
-    trfId:trfId,mon:mon,dir:dir,
-    saldoCajaAntes:saldoCajaAntes,saldoBancoAntes:saldoBancoAntes,
-    fec:fecha,obs:obs,ref:ref
-  });
+  auditLog(accionAud,{trfId:trfId,mon:mon,dir:dir,saldoCajaAntes:saldoCajaAntes,saldoBancoAntes:saldoBancoAntes,fec:fecha,obs:obs,ref:ref});
 
   cm('ov-transferencia');
+  renderTrfRecent();
   renderMov();
   if(document.getElementById('mod-banco').classList.contains('active'))renderBanco();
   toast(dir==='caja_banco'?'✅ Transferencia Caja → Banco registrada':'✅ Transferencia Banco → Caja registrada');
