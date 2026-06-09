@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VERSION: 2026-06-09-V10 -->
+<!-- VERSION: 2026-06-09-V11 -->
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -6741,13 +6741,15 @@ function onChangeTrfDir(){
 }
 
 function updTrfSaldos(){
-  // Calcular saldo caja sede central — ingresos/egresos normales + impacto de transferencias
+  // Usar el mismo cálculo que el dashboard — saldo acumulado total hasta hoy
   var siCaja=Number((DB.saldos_iniciales||{}).filiales)||0;
-  var todasFilIds=DB.filiales.filter(function(f){return (f.tipo||'filial')!=='departamento';}).map(function(f){return f.id;});if(todasFilIds.indexOf('sede')<0)todasFilIds.push('sede');
   var saldoCaja=siCaja;
   (DB.movimientos||[]).forEach(function(m){
-    if(todasFilIds.indexOf(m.fil)<0)return;
     if(m.esBancario||(m.moneda||'PEN')!=='PEN')return;
+    // Solo filiales (no departamentos) — incluir siempre sede
+    var f=DB.filiales.find(function(x){return x.id===m.fil;});
+    var esFilial=m.fil==='sede'||!f||(f.tipo||'filial')!=='departamento';
+    if(!esFilial)return;
     if(m.tipo==='ingreso')saldoCaja+=Number(m.mon);
     else if(m.tipo==='egreso')saldoCaja-=Number(m.mon);
     else if(m.tipo==='transferencia'){
@@ -6756,7 +6758,7 @@ function updTrfSaldos(){
     }
   });
 
-  // Calcular saldo banco total acumulado
+  // Saldo banco total acumulado
   var siBanco=Number((DB.saldos_iniciales||{}).banco)||0;
   var saldoBanco=siBanco;
   (DB.banco||[]).forEach(function(b){
