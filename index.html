@@ -6711,10 +6711,7 @@ function genRptTransferencias(){
 }
 
 document.addEventListener('DOMContentLoaded',function(){
-  // Init auditoria array in DB
-  if(!DB.auditoria)DB.auditoria=[];
-});
-
+  // File reader for comprobante
   document.addEventListener('change', function(e){
     if(e.target && e.target.id === 'm-comp-file'){
       var file = e.target.files[0];
