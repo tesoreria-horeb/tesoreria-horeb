@@ -900,7 +900,14 @@ body.contador-mode .modal-ft .btn-d {
           </div>
           <div class="card" style="margin-top:6px">
             <div class="card-title">Últimas Transferencias</div>
-            <div class="tw"><table><thead><tr><th>Fecha</th><th>Dirección</th><th>Monto</th><th>Referencia</th><th>Registrado Por</th><th>Acciones</th></tr></thead>
+            <div class="tw" style="overflow-x:auto"><table style="min-width:680px"><thead><tr>
+              <th style="min-width:90px">Fecha</th>
+              <th style="min-width:160px">Dirección</th>
+              <th style="min-width:110px">Monto</th>
+              <th style="min-width:110px">Referencia</th>
+              <th style="min-width:130px">Registrado Por</th>
+              <th style="min-width:80px;text-align:center">Acciones</th>
+            </tr></thead>
             <tbody id="trf-recent-body"></tbody>
             </table></div>
           </div>
@@ -1994,18 +2001,15 @@ function renderDash(){
   var trfsMes=allMovsFil.filter(function(m){
     return m.tipo==='transferencia'&&m.fec.substring(0,7)===selectedYM&&(m.moneda||'PEN')==='PEN';
   });
-  console.log('[DEBUG TRF] selectedYM='+selectedYM+' allMovsFil.length='+allMovsFil.length+' trfsMes.length='+trfsMes.length, trfsMes.map(function(m){return{id:m.id,fec:m.fec,mon:m.mon,subtipo:m.subtipo,tipo:m.tipo};}));
   var trfsMesImpacto=trfsMes.reduce(function(a,m){
-    var esSalida=m.subtipo==='salida_caja_banco'||(m.desc&&m.desc.indexOf('Caja → Banco')>-1);
-    return a+(esSalida?-Number(m.mon):Number(m.mon));
+    return a+(m.subtipo==='entrada_banco_caja'?Number(m.mon):-Number(m.mon));
   },0);
   // Transferencias de meses anteriores (para el saldo anterior)
   var trfsPrev=allMovsFil.filter(function(m){
     return m.tipo==='transferencia'&&m.fec.substring(0,7)<selectedYM&&(m.moneda||'PEN')==='PEN';
   });
   var trfsPrevImpacto=trfsPrev.reduce(function(a,m){
-    var esSalida=m.subtipo==='salida_caja_banco'||(m.desc&&m.desc.indexOf('Caja → Banco')>-1);
-    return a+(esSalida?-Number(m.mon):Number(m.mon));
+    return a+(m.subtipo==='entrada_banco_caja'?Number(m.mon):-Number(m.mon));
   },0);
   var saldoAntFilConTrf=saldoAntFil+trfsPrevImpacto;
   var saldoTotalFil=saldoAntFilConTrf+(ing-eg)+trfsMesImpacto;
@@ -3468,6 +3472,19 @@ function genCaja(){
 
     saldoAnterior=siFilPEN+ingPrevSede-egPrevSede;
     saldoAnteriorUSD=siFilUSD+ingPrevSedeUSD-egPrevSedeUSD;
+
+    // Incluir impacto de transferencias anteriores al mes en el saldo anterior
+    var trfsPrevSede=gAccMov().filter(function(m){
+      if(todasFilIds.indexOf(m.fil)<0)return false;
+      if(m.tipo!=='transferencia')return false;
+      var y=parseInt(m.fec.split('-')[0]);
+      var mo=parseInt(m.fec.split('-')[1]);
+      return (y<anio)||(y===anio&&mo<mes);
+    });
+    trfsPrevSede.forEach(function(m){
+      var esSalida=m.subtipo==='salida_caja_banco'||(m.desc&&m.desc.indexOf('Caja → Banco')>-1);
+      saldoAnterior+=(esSalida?-Number(m.mon):Number(m.mon));
+    });
   }
 
   var movs=gAccMov().filter(function(m){
@@ -5189,7 +5206,7 @@ function renderTrfRecent(){
       +'<td style="font-weight:bold">S/. '+Number(t.mon).toFixed(2)+'</td>'
       +'<td style="font-size:11px">'+(t.comp||'—')+'</td>'
       +'<td style="font-size:11px">'+(t.regBy||'—')+'</td>'
-      +'<td>'+btns+'</td>'
+      +'<td style="text-align:center;white-space:nowrap">'+btns+'</td>'
       +'</tr>';
   }).join('');
 }
@@ -6079,8 +6096,7 @@ function genEjecutivo(){
     return esFilial&&m.tipo==='transferencia'&&(m.moneda||'PEN')==='PEN'&&((y<anio)||(y===anio&&mo<mes));
   });
   var grandSAconTrf=grandSA+trfsPrevEj.reduce(function(a,m){
-    var esSalida=m.subtipo==='salida_caja_banco'||(m.desc&&m.desc.indexOf('Caja → Banco')>-1);
-    return a+(esSalida?-Number(m.mon):Number(m.mon));
+    return a+(m.subtipo==='entrada_banco_caja'?Number(m.mon):-Number(m.mon));
   },0);
 
   // Impacto de transferencias DEL MES en el saldo final de caja
@@ -6090,8 +6106,7 @@ function genEjecutivo(){
     return esFilial&&m.tipo==='transferencia'&&(m.moneda||'PEN')==='PEN'&&y===anio&&mo===mes;
   });
   var trfsMesImpactoEj=trfsMesEj.reduce(function(a,m){
-    var esSalida=m.subtipo==='salida_caja_banco'||(m.desc&&m.desc.indexOf('Caja → Banco')>-1);
-    return a+(esSalida?-Number(m.mon):Number(m.mon));
+    return a+(m.subtipo==='entrada_banco_caja'?Number(m.mon):-Number(m.mon));
   },0);
 
   // Transferido a Banco = solo movimientos bancarios DEL MES seleccionado
@@ -6600,10 +6615,14 @@ function renderAuditoria(){
     var fechaFmt=d.toLocaleDateString('es-PE')+' '+d.toLocaleTimeString('es-PE',{hour:'2-digit',minute:'2-digit'});
     var detalle='';
     if(a.datos){
-      if(a.datos.desc)detalle+='"'+a.datos.desc+'" ';
-      if(a.datos.mon)detalle+='S/. '+Number(a.datos.mon).toFixed(2)+' ';
-      if(a.datos.tipo)detalle+=a.datos.tipo+' ';
-      if(a.datos.fec)detalle+=fd2(a.datos.fec);
+      if(a.datos.desc)detalle+='<strong>'+a.datos.desc+'</strong> ';
+      if(a.datos.mon)detalle+='<span style="color:#2ECC71;font-weight:bold">S/. '+Number(a.datos.mon).toFixed(2)+'</span> ';
+      if(a.datos.dir){var dirTxt=a.datos.dir==='caja_banco'?'💰→🏦':'🏦→💰';detalle+=dirTxt+' ';}
+      if(a.datos.subtipo){var stxt=a.datos.subtipo==='salida_caja_banco'?'💰→🏦 Caja→Banco':'🏦→💰 Banco→Caja';detalle+=stxt+' ';}
+      if(a.datos.tipo&&!a.datos.subtipo)detalle+='<span style="color:rgba(247,243,233,.4)">'+a.datos.tipo+'</span> ';
+      if(a.datos.fec)detalle+='<span style="color:rgba(247,243,233,.4)">'+fd2(a.datos.fec)+'</span>';
+      if(a.datos.obs&&!a.datos.desc)detalle+='<span style="color:rgba(247,243,233,.4)"> — '+a.datos.obs+'</span>';
+      if(a.datos.ref)detalle+='<span style="color:rgba(247,243,233,.3)"> Ref:'+a.datos.ref+'</span>';
     }
     var accionColor=a.accion.includes('elimin')?'#E74C3C':a.accion.includes('edit')?'#F39C12':'#2ECC71';
     return '<tr>'
@@ -6694,15 +6713,22 @@ function onChangeTrfDir(){
 }
 
 function updTrfSaldos(){
-  // Calcular saldo caja sede central (ingresos - egresos de movimientos normales, sin transferencias)
-  var movsCaja=DB.movimientos.filter(function(m){
-    return m.fil==='sede' && m.tipo!=='transferencia' && !m.esBancario && (m.moneda||'PEN')==='PEN';
-  });
-  var saldoCaja=movsCaja.reduce(function(a,m){return a+(m.tipo==='ingreso'?Number(m.mon):-Number(m.mon));},0);
+  // Calcular saldo caja sede central — ingresos/egresos normales + impacto de transferencias
   var siCaja=Number((DB.saldos_iniciales||{}).filiales)||0;
-  saldoCaja+=siCaja;
+  var todasFilIds=DB.filiales.filter(function(f){return (f.tipo||'filial')!=='departamento';}).map(function(f){return f.id;});
+  var saldoCaja=siCaja;
+  (DB.movimientos||[]).forEach(function(m){
+    if(todasFilIds.indexOf(m.fil)<0)return;
+    if(m.esBancario||(m.moneda||'PEN')!=='PEN')return;
+    if(m.tipo==='ingreso')saldoCaja+=Number(m.mon);
+    else if(m.tipo==='egreso')saldoCaja-=Number(m.mon);
+    else if(m.tipo==='transferencia'){
+      var esSalida=m.subtipo==='salida_caja_banco'||(m.desc&&m.desc.indexOf('Caja → Banco')>-1);
+      saldoCaja+=(esSalida?-Number(m.mon):Number(m.mon));
+    }
+  });
 
-  // Calcular saldo banco
+  // Calcular saldo banco total acumulado
   var siBanco=Number((DB.saldos_iniciales||{}).banco)||0;
   var saldoBanco=siBanco;
   (DB.banco||[]).forEach(function(b){
