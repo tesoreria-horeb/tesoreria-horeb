@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VERSION: 2026-06-09-V8 -->
+<!-- VERSION: 2026-06-09-V9 -->
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -1721,7 +1721,7 @@ function popRcatFil(){
   oAllFil.textContent='— Todas las Filiales —';
   sel.appendChild(oAllFil);
   // Filiales individuales
-  var filiales=DB.filiales.filter(function(f){return (f.tipo||'filial')!=='departamento';});
+  var filiales=DB.filiales.filter(function(f){return (f.tipo||'filial')!=='departamento';});if(!filiales.find(function(f){return f.id==='sede';})){var sedeCentral=DB.filiales.find(function(f){return f.id==='sede';});if(sedeCentral)filiales.push(sedeCentral);}
   filiales.forEach(function(f){
     var o=document.createElement('option');
     o.value=f.id;o.textContent=f.nom;
@@ -1943,7 +1943,7 @@ function renderDash(){
   const mesLabel=selMes>0?['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'][selMes-1]+' '+curY:'Mes actual';
 
   // Separate filiales and departamentos
-  var filIds=DB.filiales.filter(function(f){return (f.tipo||'filial')!=='departamento';}).map(function(f){return f.id;});
+  var filIds=DB.filiales.filter(function(f){return (f.tipo||'filial')!=='departamento';}).map(function(f){return f.id;});if(filIds.indexOf('sede')<0)filIds.push('sede');
   var deptIds=DB.filiales.filter(function(f){return f.tipo==='departamento';}).map(function(f){return f.id;});
   if(filIds.length===0&&deptIds.length<DB.filiales.length){
     filIds=DB.filiales.map(function(f){return f.id;});
@@ -1983,7 +1983,7 @@ function renderDash(){
   var siFilUSD=Number((DB.saldos_iniciales||{}).filialesUSD)||0;
   var siDeptos=Number((DB.saldos_iniciales||{}).departamentos)||0;
 
-  var allMovsFil=gAccMov().filter(function(m){var f=DB.filiales.find(function(x){return x.id===m.fil;});return !f||(f.tipo||'filial')!=='departamento';});
+  var allMovsFil=gAccMov().filter(function(m){var f=DB.filiales.find(function(x){return x.id===m.fil;});return m.fil==='sede'||!f||(f.tipo||'filial')!=='departamento';});
   var allMovsDept=gAccMov().filter(function(m){var f=DB.filiales.find(function(x){return x.id===m.fil;});return f&&f.tipo==='departamento';});
   var allMovsMyFil=myFil?gAccMov().filter(function(m){return m.fil===myFil;}):allMovsFil;
 
@@ -3457,7 +3457,7 @@ function genCaja(){
     var siFilUSD=Number((DB.saldos_iniciales||{}).filialesUSD)||0;
 
     // Movimientos de TODAS las filiales (no departamentos) anteriores al mes
-    var todasFilIds=DB.filiales.filter(function(f){return (f.tipo||'filial')!=='departamento';}).map(function(f){return f.id;});
+    var todasFilIds=DB.filiales.filter(function(f){return (f.tipo||'filial')!=='departamento';}).map(function(f){return f.id;});if(todasFilIds.indexOf('sede')<0)todasFilIds.push('sede');
     var movsPrevSede=gAccMov().filter(function(m){
       if(todasFilIds.indexOf(m.fil)<0)return false;
       if(m.esBancario||m.origen==='cierre_filial_efectivo'||m.tipo==='transferencia')return false;
@@ -6057,7 +6057,7 @@ function genEjecutivo(){
   var allMovs=gAccMov();
 
   // Solo filiales (sin departamentos)
-  var filiales=DB.filiales.filter(function(f){return (f.tipo||'filial')!=='departamento';});
+  var filiales=DB.filiales.filter(function(f){return (f.tipo||'filial')!=='departamento';});if(!filiales.find(function(f){return f.id==='sede';})){var sedeCentral=DB.filiales.find(function(f){return f.id==='sede';});if(sedeCentral)filiales.push(sedeCentral);}
 
   // Movimientos del mes — solo filiales
   var movsMes=allMovs.filter(function(m){
@@ -6419,6 +6419,7 @@ function genCategorias(){
   var fn='';
   if(fil==='all-filiales'){
     filIds=DB.filiales.filter(function(f){return (f.tipo||'filial')!=='departamento';}).map(function(f){return f.id;});
+    if(filIds.indexOf('sede')<0)filIds.push('sede');
     fn='Todas las Filiales';
   } else if(fil==='all-departamentos'){
     filIds=DB.filiales.filter(function(f){return f.tipo==='departamento';}).map(function(f){return f.id;});
@@ -6742,7 +6743,7 @@ function onChangeTrfDir(){
 function updTrfSaldos(){
   // Calcular saldo caja sede central — ingresos/egresos normales + impacto de transferencias
   var siCaja=Number((DB.saldos_iniciales||{}).filiales)||0;
-  var todasFilIds=DB.filiales.filter(function(f){return (f.tipo||'filial')!=='departamento';}).map(function(f){return f.id;});
+  var todasFilIds=DB.filiales.filter(function(f){return (f.tipo||'filial')!=='departamento';}).map(function(f){return f.id;});if(todasFilIds.indexOf('sede')<0)todasFilIds.push('sede');
   var saldoCaja=siCaja;
   (DB.movimientos||[]).forEach(function(m){
     if(todasFilIds.indexOf(m.fil)<0)return;
