@@ -1994,15 +1994,18 @@ function renderDash(){
   var trfsMes=allMovsFil.filter(function(m){
     return m.tipo==='transferencia'&&m.fec.substring(0,7)===selectedYM&&(m.moneda||'PEN')==='PEN';
   });
+  console.log('[DEBUG TRF] selectedYM='+selectedYM+' allMovsFil.length='+allMovsFil.length+' trfsMes.length='+trfsMes.length, trfsMes.map(function(m){return{id:m.id,fec:m.fec,mon:m.mon,subtipo:m.subtipo,tipo:m.tipo};}));
   var trfsMesImpacto=trfsMes.reduce(function(a,m){
-    return a+(m.subtipo==='entrada_banco_caja'?Number(m.mon):-Number(m.mon));
+    var esSalida=m.subtipo==='salida_caja_banco'||(m.desc&&m.desc.indexOf('Caja → Banco')>-1);
+    return a+(esSalida?-Number(m.mon):Number(m.mon));
   },0);
   // Transferencias de meses anteriores (para el saldo anterior)
   var trfsPrev=allMovsFil.filter(function(m){
     return m.tipo==='transferencia'&&m.fec.substring(0,7)<selectedYM&&(m.moneda||'PEN')==='PEN';
   });
   var trfsPrevImpacto=trfsPrev.reduce(function(a,m){
-    return a+(m.subtipo==='entrada_banco_caja'?Number(m.mon):-Number(m.mon));
+    var esSalida=m.subtipo==='salida_caja_banco'||(m.desc&&m.desc.indexOf('Caja → Banco')>-1);
+    return a+(esSalida?-Number(m.mon):Number(m.mon));
   },0);
   var saldoAntFilConTrf=saldoAntFil+trfsPrevImpacto;
   var saldoTotalFil=saldoAntFilConTrf+(ing-eg)+trfsMesImpacto;
@@ -6076,7 +6079,8 @@ function genEjecutivo(){
     return esFilial&&m.tipo==='transferencia'&&(m.moneda||'PEN')==='PEN'&&((y<anio)||(y===anio&&mo<mes));
   });
   var grandSAconTrf=grandSA+trfsPrevEj.reduce(function(a,m){
-    return a+(m.subtipo==='entrada_banco_caja'?Number(m.mon):-Number(m.mon));
+    var esSalida=m.subtipo==='salida_caja_banco'||(m.desc&&m.desc.indexOf('Caja → Banco')>-1);
+    return a+(esSalida?-Number(m.mon):Number(m.mon));
   },0);
 
   // Impacto de transferencias DEL MES en el saldo final de caja
@@ -6086,7 +6090,8 @@ function genEjecutivo(){
     return esFilial&&m.tipo==='transferencia'&&(m.moneda||'PEN')==='PEN'&&y===anio&&mo===mes;
   });
   var trfsMesImpactoEj=trfsMesEj.reduce(function(a,m){
-    return a+(m.subtipo==='entrada_banco_caja'?Number(m.mon):-Number(m.mon));
+    var esSalida=m.subtipo==='salida_caja_banco'||(m.desc&&m.desc.indexOf('Caja → Banco')>-1);
+    return a+(esSalida?-Number(m.mon):Number(m.mon));
   },0);
 
   // Transferido a Banco = solo movimientos bancarios DEL MES seleccionado
