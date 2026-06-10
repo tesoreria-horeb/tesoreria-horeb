@@ -252,6 +252,7 @@ tbody td{padding:9px 11px;color:rgba(247,243,233,.8);vertical-align:middle}
       <div class="nav-item" onclick="sm('mantenimiento')"><span class="ic">🔧</span>Mantenimiento</div>
       <div class="nav-item" onclick="sm('seguros')"><span class="ic">🛡️</span>Seguros</div>
       <div class="nav-sec nav-admin">Configuración</div>
+      <div class="nav-item nav-admin" onclick="sm('filiales')"><span class="ic">🏛️</span>Filiales</div>
       <div class="nav-item nav-admin" onclick="sm('categorias')"><span class="ic">📂</span>Categorías</div>
       <div class="nav-sec">Informes</div>
       <div class="nav-item" onclick="sm('rpt-inventario')"><span class="ic">📋</span>Inventario General</div>
@@ -497,6 +498,23 @@ tbody td{padding:9px 11px;color:rgba(247,243,233,.8);vertical-align:middle}
         </div>
       </div>
 
+      <!-- FILIALES -->
+      <div class="mod" id="mod-filiales">
+        <div class="tb">
+          <input class="sb-inp" id="fil-s" placeholder="🔍 Buscar filial..." oninput="renderFiliales()">
+          <button class="btn btn-p" onclick="openFilial()">➕ Nueva Filial</button>
+        </div>
+        <div class="card">
+          <div class="tw"><table>
+            <thead><tr>
+              <th>Código</th><th>Tipo</th><th>Nombre</th><th>Pastor / Responsable</th>
+              <th>Tesorero</th><th>Dirección</th><th>Activos</th><th>Acciones</th>
+            </tr></thead>
+            <tbody id="fil-tbody"></tbody>
+          </table></div>
+        </div>
+      </div>
+
       <!-- CATEGORIAS -->
       <div class="mod" id="mod-categorias">
         <div class="card">
@@ -632,6 +650,44 @@ tbody td{padding:9px 11px;color:rgba(247,243,233,.8);vertical-align:middle}
   </div>
 </div>
 
+<!-- MODAL FILIAL -->
+<div class="ov" id="ov-filial">
+  <div class="modal">
+    <div class="modal-hd">
+      <span class="modal-tit" id="fil-modal-tit">Nueva Filial</span>
+      <button class="modal-x" onclick="closeModal('ov-filial')">✕</button>
+    </div>
+    <div class="fr">
+      <div class="fld"><label>Código</label><input type="text" id="f-cod" placeholder="Ej: F001, LIMA, NORTE"></div>
+      <div class="fld"><label>Tipo</label>
+        <select id="f-tipo">
+          <option value="filial">Filial</option>
+          <option value="sede">Sede Central</option>
+          <option value="departamento">Departamento</option>
+        </select>
+      </div>
+    </div>
+    <div class="fr fr1">
+      <div class="fld"><label>Nombre</label><input type="text" id="f-nom" placeholder="Nombre completo de la filial"></div>
+    </div>
+    <div class="fr">
+      <div class="fld"><label>Pastor / Responsable</label><input type="text" id="f-pas" placeholder="Nombre del pastor o responsable"></div>
+      <div class="fld"><label>Tesorero</label><input type="text" id="f-tes" placeholder="Nombre del tesorero"></div>
+    </div>
+    <div class="fr">
+      <div class="fld"><label>Dirección</label><input type="text" id="f-dir" placeholder="Dirección de la filial"></div>
+      <div class="fld"><label>Teléfono</label><input type="text" id="f-tel" placeholder="Teléfono de contacto"></div>
+    </div>
+    <div class="fr fr1">
+      <div class="fld"><label>Observaciones</label><textarea id="f-obs" placeholder="Notas adicionales..."></textarea></div>
+    </div>
+    <div class="modal-ft">
+      <button class="btn btn-s" onclick="closeModal('ov-filial')">Cancelar</button>
+      <button class="btn btn-p" onclick="saveFilial()">💾 Guardar</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL CATEGORIA -->
 <div class="ov" id="ov-cat">
   <div class="modal">
@@ -729,6 +785,7 @@ var TITLES = {
   transferencias:'Transferencias',
   mantenimiento:'Mantenimiento',
   seguros:'Seguros',
+  filiales:'Filiales',
   categorias:'Categorías',
   'rpt-inventario':'Informe: Inventario General',
   'rpt-depreciacion':'Informe: Depreciación',
@@ -790,7 +847,13 @@ function syncDB(){
   prom.push(window.FB_DB.collection('patrimonio_categorias').get().then(function(snap){
     if(!snap.empty){DB.categorias=[];snap.forEach(function(d){DB.categorias.push(d.data());});}
   }).catch(function(){}));
-  // Sincronizar filiales del sistema financiero
+  // Sincronizar filiales propias del patrimonio
+  prom.push(window.FB_DB.collection('patrimonio_filiales').get().then(function(snap){
+    if(!snap.empty){DB.filiales=[];snap.forEach(function(d){DB.filiales.push(d.data());});
+    // Asegurar que siempre exista sede
+    if(!DB.filiales.find(function(f){return f.id==='sede';}))DB.filiales.unshift({id:'sede',cod:'S000',nom:'Sede Central',tipo:'sede',pastor:'',tes:'',dir:'',tel:''});}
+  }).catch(function(){}));
+  // Sincronizar filiales del sistema financiero (como respaldo)
   prom.push(window.FB_DB.collection('filiales').get().then(function(snap){
     if(!snap.empty){DB.filiales=[];snap.forEach(function(d){DB.filiales.push(d.data());});}
   }).catch(function(){}));
@@ -895,6 +958,7 @@ function renderMod(n){
   else if(n==='transferencias'){popTrfSelects();renderTrfHistorial();renderTrfPend();}
   else if(n==='mantenimiento'){popMantActivos();renderMantHistorial();renderMantProg();}
   else if(n==='seguros'){popSegActivos();renderSeguros();}
+  if(n==='filiales')renderFiliales();
   else if(n==='categorias')renderCats();
   else if(n==='rpt-inventario'){popRptFils();renderRptInventario();}
   else if(n==='rpt-depreciacion'){popRptFils();renderRptDepreciacion();}
@@ -1709,6 +1773,114 @@ function cancelarSeg(id){
   auditLog('eliminar_seguro','ID: '+id);
   renderSeguros();
   toast('Seguro eliminado ✅');
+}
+
+// ==================== FILIALES ====================
+function renderFiliales(){
+  var s=(document.getElementById('fil-s')||{}).value||'';
+  var fils=DB.filiales||[];
+  if(s)fils=fils.filter(function(f){return (f.nom+f.cod+(f.pastor||'')+(f.tes||'')).toLowerCase().includes(s.toLowerCase());});
+  var html='';
+  if(!fils.length){
+    html='<tr><td colspan="8"><div class="empty"><span class="ic">🏛️</span><p>No hay filiales registradas</p></div></td></tr>';
+  }else{
+    fils.forEach(function(f){
+      var cnt=(DB.activos||[]).filter(function(a){return a.fil===f.id&&a.estado!=='baja';}).length;
+      var tipoBadge='<span class="badge '+(f.tipo==='sede'?'b-apro':f.tipo==='departamento'?'b-transf':'b-act')+'" style="font-size:9px">'+(f.tipo||'filial')+'</span>';
+      html+='<tr>';
+      html+='<td><span class="qr-code">'+f.cod+'</span></td>';
+      html+='<td>'+tipoBadge+'</td>';
+      html+='<td><strong>'+f.nom+'</strong></td>';
+      html+='<td style="font-size:11px">'+(f.pastor||'—')+'</td>';
+      html+='<td style="font-size:11px">'+(f.tes||'—')+'</td>';
+      html+='<td style="font-size:11px">'+(f.dir||'—')+'</td>';
+      html+='<td><span class="badge b-act">'+cnt+'</span></td>';
+      html+='<td style="white-space:nowrap">';
+      html+='<button class="btn btn-sm btn-s" onclick="openFilial(\''+f.id+'\')">✏️</button> ';
+      if(cnt===0&&f.id!=='sede'){
+        html+='<button class="btn btn-sm btn-d" onclick="delFilial(\''+f.id+'\')">🗑️</button>';
+      }
+      html+='</td></tr>';
+    });
+  }
+  document.getElementById('fil-tbody').innerHTML=html;
+}
+
+function openFilial(id){
+  EID=id||null;
+  document.getElementById('fil-modal-tit').textContent=id?'Editar Filial':'Nueva Filial';
+  if(id){
+    var f=DB.filiales.find(function(x){return x.id===id;});
+    if(!f)return;
+    document.getElementById('f-cod').value=f.cod||'';
+    document.getElementById('f-tipo').value=f.tipo||'filial';
+    document.getElementById('f-nom').value=f.nom||'';
+    document.getElementById('f-pas').value=f.pastor||'';
+    document.getElementById('f-tes').value=f.tes||'';
+    document.getElementById('f-dir').value=f.dir||'';
+    document.getElementById('f-tel').value=f.tel||'';
+    document.getElementById('f-obs').value=f.obs||'';
+    // No permitir cambiar código si tiene activos
+    var cnt=(DB.activos||[]).filter(function(a){return a.fil===id;}).length;
+    document.getElementById('f-cod').readOnly=cnt>0;
+    document.getElementById('f-cod').style.opacity=cnt>0?'0.5':'1';
+  }else{
+    ['f-cod','f-nom','f-pas','f-tes','f-dir','f-tel','f-obs'].forEach(function(fid){document.getElementById(fid).value='';});
+    document.getElementById('f-tipo').value='filial';
+    document.getElementById('f-cod').readOnly=false;
+    document.getElementById('f-cod').style.opacity='1';
+  }
+  document.getElementById('ov-filial').classList.add('open');
+}
+
+function saveFilial(){
+  if(!canEdit()){toast('No tiene permisos','err');return;}
+  var cod=document.getElementById('f-cod').value.trim().toUpperCase();
+  var nom=document.getElementById('f-nom').value.trim();
+  var tipo=document.getElementById('f-tipo').value;
+  if(!cod){toast('Ingrese el código','err');return;}
+  if(!nom){toast('Ingrese el nombre','err');return;}
+  if(!EID&&DB.filiales.find(function(f){return f.id===cod;})){
+    toast('Ya existe una filial con ese código','err');return;
+  }
+  var obj={
+    id:EID||cod,
+    cod:cod,
+    nom:nom,
+    tipo:tipo,
+    pastor:document.getElementById('f-pas').value.trim(),
+    tes:document.getElementById('f-tes').value.trim(),
+    dir:document.getElementById('f-dir').value.trim(),
+    tel:document.getElementById('f-tel').value.trim(),
+    obs:document.getElementById('f-obs').value.trim()
+  };
+  if(EID){
+    var i=DB.filiales.findIndex(function(f){return f.id===EID;});
+    if(i>-1)DB.filiales[i]=obj;
+  }else{
+    DB.filiales.push(obj);
+  }
+  saveDB();
+  fbSave('patrimonio_filiales',obj.id,obj);
+  auditLog(EID?'editar_filial':'crear_filial','Filial: '+obj.cod+' — '+obj.nom);
+  popFils();
+  closeModal('ov-filial');
+  renderFiliales();
+  toast((EID?'Filial actualizada':'Filial registrada')+' ✅');
+}
+
+function delFilial(id){
+  if(!canEdit()){toast('No tiene permisos','err');return;}
+  var cnt=(DB.activos||[]).filter(function(a){return a.fil===id;}).length;
+  if(cnt>0){toast('No se puede eliminar — tiene '+cnt+' activo(s) asignado(s)','err');return;}
+  if(!confirm('¿Eliminar esta filial?'))return;
+  DB.filiales=DB.filiales.filter(function(f){return f.id!==id;});
+  saveDB();
+  if(window.FB_DB)window.FB_DB.collection('patrimonio_filiales').doc(id).delete().catch(function(){});
+  auditLog('eliminar_filial','ID: '+id);
+  popFils();
+  renderFiliales();
+  toast('Filial eliminada ✅');
 }
 
 // ==================== CATEGORIAS ====================
