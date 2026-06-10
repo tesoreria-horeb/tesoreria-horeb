@@ -918,7 +918,18 @@ function syncDB(){
   prom.push(window.FB_DB.collection('patrimonio_categorias').get().then(function(snap){
     if(!snap.empty){DB.categorias=[];snap.forEach(function(d){DB.categorias.push(d.data());});}
   }).catch(function(){}));
-  // Sincronizar filiales propias del patrimonio
+  prom.push(window.FB_DB.collection('usuarios').get().then(function(snap){
+    if(!snap.empty){
+      if(!DB.usuarios)DB.usuarios=[];
+      snap.forEach(function(d){
+        var u=d.data();
+        // Solo agregar si no existe ya localmente
+        if(!DB.usuarios.find(function(x){return x.user===u.user;})){
+          DB.usuarios.push(u);
+        }
+      });
+    }
+  }).catch(function(){}));
   prom.push(window.FB_DB.collection('patrimonio_filiales').get().then(function(snap){
     if(!snap.empty){DB.filiales=[];snap.forEach(function(d){DB.filiales.push(d.data());});
     // Asegurar que siempre exista sede
