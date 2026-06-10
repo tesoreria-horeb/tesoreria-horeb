@@ -253,6 +253,7 @@ tbody td{padding:9px 11px;color:rgba(247,243,233,.8);vertical-align:middle}
       <div class="nav-item" onclick="sm('seguros')"><span class="ic">🛡️</span>Seguros</div>
       <div class="nav-sec nav-admin">Configuración</div>
       <div class="nav-item nav-admin" onclick="sm('filiales')"><span class="ic">🏛️</span>Filiales</div>
+      <div class="nav-item nav-admin" onclick="sm('usuarios')"><span class="ic">👤</span>Usuarios</div>
       <div class="nav-item nav-admin" onclick="sm('categorias')"><span class="ic">📂</span>Categorías</div>
       <div class="nav-sec">Informes</div>
       <div class="nav-item" onclick="sm('rpt-inventario')"><span class="ic">📋</span>Inventario General</div>
@@ -498,6 +499,32 @@ tbody td{padding:9px 11px;color:rgba(247,243,233,.8);vertical-align:middle}
         </div>
       </div>
 
+      <!-- USUARIOS -->
+      <div class="mod" id="mod-usuarios">
+        <div class="tb">
+          <input class="sb-inp" id="usr-s" placeholder="🔍 Buscar usuario..." oninput="renderUsrs()">
+          <select class="fs" id="usr-sf" onchange="renderUsrs()">
+            <option value="">Todos los roles</option>
+            <option value="pastor">Pastor Principal</option>
+            <option value="tesorero_principal">Tesorero Principal</option>
+            <option value="auxiliar_central">Auxiliar Tesorería Central</option>
+            <option value="tesorero_sede">Tesorero Sede Central</option>
+            <option value="tesorero_filial">Tesorero Filial</option>
+            <option value="contador">Contador (Solo Lectura)</option>
+          </select>
+          <button class="btn btn-p" onclick="openUsrModal(null)">➕ Nuevo Usuario</button>
+        </div>
+        <div class="card">
+          <div class="tw"><table>
+            <thead><tr>
+              <th>Usuario</th><th>Nombre</th><th>Contraseña</th>
+              <th>Rol</th><th>Sede / Filial</th><th>Estado</th><th>Acciones</th>
+            </tr></thead>
+            <tbody id="usr-list"></tbody>
+          </table></div>
+        </div>
+      </div>
+
       <!-- FILIALES -->
       <div class="mod" id="mod-filiales">
         <div class="tb">
@@ -650,6 +677,49 @@ tbody td{padding:9px 11px;color:rgba(247,243,233,.8);vertical-align:middle}
   </div>
 </div>
 
+<!-- MODAL USUARIO -->
+<div class="ov" id="ov-usr">
+  <div class="modal">
+    <div class="modal-hd">
+      <span class="modal-tit" id="usr-tit">Nuevo Usuario</span>
+      <button class="modal-x" onclick="closeModal('ov-usr')">✕</button>
+    </div>
+    <div class="fr">
+      <div class="fld"><label>Nombre completo</label><input type="text" id="u-nom" placeholder="Nombre completo"></div>
+      <div class="fld"><label>Usuario (login)</label><input type="text" id="u-usr" placeholder="Ej: tsjuan" autocomplete="off">
+        <div id="u-usr-hint" style="font-size:10px;color:rgba(247,243,233,.4);margin-top:3px;display:none">El usuario no se puede cambiar una vez creado</div>
+      </div>
+    </div>
+    <div class="fr">
+      <div class="fld"><label>Contraseña</label><input type="password" id="u-pass" placeholder="Contraseña" autocomplete="new-password"></div>
+      <div class="fld"><label>Confirmar contraseña</label><input type="password" id="u-pass2" placeholder="Repetir contraseña"></div>
+    </div>
+    <div class="fr">
+      <div class="fld"><label>Rol</label>
+        <select id="u-rol" onchange="updUsrFil()">
+          <option value="pastor">Pastor Principal</option>
+          <option value="tesorero_principal">Tesorero Principal</option>
+          <option value="auxiliar_central">Auxiliar Tesorería Central</option>
+          <option value="tesorero_sede">Tesorero Sede Central</option>
+          <option value="tesorero_filial">Tesorero Filial</option>
+          <option value="contador">Contador (Solo Lectura)</option>
+        </select>
+      </div>
+      <div class="fld"><label>Sede / Filial</label><select id="u-fil"></select></div>
+    </div>
+    <div class="fr">
+      <div class="fld"><label>Estado</label>
+        <select id="u-act"><option value="1">Activo</option><option value="0">Inactivo</option></select>
+      </div>
+    </div>
+    <div class="login-err" id="usr-err" style="display:none"></div>
+    <div class="modal-ft">
+      <button class="btn btn-s" onclick="closeModal('ov-usr')">Cancelar</button>
+      <button class="btn btn-p" onclick="savUsr()">💾 Guardar</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL FILIAL -->
 <div class="ov" id="ov-filial">
   <div class="modal">
@@ -785,6 +855,7 @@ var TITLES = {
   transferencias:'Transferencias',
   mantenimiento:'Mantenimiento',
   seguros:'Seguros',
+  usuarios:'Gestión de Usuarios',
   filiales:'Filiales',
   categorias:'Categorías',
   'rpt-inventario':'Informe: Inventario General',
@@ -958,7 +1029,8 @@ function renderMod(n){
   else if(n==='transferencias'){popTrfSelects();renderTrfHistorial();renderTrfPend();}
   else if(n==='mantenimiento'){popMantActivos();renderMantHistorial();renderMantProg();}
   else if(n==='seguros'){popSegActivos();renderSeguros();}
-  if(n==='filiales')renderFiliales();
+  if(n==='usuarios'){if(CU&&(CU.niv===0||CU.niv<=2))renderUsrs();else{toast('Sin acceso','err');sm('dashboard');}}
+  else if(n==='filiales')renderFiliales();
   else if(n==='categorias')renderCats();
   else if(n==='rpt-inventario'){popRptFils();renderRptInventario();}
   else if(n==='rpt-depreciacion'){popRptFils();renderRptDepreciacion();}
@@ -1773,6 +1845,150 @@ function cancelarSeg(id){
   auditLog('eliminar_seguro','ID: '+id);
   renderSeguros();
   toast('Seguro eliminado ✅');
+}
+
+// ==================== USUARIOS ====================
+function renderUsrs(){
+  if(!CU||(CU.niv!==0&&CU.niv>2))return;
+  var s=(document.getElementById('usr-s').value||'').toLowerCase();
+  var sf=document.getElementById('usr-sf').value;
+  var usrs=(DB.usuarios||[]).slice();
+  if(s)usrs=usrs.filter(function(u){return u.nom.toLowerCase().includes(s)||u.user.toLowerCase().includes(s);});
+  if(sf)usrs=usrs.filter(function(u){return u.rol===sf;});
+  var tb=document.getElementById('usr-list');
+  if(!usrs.length){tb.innerHTML='<tr><td colspan="7"><div class="empty"><span class="ic">👤</span><p>No hay usuarios registrados</p></div></td></tr>';return;}
+  tb.innerHTML=usrs.map(function(u){
+    var rl=ROLES[u.rol]||u.rol;
+    var fl=u.fil==='all'?'Todo el sistema':gFilNom(u.fil);
+    var ok=u.act!==0;
+    var passCell='<span id="pw-'+u.user+'" style="font-family:monospace;letter-spacing:2px">••••••••</span>'
+      +' <button onclick="togglePw(\''+u.user+'\')" style="background:none;border:none;cursor:pointer;color:var(--gold-light);font-size:11px;padding:0 3px" title="Mostrar">👁️</button>'
+      +' <button onclick="openChgPw(\''+u.user+'\')" style="background:none;border:none;cursor:pointer;color:var(--gold-light);font-size:10px;padding:0 3px" title="Cambiar clave">🔑</button>';
+    var btns='<button class="btn btn-sm btn-s" onclick="openUsrModal(\''+u.user+'\')">✏️ Editar</button>';
+    if(u.user!=='adm')btns+=' <button class="btn btn-sm btn-d" onclick="delUsr(\''+u.user+'\')">🗑️</button>';
+    return '<tr>'
+      +'<td style="font-family:monospace;color:var(--gold-light)">'+u.user+'</td>'
+      +'<td><strong>'+u.nom+'</strong></td>'
+      +'<td>'+passCell+'</td>'
+      +'<td style="font-size:11px">'+rl+'</td>'
+      +'<td style="font-size:11px">'+fl+'</td>'
+      +'<td><span class="badge '+(ok?'b-act':'b-baja')+'">'+(ok?'Activo':'Inactivo')+'</span></td>'
+      +'<td>'+btns+'</td>'
+      +'</tr>';
+  }).join('');
+}
+
+function togglePw(uid){
+  var sp=document.getElementById('pw-'+uid);
+  if(!sp)return;
+  var u=(DB.usuarios||[]).find(function(x){return x.user===uid;});
+  if(!u)return;
+  sp.textContent=sp.textContent.includes('•')?u.pass:'••••••••';
+}
+
+function openChgPw(uid){
+  var nova=prompt('Nueva contraseña para "'+uid+'":');
+  if(!nova||nova.length<4){if(nova!==null)toast('Mínimo 4 caracteres','err');return;}
+  var i=(DB.usuarios||[]).findIndex(function(u){return u.user===uid;});
+  if(i>-1){
+    DB.usuarios[i].pass=nova;
+    saveDB();
+    fbSave('usuarios',uid,DB.usuarios[i]);
+    auditLog('cambiar_password','Usuario: '+uid);
+    toast('Contraseña actualizada ✅');
+  }
+}
+
+function updUsrFil(){
+  var rol=document.getElementById('u-rol').value;
+  var sel=document.getElementById('u-fil');
+  sel.innerHTML='';
+  if(rol==='pastor'||rol==='tesorero_principal'||rol==='auxiliar_central'||rol==='contador'){
+    var o=document.createElement('option');o.value='all';o.textContent='Todo el sistema';sel.appendChild(o);
+  }else{
+    (DB.filiales||[]).forEach(function(f){var o=document.createElement('option');o.value=f.id;o.textContent=f.nom;sel.appendChild(o);});
+  }
+}
+
+function openUsrModal(id){
+  EID=id||null;
+  updUsrFil();
+  document.getElementById('usr-err').style.display='none';
+  if(id){
+    var u=(DB.usuarios||[]).find(function(x){return x.user===id;});
+    if(!u)return;
+    document.getElementById('usr-tit').textContent='Editar Usuario';
+    document.getElementById('u-nom').value=u.nom;
+    document.getElementById('u-usr').value=u.user;
+    document.getElementById('u-usr').readOnly=true;
+    document.getElementById('u-usr').style.opacity='0.5';
+    document.getElementById('u-usr-hint').style.display='block';
+    document.getElementById('u-pass').value='';
+    document.getElementById('u-pass2').value='';
+    document.getElementById('u-rol').value=u.rol;
+    updUsrFil();
+    document.getElementById('u-fil').value=u.fil;
+    document.getElementById('u-act').value=u.act!==0?'1':'0';
+  }else{
+    document.getElementById('usr-tit').textContent='Nuevo Usuario';
+    document.getElementById('u-usr').readOnly=false;
+    document.getElementById('u-usr').style.opacity='1';
+    document.getElementById('u-usr-hint').style.display='none';
+    ['u-nom','u-usr','u-pass','u-pass2'].forEach(function(fid){document.getElementById(fid).value='';});
+    document.getElementById('u-rol').value='tesorero_filial';
+    document.getElementById('u-act').value='1';
+    updUsrFil();
+  }
+  document.getElementById('ov-usr').classList.add('open');
+}
+
+function savUsr(){
+  var nom=document.getElementById('u-nom').value.trim();
+  var usr=document.getElementById('u-usr').value.trim().toLowerCase().replace(/\s+/g,'');
+  var pass=document.getElementById('u-pass').value;
+  var pass2=document.getElementById('u-pass2').value;
+  var rol=document.getElementById('u-rol').value;
+  var fil=document.getElementById('u-fil').value;
+  var act=document.getElementById('u-act').value==='1'?1:0;
+  var errEl=document.getElementById('usr-err');
+  errEl.style.display='none';
+  if(!nom||!usr){errEl.textContent='Complete nombre y usuario.';errEl.style.display='block';return;}
+  if(!EID&&!pass){errEl.textContent='Ingrese una contraseña.';errEl.style.display='block';return;}
+  if(pass&&pass!==pass2){errEl.textContent='Las contraseñas no coinciden.';errEl.style.display='block';return;}
+  if(pass&&pass.length<4){errEl.textContent='La contraseña debe tener al menos 4 caracteres.';errEl.style.display='block';return;}
+  if(!EID&&(DB.usuarios||[]).find(function(u){return u.user===usr;})){errEl.textContent='Ese nombre de usuario ya existe.';errEl.style.display='block';return;}
+  var nivMap={pastor:1,tesorero_principal:2,auxiliar_central:2,tesorero_sede:3,tesorero_filial:4,contador:5};
+  if(!DB.usuarios)DB.usuarios=[];
+  if(EID){
+    var idx=DB.usuarios.findIndex(function(u){return u.user===EID;});
+    if(idx>-1){
+      DB.usuarios[idx].nom=nom;DB.usuarios[idx].rol=rol;
+      DB.usuarios[idx].niv=nivMap[rol]||4;DB.usuarios[idx].fil=fil;
+      DB.usuarios[idx].act=act;
+      if(pass)DB.usuarios[idx].pass=pass;
+    }
+  }else{
+    DB.usuarios.push({user:usr,pass:pass,nom:nom,rol:rol,niv:nivMap[rol]||4,fil:fil,act:act});
+  }
+  saveDB();
+  var savedUsr=DB.usuarios.find(function(u){return u.user===(EID||usr);});
+  if(savedUsr)fbSave('usuarios',savedUsr.user,savedUsr);
+  auditLog(EID?'editar_usuario':'crear_usuario','Usuario: '+usr+' | Rol: '+rol);
+  closeModal('ov-usr');
+  renderUsrs();
+  toast(EID?'Usuario actualizado ✅':'Usuario creado ✅');
+}
+
+function delUsr(id){
+  if(id==='adm'){toast('No se puede eliminar al Administrador','err');return;}
+  if(CU&&id===CU.user){toast('No puede eliminarse a sí mismo','err');return;}
+  if(!confirm('¿Eliminar usuario "'+id+'"?'))return;
+  DB.usuarios=(DB.usuarios||[]).filter(function(u){return u.user!==id;});
+  saveDB();
+  if(window.FB_DB)window.FB_DB.collection('usuarios').doc(id).delete().catch(function(){});
+  auditLog('eliminar_usuario','Usuario: '+id);
+  renderUsrs();
+  toast('Usuario eliminado ✅');
 }
 
 // ==================== FILIALES ====================
