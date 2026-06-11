@@ -2439,6 +2439,7 @@ function savMov(keepOpen){
   var desc=document.getElementById('m-desc').value.trim();
   var cat=document.getElementById('m-cat').value;
   var fil=document.getElementById('m-fil').value;
+  var movId=EID||gid('M');
 
   if(!fec){toast('Seleccione la fecha','err');return;}
   // Validar que la fecha esté dentro del rango permitido (solo en nuevos, no en edición)
@@ -2448,6 +2449,9 @@ function savMov(keepOpen){
     if(fechaEl2&&fechaEl2.max&&fec>fechaEl2.max){toast('No se puede registrar una fecha futura','err');return;}
   }
   if(!desc){toast('Ingrese una descripcion','err');return;}
+  if(!monStr||isNaN(mon)||mon<=0){toast('Ingrese un monto válido mayor a 0','err');return;}
+  if(!cat){toast('Seleccione una categoría','err');return;}
+  if(!fil){toast('Seleccione la sede o filial','err');return;}
 
   // Get file data
   var fileInput=document.getElementById('m-comp-file');
