@@ -2167,11 +2167,14 @@ function renderDash(){
     retHtml+='<div style="padding:10px 14px">';
     var totalRetSaldo=0;
     filialesRetenidas.forEach(function(f){
-      // Calcular saldo acumulado de la filial retenida
+      // Calcular saldo desde la fecha de inicio de retención
+      var fechaInicioRet=f.retencion.fecha||'1900-01-01';
       var siRet=Number(f.saldo_inicial||0);
-      var allMovsRet=gAccMov().filter(function(m){return m.fil===f.id&&!m.esBancario&&(m.moneda||'PEN')==='PEN'&&m.tipo!=='transferencia';});
+      var allMovsRet=gAccMov().filter(function(m){
+        return m.fil===f.id&&!m.esBancario&&(m.moneda||'PEN')==='PEN'&&m.tipo!=='transferencia'&&m.fec>=fechaInicioRet;
+      });
       var prevRet=allMovsRet.filter(function(m){return m.fec.substring(0,7)<selectedYM;});
-      var saldoAntRet=siRet+prevRet.filter(function(m){return m.tipo==='ingreso';}).reduce(function(a,m){return a+Number(m.mon);},0)
+      var saldoAntRet=prevRet.filter(function(m){return m.tipo==='ingreso';}).reduce(function(a,m){return a+Number(m.mon);},0)
                      -prevRet.filter(function(m){return m.tipo==='egreso';}).reduce(function(a,m){return a+Number(m.mon);},0);
       var movMesRet=allMovsRet.filter(function(m){return m.fec.substring(0,7)===selectedYM;});
       var ingRet=movMesRet.filter(function(m){return m.tipo==='ingreso';}).reduce(function(a,m){return a+Number(m.mon);},0);
