@@ -1102,6 +1102,24 @@ body.contador-mode .modal-ft .btn-d {
     </div>
     <div class="fr fr1"><div class="fld"><label>Dirección</label><input type="text" id="f-dir" placeholder="Dirección completa"></div></div>
     <div class="fr"><div class="fld"><label>Teléfono</label><input type="text" id="f-tel" placeholder="Teléfono"></div><div class="fld"><label>Fecha de Fundación</label><input type="date" id="f-fun"></div></div>
+    <!-- Retención de Saldo -->
+    <div id="f-retencion-section" style="display:none;margin-top:4px;padding:12px;background:rgba(231,76,60,.06);border:1px solid rgba(231,76,60,.2);border-radius:8px">
+      <div style="font-size:11px;font-weight:700;color:#E74C3C;margin-bottom:10px;text-transform:uppercase;letter-spacing:1px">🔒 Retención de Saldo</div>
+      <div class="fr">
+        <div class="fld">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+            <input type="checkbox" id="f-ret-activa" onchange="onRetActivaChange()" style="width:16px;height:16px;cursor:pointer">
+            <span>Retención activa — el saldo <strong>no se consolida</strong> en Sede Central</span>
+          </label>
+        </div>
+      </div>
+      <div id="f-ret-campos" style="display:none">
+        <div class="fr">
+          <div class="fld"><label>Fecha de inicio</label><input type="date" id="f-ret-fecha"></div>
+          <div class="fld"><label>Motivo</label><input type="text" id="f-ret-motivo" placeholder="Ej: En construcción, Proyecto especial..."></div>
+        </div>
+      </div>
+    </div>
     <div class="modal-ft"><button class="btn btn-s" onclick="cm('ov-fil')">Cancelar</button><button class="btn btn-p" onclick="savFil()">💾 Guardar</button></div>
   </div>
 </div>
@@ -1950,9 +1968,15 @@ function renderDash(){
     deptIds=[];
   }
 
+  // Filiales en retención — excluidas del consolidado
+  var filialesRetenidas=DB.filiales.filter(function(f){return f.retencion&&f.retencion.activa&&(f.tipo||'filial')!=='departamento';});
+  var retIdsSet=filialesRetenidas.map(function(f){return f.id;});
+  // filIds consolidados = filiales sin retención
+  var filIdsConsolidados=filIds.filter(function(id){return retIdsSet.indexOf(id)<0;});
+
   // Filter movements by month
   var cm2=movs.filter(function(m){var p=m.fec.split('-').map(Number);return p[0]===curY&&p[1]===curM;});
-  var cm2fil=cm2.filter(function(m){return filIds.indexOf(m.fil)>-1&&!m.esBancario&&m.origen!=='cierre_filial_efectivo'&&m.tipo!=='transferencia';});
+  var cm2fil=cm2.filter(function(m){return filIdsConsolidados.indexOf(m.fil)>-1&&!m.esBancario&&m.origen!=='cierre_filial_efectivo'&&m.tipo!=='transferencia';});
   var cm2dept=cm2.filter(function(m){return deptIds.indexOf(m.fil)>-1&&!m.esBancario&&m.origen!=='cierre_filial_efectivo'&&m.tipo!=='transferencia';});
 
   // FIX 2: For filial users (niv>=3), filter only their filial
@@ -1983,7 +2007,11 @@ function renderDash(){
   var siFilUSD=Number((DB.saldos_iniciales||{}).filialesUSD)||0;
   var siDeptos=Number((DB.saldos_iniciales||{}).departamentos)||0;
 
-  var allMovsFil=gAccMov().filter(function(m){var f=DB.filiales.find(function(x){return x.id===m.fil;});return m.fil==='sede'||m.fil==='F001'||!f||(f.tipo||'filial')!=='departamento';});
+  var allMovsFil=gAccMov().filter(function(m){
+    var f=DB.filiales.find(function(x){return x.id===m.fil;});
+    var esFilConsolidada=filIdsConsolidados.indexOf(m.fil)>-1||(m.fil==='sede'&&retIdsSet.indexOf('sede')<0)||(m.fil==='F001'&&retIdsSet.indexOf('F001')<0);
+    return esFilConsolidada||(!f||(f.tipo||'filial')!=='departamento')&&retIdsSet.indexOf(m.fil)<0;
+  });
   var allMovsDept=gAccMov().filter(function(m){var f=DB.filiales.find(function(x){return x.id===m.fil;});return f&&f.tipo==='departamento';});
   var allMovsMyFil=myFil?gAccMov().filter(function(m){return m.fil===myFil;}):allMovsFil;
 
@@ -2127,6 +2155,56 @@ function renderDash(){
       {lbl:'Saldo Mensual',        val:(saldoMensualBanco>=0?'+':'-')+fs(saldoMensualBanco), color:saldoMensualBanco>=0?'#2ECC71':'#E74C3C'},
       {lbl:'Saldo Total en Banco', val:fs(saldoTotalBanco),    color:'#5DADE2', bg:'rgba(46,134,171,.12)', big:true}
     ],'46,134,171','🏦')+'</div>';
+
+  // FILIALES EN RETENCIÓN
+  if(filialesRetenidas.length>0){
+    var retHtml='<div style="grid-column:1/-1;border-radius:10px;border:1px solid rgba(231,76,60,.25);overflow:hidden;background:rgba(13,27,42,.6)">';
+    retHtml+='<div style="padding:9px 14px;background:rgba(231,76,60,.08);border-bottom:1px solid rgba(231,76,60,.2);display:flex;align-items:center;gap:7px">';
+    retHtml+='<span style="font-size:14px">🔒</span>';
+    retHtml+='<span style="font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:rgba(247,243,233,.9)">Filiales en Retención — '+mesLabel+'</span>';
+    retHtml+='<span style="font-size:10px;color:rgba(231,76,60,.7);margin-left:4px">(informativo — no consolida en Sede Central)</span>';
+    retHtml+='</div>';
+    retHtml+='<div style="padding:10px 14px">';
+    var totalRetSaldo=0;
+    filialesRetenidas.forEach(function(f){
+      // Calcular saldo acumulado de la filial retenida
+      var siRet=Number(f.saldo_inicial||0);
+      var allMovsRet=gAccMov().filter(function(m){return m.fil===f.id&&!m.esBancario&&(m.moneda||'PEN')==='PEN'&&m.tipo!=='transferencia';});
+      var prevRet=allMovsRet.filter(function(m){return m.fec.substring(0,7)<selectedYM;});
+      var saldoAntRet=siRet+prevRet.filter(function(m){return m.tipo==='ingreso';}).reduce(function(a,m){return a+Number(m.mon);},0)
+                     -prevRet.filter(function(m){return m.tipo==='egreso';}).reduce(function(a,m){return a+Number(m.mon);},0);
+      var movMesRet=allMovsRet.filter(function(m){return m.fec.substring(0,7)===selectedYM;});
+      var ingRet=movMesRet.filter(function(m){return m.tipo==='ingreso';}).reduce(function(a,m){return a+Number(m.mon);},0);
+      var egRet=movMesRet.filter(function(m){return m.tipo==='egreso';}).reduce(function(a,m){return a+Number(m.mon);},0);
+      var saldoRet=saldoAntRet+ingRet-egRet;
+      totalRetSaldo+=saldoRet;
+      retHtml+='<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;margin-bottom:6px;background:rgba(231,76,60,.05);border:1px solid rgba(231,76,60,.1);border-radius:7px">';
+      retHtml+='<div>';
+      retHtml+='<div style="font-weight:700;color:var(--cream)">'+f.nom+'</div>';
+      retHtml+='<div style="font-size:10px;color:rgba(247,243,233,.4)">🔒 En retención desde '+(f.retencion.fecha?fd2(f.retencion.fecha):'—')+(f.retencion.motivo?' — '+f.retencion.motivo:'')+'</div>';
+      retHtml+='</div>';
+      retHtml+='<div style="text-align:right">';
+      retHtml+='<div style="font-size:11px;color:rgba(247,243,233,.4)">Ing: <span style="color:#2ECC71">'+fs(ingRet)+'</span> / Eg: <span style="color:#E74C3C">'+fs(egRet)+'</span></div>';
+      retHtml+='<div style="font-size:16px;font-weight:700;color:#E74C3C">'+fs(saldoRet)+'</div>';
+      retHtml+='</div>';
+      retHtml+='</div>';
+    });
+    if(filialesRetenidas.length>1){
+      retHtml+='<div style="text-align:right;padding-top:6px;border-top:1px solid rgba(231,76,60,.15);margin-top:4px">';
+      retHtml+='<span style="font-size:10px;color:rgba(247,243,233,.4)">Total en retención: </span>';
+      retHtml+='<span style="font-size:15px;font-weight:700;color:#E74C3C">'+fs(totalRetSaldo)+'</span>';
+      retHtml+='</div>';
+    }
+    retHtml+='</div></div>';
+    adminHtml+='<div style="grid-column:1/-1">'+retHtml+'</div>';
+
+    // TOTAL GENERAL REAL = caja consolidada + retenidas + banco
+    var totalGeneral=saldoCaja+totalRetSaldo+saldoTotalBanco;
+    adminHtml+='<div style="grid-column:1/-1;border-radius:10px;border:1px solid rgba(201,168,76,.3);background:rgba(201,168,76,.06);padding:12px 16px;display:flex;justify-content:space-between;align-items:center">';
+    adminHtml+='<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:rgba(201,168,76,.8)">💰 Total General Real (Caja + Retención + Banco)</div>';
+    adminHtml+='<div style="font-size:22px;font-weight:700;color:var(--gold-light)">'+fs(totalGeneral)+'</div>';
+    adminHtml+='</div>';
+  }
 
   if(deptIds.length>0){
     var saldoMensDept=ingDept-egDept;
@@ -2724,12 +2802,17 @@ function renderFil(){
   tb.innerHTML=fils.map(f=>{
     const nm=DB.miembros.filter(m=>m.fil===f.id).length;
     var tipoBadge=f.tipo==='departamento'?'<span style="font-size:9px;background:rgba(155,89,182,.2);color:#A569BD;padding:1px 5px;border-radius:3px;border:1px solid rgba(155,89,182,.3)">DEPT</span>':'<span style="font-size:9px;background:rgba(46,134,171,.2);color:#5DADE2;padding:1px 5px;border-radius:3px;border:1px solid rgba(46,134,171,.3)">FILIAL</span>';
-    return`<tr><td><input type="checkbox" class="fil-chk" data-id="${f.id}" onchange="updBulkBtn('fil')" style="cursor:pointer"></td><td style="font-family:'Cinzel',serif;color:var(--gold-light);font-size:11px">${f.cod} ${tipoBadge}</td><td><strong>${f.nom}</strong></td><td>${f.pastor}</td><td>${f.tes}</td><td style="font-size:11px">${f.dir}</td><td style="text-align:center">${nm}</td><td><span class="badge b-act">Activa</span></td><td><button class="btn btn-sm btn-s" onclick="edFil('${f.id}')">✏️</button>${f.id!=='sede'?` <button class="btn btn-sm btn-d" onclick="delFil('${f.id}')">🗑️</button>`:''}</td></tr>`;
+    var retBadge=f.retencion&&f.retencion.activa?'<span style="font-size:9px;background:rgba(231,76,60,.15);color:#E74C3C;padding:1px 5px;border-radius:3px;border:1px solid rgba(231,76,60,.3);margin-left:4px">🔒 RETENCIÓN</span>':'';
+    var estadoBadge=f.retencion&&f.retencion.activa?'<span class="badge" style="background:rgba(231,76,60,.15);color:#E74C3C;border:1px solid rgba(231,76,60,.3)">🔒 En Retención</span>':'<span class="badge b-act">Activa</span>';
+    return`<tr><td><input type="checkbox" class="fil-chk" data-id="${f.id}" onchange="updBulkBtn('fil')" style="cursor:pointer"></td><td style="font-family:'Cinzel',serif;color:var(--gold-light);font-size:11px">${f.cod} ${tipoBadge}${retBadge}</td><td><strong>${f.nom}</strong></td><td>${f.pastor}</td><td>${f.tes}</td><td style="font-size:11px">${f.dir}</td><td style="text-align:center">${nm}</td><td>${estadoBadge}</td><td><button class="btn btn-sm btn-s" onclick="edFil('${f.id}')">✏️</button>${f.id!=='F001'&&f.id!=='sede'?` <button class="btn btn-sm btn-d" onclick="delFil('${f.id}')">🗑️</button>`:''}</td></tr>`;
   }).join('');
 }
 
 function openFilModal(id=null){
   EID=id;
+  // Show retención section only for filiales and only for admin/tesorero principal
+  var retSection=document.getElementById('f-retencion-section');
+  if(retSection)retSection.style.display='none';
   if(id){
     const f=DB.filiales.find(x=>x.id===id);
     document.getElementById('fil-tit').textContent='Editar Filial';
@@ -2740,6 +2823,17 @@ function openFilModal(id=null){
     document.getElementById('f-pas').value=f.pastor;document.getElementById('f-tes').value=f.tes;
     document.getElementById('f-dir').value=f.dir;document.getElementById('f-tel').value=f.tel;
     document.getElementById('f-fun').value=f.fun||'';
+    // Load retención — only for filiales and admin/tesorero
+    if((f.tipo||'filial')!=='departamento'&&CU&&CU.niv<=2){
+      if(retSection)retSection.style.display='';
+      var retActiva=document.getElementById('f-ret-activa');
+      var retFecha=document.getElementById('f-ret-fecha');
+      var retMotivo=document.getElementById('f-ret-motivo');
+      if(retActiva)retActiva.checked=!!(f.retencion&&f.retencion.activa);
+      if(retFecha)retFecha.value=(f.retencion&&f.retencion.fecha)||'';
+      if(retMotivo)retMotivo.value=(f.retencion&&f.retencion.motivo)||'';
+      onRetActivaChange();
+    }
   }else{
     document.getElementById('fil-tit').textContent='Nueva Filial';
     var fsiNew=document.getElementById('f-saldo-inicial');if(fsiNew)fsiNew.value='0';
@@ -2748,9 +2842,23 @@ function openFilModal(id=null){
     document.getElementById('f-cod').value='F'+String(cnt).padStart(3,'0');
     document.getElementById('f-cod').style.opacity='1';
     ['f-nom','f-pas','f-tes','f-dir','f-tel','f-fun'].forEach(function(id){document.getElementById(id).value='';});
+    var retActiva=document.getElementById('f-ret-activa');if(retActiva)retActiva.checked=false;
+    var retFecha=document.getElementById('f-ret-fecha');if(retFecha)retFecha.value='';
+    var retMotivo=document.getElementById('f-ret-motivo');if(retMotivo)retMotivo.value='';
+    onRetActivaChange();
   }
   om('ov-fil');
 }
+function onRetActivaChange(){
+  var activa=document.getElementById('f-ret-activa');
+  var campos=document.getElementById('f-ret-campos');
+  if(campos)campos.style.display=(activa&&activa.checked)?'':'none';
+  if(activa&&activa.checked){
+    var retFecha=document.getElementById('f-ret-fecha');
+    if(retFecha&&!retFecha.value)retFecha.value=today();
+  }
+}
+
 function savFil(){
   var nom=document.getElementById('f-nom').value.trim();
   var pas=document.getElementById('f-pas').value.trim();
@@ -2758,9 +2866,22 @@ function savFil(){
   if(!cod){toast('Ingrese el código de la filial','err');return;}
   if(!nom){toast('Ingrese el nombre de la filial','err');return;}
   if(!pas){toast('Ingrese el nombre del pastor','err');return;}
-  // Check duplicate code (only for new records)
   if(!EID && DB.filiales.find(function(f){return f.id===cod;})){
     toast('Ya existe una filial con ese código','err');return;
+  }
+  // Retención
+  var retActiva=document.getElementById('f-ret-activa');
+  var retFecha=document.getElementById('f-ret-fecha');
+  var retMotivo=document.getElementById('f-ret-motivo');
+  var retencion=null;
+  if(retActiva&&retActiva.checked){
+    retencion={activa:true,fecha:retFecha?retFecha.value:'',motivo:retMotivo?retMotivo.value.trim():''};
+  } else if(retActiva&&!retActiva.checked){
+    // Keep history if was active before
+    var filExist=EID?DB.filiales.find(function(f){return f.id===EID;}):null;
+    if(filExist&&filExist.retencion&&filExist.retencion.activa){
+      retencion={activa:false,fecha:filExist.retencion.fecha,motivo:filExist.retencion.motivo,fechaFin:today()};
+    }
   }
   var obj={
     id:EID||cod, cod:cod, nom:nom, pastor:pas,
@@ -2771,6 +2892,7 @@ function savFil(){
     tel:document.getElementById('f-tel').value||'',
     fun:document.getElementById('f-fun').value||''
   };
+  if(retencion)obj.retencion=retencion;
   if(EID){
     var i=DB.filiales.findIndex(function(f){return f.id===EID;});
     if(i>-1)DB.filiales[i]=obj;
