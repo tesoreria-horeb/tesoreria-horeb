@@ -1415,7 +1415,7 @@ const ROLES={pastor:'Pastor Principal',tesorero_principal:'Tesorero Principal',a
 function initDB(){
   const data={
     filiales:[
-      {id:'sede',cod:'S000',nom:'Sede Central',pastor:'',tes:'',dir:'',tel:'',fun:''}
+      {id:'F001',cod:'F001',nom:'Sede Central',pastor:'',tes:'',dir:'',tel:'',fun:''}
     ],
     miembros:[],
     movimientos:[],
@@ -1721,7 +1721,7 @@ function popRcatFil(){
   oAllFil.textContent='— Todas las Filiales —';
   sel.appendChild(oAllFil);
   // Filiales individuales
-  var filiales=DB.filiales.filter(function(f){return (f.tipo||'filial')!=='departamento';});if(!filiales.find(function(f){return f.id==='sede';})){var sedeCentral=DB.filiales.find(function(f){return f.id==='sede';});if(sedeCentral)filiales.push(sedeCentral);}
+  var filiales=DB.filiales.filter(function(f){return (f.tipo||'filial')!=='departamento';});
   filiales.forEach(function(f){
     var o=document.createElement('option');
     o.value=f.id;o.textContent=f.nom;
@@ -1943,7 +1943,7 @@ function renderDash(){
   const mesLabel=selMes>0?['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'][selMes-1]+' '+curY:'Mes actual';
 
   // Separate filiales and departamentos
-  var filIds=DB.filiales.filter(function(f){return (f.tipo||'filial')!=='departamento';}).map(function(f){return f.id;});if(filIds.indexOf('sede')<0)filIds.push('sede');
+  var filIds=DB.filiales.filter(function(f){return (f.tipo||'filial')!=='departamento';}).map(function(f){return f.id;});
   var deptIds=DB.filiales.filter(function(f){return f.tipo==='departamento';}).map(function(f){return f.id;});
   if(filIds.length===0&&deptIds.length<DB.filiales.length){
     filIds=DB.filiales.map(function(f){return f.id;});
@@ -1983,7 +1983,7 @@ function renderDash(){
   var siFilUSD=Number((DB.saldos_iniciales||{}).filialesUSD)||0;
   var siDeptos=Number((DB.saldos_iniciales||{}).departamentos)||0;
 
-  var allMovsFil=gAccMov().filter(function(m){var f=DB.filiales.find(function(x){return x.id===m.fil;});return m.fil==='sede'||!f||(f.tipo||'filial')!=='departamento';});
+  var allMovsFil=gAccMov().filter(function(m){var f=DB.filiales.find(function(x){return x.id===m.fil;});return m.fil==='sede'||m.fil==='F001'||!f||(f.tipo||'filial')!=='departamento';});
   var allMovsDept=gAccMov().filter(function(m){var f=DB.filiales.find(function(x){return x.id===m.fil;});return f&&f.tipo==='departamento';});
   var allMovsMyFil=myFil?gAccMov().filter(function(m){return m.fil===myFil;}):allMovsFil;
 
@@ -2744,7 +2744,7 @@ function openFilModal(id=null){
     document.getElementById('fil-tit').textContent='Nueva Filial';
     var fsiNew=document.getElementById('f-saldo-inicial');if(fsiNew)fsiNew.value='0';
     var fsiRow=document.getElementById('f-saldo-row');if(fsiRow)fsiRow.style.display='none';
-    var cnt=DB.filiales.filter(function(f){return f.id!=='sede';}).length+1;
+    var cnt=DB.filiales.filter(function(f){return f.id!=='sede'&&f.id!=='F001'||(f.tipo||'filial')==='filial';}).length+1;
     document.getElementById('f-cod').value='F'+String(cnt).padStart(3,'0');
     document.getElementById('f-cod').style.opacity='1';
     ['f-nom','f-pas','f-tes','f-dir','f-tel','f-fun'].forEach(function(id){document.getElementById(id).value='';});
@@ -2995,7 +2995,7 @@ function renderCierreFiliales(){
   var mes=parseInt(document.getElementById('cf-mes').value);
   var anio=parseInt(document.getElementById('cf-anio').value);
   if(!anio){toast('Seleccione el año','err');return;}
-  var todasFiliales=DB.filiales.filter(function(f){return f.id!=='sede';});
+  var todasFiliales=DB.filiales.filter(function(f){return (f.tipo||'filial')!=='departamento';});
   if(!todasFiliales.length){
     document.getElementById('cf-panel').innerHTML='<div class="empty"><span class="ic">🏛️</span>No hay filiales ni departamentos registrados</div>';
     return;
@@ -3174,7 +3174,7 @@ function savCierreDeposito(){
     var movId='M'+Date.now();
     var movEfectivo={
       id:movId,tipo:'ingreso',fec:fecha,mon:monto,moneda:'PEN',
-      cat:'Transferencia de Filial',fil:'sede',
+      cat:'Transferencia de Filial',fil:'F001',
       desc:'Efectivo recibido de '+filNom+' — '+MESES[mes-1]+' '+anio+(obs?' — '+obs:''),
       obs:obs,origen:'cierre_filial_efectivo'
     };
@@ -3432,7 +3432,7 @@ function genCaja(){
   var saldoAnteriorUSD=0;
   var filObj=fil!=='all'?DB.filiales.find(function(f){return f.id===fil;}):null;
   var esDepartamento=filObj&&filObj.tipo==='departamento';
-  var esSedeCentral=fil!=='all'&&filObj&&(filObj.id==='sede'||filObj.cod==='S000'||(filObj.nom&&filObj.nom.toLowerCase().includes('sede central')))&&!esDepartamento;
+  var esSedeCentral=fil!=='all'&&filObj&&(filObj.id==='sede'||filObj.id==='F001'||filObj.cod==='S000'||(filObj.nom&&filObj.nom.toLowerCase().includes('sede central')))&&!esDepartamento;
 
   if(esDepartamento){
     // Saldo inicial del departamento (configurado al crear la filial)
@@ -3461,7 +3461,7 @@ function genCaja(){
     var siFilUSD=Number((DB.saldos_iniciales||{}).filialesUSD)||0;
 
     // Movimientos de TODAS las filiales (no departamentos) anteriores al mes
-    var todasFilIds=DB.filiales.filter(function(f){return (f.tipo||'filial')!=='departamento';}).map(function(f){return f.id;});if(todasFilIds.indexOf('sede')<0)todasFilIds.push('sede');
+    var todasFilIds=DB.filiales.filter(function(f){return (f.tipo||'filial')!=='departamento';}).map(function(f){return f.id;});
     var movsPrevSede=gAccMov().filter(function(m){
       if(todasFilIds.indexOf(m.fil)<0)return false;
       if(m.esBancario||m.origen==='cierre_filial_efectivo'||m.tipo==='transferencia')return false;
@@ -4128,7 +4128,7 @@ function delSelected(mod){
     if(mod==='mov') DB.movimientos=DB.movimientos.filter(function(m){return m.id!==id;});
     else if(mod==='miem') DB.miembros=DB.miembros.filter(function(m){return m.id!==id;});
     else if(mod==='fil'){
-      if(id==='sede'){toast('No se puede eliminar la Sede Central','err');return;}
+      if(id==='F001'||id==='sede'){toast('No se puede eliminar la Sede Central','err');return;}
       DB.filiales=DB.filiales.filter(function(f){return f.id!==id;});
     }
     else if(mod==='vot') DB.votos=DB.votos.filter(function(v){return v.id!==id;});
@@ -5137,7 +5137,7 @@ function startRealtimeSync(){
         DB.movimientos=items;try{sd();}catch(e){}
       } else if(col === 'filiales'){
         var items=[];snap.forEach(function(d){items.push(d.data());});
-        if(items.length>0){DB.filiales=items;if(!DB.filiales.find(function(f){return f.id==='sede';}))DB.filiales.unshift({id:'sede',cod:'S000',nom:'Sede Central',tipo:'filial'});try{sd();}catch(e){}}
+        if(items.length>0){DB.filiales=items;try{sd();}catch(e){}}
       } else if(col === 'miembros'){
         var items=[];snap.forEach(function(d){items.push(d.data());});
         if(items.length>0){DB.miembros=items;try{sd();}catch(e){}}
@@ -5178,6 +5178,7 @@ function startRealtimeSync(){
       // Refresh current active module
       refreshCurrentModule();
       migrarTransferencias();
+      migrarFilSede();
 
     }, function(err){console.warn('Listener error '+col+':', err);});
 
@@ -5283,7 +5284,7 @@ async function syncFromFirebase(){
     var cols=['movimientos','filiales','miembros','votos','banco','cierres','categorias','usuarios'];
     var results=await Promise.all(cols.map(function(c){return fbLoadAll(c);}));
     if(results[0]&&results[0].length>0)DB.movimientos=results[0];
-    if(results[1]&&results[1].length>0){DB.filiales=results[1];if(!DB.filiales.find(function(f){return f.id==='sede';}))DB.filiales.unshift({id:'sede',cod:'S000',nom:'Sede Central',tipo:'filial'});}
+    if(results[1]&&results[1].length>0){DB.filiales=results[1];}
     if(results[2]&&results[2].length>0)DB.miembros=results[2];
     if(results[3]&&results[3].length>0)DB.votos=results[3];
     if(results[4]&&results[4].length>0)DB.banco=results[4];
@@ -5299,6 +5300,7 @@ async function syncFromFirebase(){
     hideSyncMsg();
     refreshCurrentModule();
     migrarTransferencias();
+    migrarFilSede();
   }catch(e){hideSyncMsg();console.warn('Sync error:',e);}
 }
 
@@ -5347,7 +5349,7 @@ function delSelected(mod){
     if(mod==='mov') DB.movimientos=DB.movimientos.filter(function(m){return m.id!==id;});
     else if(mod==='miem') DB.miembros=DB.miembros.filter(function(m){return m.id!==id;});
     else if(mod==='fil'){
-      if(id==='sede'){toast('No se puede eliminar la Sede Central','err');return;}
+      if(id==='F001'||id==='sede'){toast('No se puede eliminar la Sede Central','err');return;}
       DB.filiales=DB.filiales.filter(function(f){return f.id!==id;});
     }
     else if(mod==='vot') DB.votos=DB.votos.filter(function(v){return v.id!==id;});
@@ -6061,19 +6063,19 @@ function genEjecutivo(){
   var allMovs=gAccMov();
 
   // Solo filiales (sin departamentos)
-  var filiales=DB.filiales.filter(function(f){return (f.tipo||'filial')!=='departamento';});if(!filiales.find(function(f){return f.id==='sede';})){var sedeCentral=DB.filiales.find(function(f){return f.id==='sede';});if(sedeCentral)filiales.push(sedeCentral);}
+  var filiales=DB.filiales.filter(function(f){return (f.tipo||'filial')!=='departamento';});
 
   // Movimientos del mes — solo filiales
   var movsMes=allMovs.filter(function(m){
     var y=parseInt(m.fec.split('-')[0]),mo=parseInt(m.fec.split('-')[1]);
-    var esFilial=m.fil==='sede'||filiales.some(function(f){return f.id===m.fil;});
+    var esFilial=m.fil==='sede'||m.fil==='F001'||filiales.some(function(f){return f.id===m.fil;});
     return y===anio&&mo===mes&&(m.moneda||'PEN')==='PEN'&&esFilial&&!m.esBancario&&m.origen!=='cierre_filial_efectivo'&&m.tipo!=='transferencia';
   });
 
   // Movimientos mes anterior — solo filiales (para comparativo)
   var movsPrev=allMovs.filter(function(m){
     var y=parseInt(m.fec.split('-')[0]),mo=parseInt(m.fec.split('-')[1]);
-    var esFilial=m.fil==='sede'||filiales.some(function(f){return f.id===m.fil;});
+    var esFilial=m.fil==='sede'||m.fil==='F001'||filiales.some(function(f){return f.id===m.fil;});
     return y===anioPrev&&mo===mesPrev&&(m.moneda||'PEN')==='PEN'&&esFilial&&m.tipo!=='transferencia';
   });
 
@@ -6089,7 +6091,7 @@ function genEjecutivo(){
   var siFiliales=Number((DB.saldos_iniciales||{}).filiales)||0;
   var todosPrevios=allMovs.filter(function(m){
     var y=parseInt(m.fec.split('-')[0]),mo=parseInt(m.fec.split('-')[1]);
-    var esFilial=m.fil==='sede'||filiales.some(function(f){return f.id===m.fil;});
+    var esFilial=m.fil==='sede'||m.fil==='F001'||filiales.some(function(f){return f.id===m.fil;});
     return esFilial&&(m.moneda||'PEN')==='PEN'&&!m.esBancario&&m.origen!=='cierre_filial_efectivo'&&m.tipo!=='transferencia'&&((y<anio)||(y===anio&&mo<mes));
   });
   var grandSA=siFiliales
@@ -6099,7 +6101,7 @@ function genEjecutivo(){
   // Impacto de transferencias ANTERIORES al mes en el saldo anterior
   var trfsPrevEj=allMovs.filter(function(m){
     var y=parseInt(m.fec.split('-')[0]),mo=parseInt(m.fec.split('-')[1]);
-    var esFilial=m.fil==='sede'||filiales.some(function(f){return f.id===m.fil;});
+    var esFilial=m.fil==='sede'||m.fil==='F001'||filiales.some(function(f){return f.id===m.fil;});
     return esFilial&&m.tipo==='transferencia'&&(m.moneda||'PEN')==='PEN'&&((y<anio)||(y===anio&&mo<mes));
   });
   var grandSAconTrf=grandSA+trfsPrevEj.reduce(function(a,m){
@@ -6109,7 +6111,7 @@ function genEjecutivo(){
   // Impacto de transferencias DEL MES en el saldo final de caja
   var trfsMesEj=allMovs.filter(function(m){
     var y=parseInt(m.fec.split('-')[0]),mo=parseInt(m.fec.split('-')[1]);
-    var esFilial=m.fil==='sede'||filiales.some(function(f){return f.id===m.fil;});
+    var esFilial=m.fil==='sede'||m.fil==='F001'||filiales.some(function(f){return f.id===m.fil;});
     return esFilial&&m.tipo==='transferencia'&&(m.moneda||'PEN')==='PEN'&&y===anio&&mo===mes;
   });
   var trfsMesImpactoEj=trfsMesEj.reduce(function(a,m){
@@ -6423,7 +6425,7 @@ function genCategorias(){
   var fn='';
   if(fil==='all-filiales'){
     filIds=DB.filiales.filter(function(f){return (f.tipo||'filial')!=='departamento';}).map(function(f){return f.id;});
-    if(filIds.indexOf('sede')<0)filIds.push('sede');
+    
     fn='Todas las Filiales';
   } else if(fil==='all-departamentos'){
     filIds=DB.filiales.filter(function(f){return f.tipo==='departamento';}).map(function(f){return f.id;});
@@ -6678,6 +6680,19 @@ function loadAuditoriaFromFirebase(){
     }).catch(function(){hideSyncMsg();renderAuditoria();});
 }
 
+
+// ===================== MIGRACIÓN: fil:'sede' → fil:'F001' =====================
+function migrarFilSede(){
+  var reparados=0;
+  (DB.movimientos||[]).forEach(function(m){
+    if(m.fil==='sede'){m.fil='F001';fbSave('movimientos',m.id,m);reparados++;}
+  });
+  (DB.banco||[]).forEach(function(b){
+    if(b.fil==='sede'){b.fil='F001';fbSave('banco',b.id,b);reparados++;}
+  });
+  if(reparados>0){try{sd();}catch(e){}console.log('[MIGRACIÓN] fil:sede → F001:',reparados,'registros');}
+}
+
 // ===================== MIGRACIÓN: reparar transferencias sin subtipo =====================
 function migrarTransferencias(){
   var reparadas=0;
@@ -6756,7 +6771,7 @@ function updTrfSaldos(){
 
   var allMovsFil=gAccMov().filter(function(m){
     var f=DB.filiales.find(function(x){return x.id===m.fil;});
-    return m.fil==='sede'||!f||(f.tipo||'filial')!=='departamento';
+    return m.fil==='sede'||m.fil==='F001'||!f||(f.tipo||'filial')!=='departamento';
   });
 
   // Movimientos anteriores al mes actual (sin transferencias)
@@ -6873,11 +6888,11 @@ function savTransferencia(){
 
   // Calcular saldos ANTES
   var movsCaja=DB.movimientos.filter(function(m){
-    return m.fil==='sede' && m.tipo!=='transferencia' && !m.esBancario && (m.moneda||'PEN')==='PEN';
+    return (m.fil==='sede'||m.fil==='F001') && m.tipo!=='transferencia' && !m.esBancario && (m.moneda||'PEN')==='PEN';
   });
   var siCaja=Number((DB.saldos_iniciales||{}).filiales)||0;
   var saldoCajaAntes=siCaja+movsCaja.reduce(function(a,m){return a+(m.tipo==='ingreso'?Number(m.mon):-Number(m.mon));},0);
-  DB.movimientos.filter(function(m){return m.tipo==='transferencia'&&m.fil==='sede'&&(m.moneda||'PEN')==='PEN';}).forEach(function(m){
+  DB.movimientos.filter(function(m){return m.tipo==='transferencia'&&(m.fil==='sede'||m.fil==='F001')&&(m.moneda||'PEN')==='PEN';}).forEach(function(m){
     saldoCajaAntes+=(m.subtipo==='entrada_banco_caja'?Number(m.mon):-Number(m.mon));
   });
 
@@ -6893,7 +6908,7 @@ function savTransferencia(){
     desc:dir==='caja_banco'
       ?('Transferencia Caja → Banco'+(obs?' — '+obs:''))
       :('Transferencia Banco → Caja'+(obs?' — '+obs:'')),
-    cat:'Transferencia',fil:'sede',met:'transferencia',
+    cat:'Transferencia',fil:'F001',met:'transferencia',
     comp:ref||'',obs:obs,trfId:trfId,
     regBy:CU?CU.nom:'',regAt:ahora,ts:Date.now()
   };
@@ -6905,7 +6920,7 @@ function savTransferencia(){
     desc:dir==='caja_banco'
       ?('Depósito desde Caja — Sede Central'+(obs?' — '+obs:''))
       :('Retiro para Caja — Sede Central'+(obs?' — '+obs:'')),
-    fil:'sede',comp:ref||'',obs:obs,
+    fil:'F001',comp:ref||'',obs:obs,
     origen:'transferencia_caja_banco',
     trfId:trfId,movId:movObj.id,
     regBy:CU?CU.nom:'',regAt:ahora,
@@ -6950,8 +6965,8 @@ function genRptTransferencias(){
   var cutoff=anio+'-'+String(mes).padStart(2,'0')+'-01';
 
   // Saldo caja antes del período
-  var movsCajaAntes=DB.movimientos.filter(function(m){return m.fil==='sede'&&m.tipo!=='transferencia'&&!m.esBancario&&(m.moneda||'PEN')==='PEN'&&m.fec<cutoff;});
-  var trfsCajaAntes=DB.movimientos.filter(function(m){return m.tipo==='transferencia'&&m.fil==='sede'&&m.fec<cutoff;});
+  var movsCajaAntes=DB.movimientos.filter(function(m){return (m.fil==='sede'||m.fil==='F001')&&m.tipo!=='transferencia'&&!m.esBancario&&(m.moneda||'PEN')==='PEN'&&m.fec<cutoff;});
+  var trfsCajaAntes=DB.movimientos.filter(function(m){return m.tipo==='transferencia'&&(m.fil==='sede'||m.fil==='F001')&&m.fec<cutoff;});
   var saldoCajaInicio=siCaja+movsCajaAntes.reduce(function(a,m){return a+(m.tipo==='ingreso'?Number(m.mon):-Number(m.mon));},0)
     +trfsCajaAntes.reduce(function(a,m){return a+(m.subtipo==='entrada_banco_caja'?Number(m.mon):-Number(m.mon));},0);
 
