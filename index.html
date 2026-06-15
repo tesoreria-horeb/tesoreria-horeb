@@ -686,8 +686,18 @@ body.contador-mode .modal-ft .btn-d {
                 </div>
                 <div style="min-width:240px;padding:12px;background:rgba(46,134,171,.08);border:1px solid rgba(46,134,171,.2);border-radius:8px">
                   <div style="font-size:11px;font-weight:700;color:#5DADE2;margin-bottom:10px;text-transform:uppercase">Registrar Depósito Culqui</div>
+                  <div class="fr" style="gap:8px;margin-bottom:8px">
+                    <div class="fld" style="margin-bottom:0">
+                      <label style="font-size:10px">Desde</label>
+                      <input type="date" id="pos-dep-desde" style="width:100%" onchange="updPosDepResumen()">
+                    </div>
+                    <div class="fld" style="margin-bottom:0">
+                      <label style="font-size:10px">Hasta</label>
+                      <input type="date" id="pos-dep-hasta" style="width:100%" onchange="updPosDepResumen()">
+                    </div>
+                  </div>
                   <div class="fld" style="margin-bottom:8px">
-                    <label style="font-size:10px">Fecha depósito Culqui</label>
+                    <label style="font-size:10px">Fecha depósito Culqui en banco</label>
                     <input type="date" id="pos-dep-fecha" style="width:100%">
                   </div>
                   <div class="fld" style="margin-bottom:8px">
@@ -698,8 +708,8 @@ body.contador-mode .modal-ft .btn-d {
                     <label style="font-size:10px">Observación (opcional)</label>
                     <input type="text" id="pos-dep-obs" placeholder="Ej: Depósito Culqui 15/06" style="width:100%">
                   </div>
-                  <div style="font-size:10px;color:rgba(247,243,233,.4);margin-bottom:8px">
-                    Neto esperado: <strong id="pos-dep-neto-esp" style="color:#5DADE2">S/. 0.00</strong>
+                  <div id="pos-dep-resumen" style="font-size:10px;color:rgba(247,243,233,.5);margin-bottom:8px;padding:6px;background:rgba(0,0,0,.2);border-radius:4px">
+                    Seleccione el rango de fechas
                   </div>
                   <button class="btn btn-p" style="width:100%" onclick="registrarDepositoCulqui()">💾 Registrar Depósito</button>
                 </div>
@@ -1759,7 +1769,7 @@ function sm(n){
 
 // ===================== HELPERS =====================
 var movPg=1;
-function gAccMov(){if(!CU)return[];return (CU.niv<=2||CU.niv===5||CU.fil==='all')?DB.movimientos:DB.movimientos.filter(m=>m.fil===CU.fil);}
+function gAccMov(){if(!CU)return[];var all=(CU.niv<=2||CU.niv===5||CU.fil==='all')?DB.movimientos:DB.movimientos.filter(m=>m.fil===CU.fil);return all.filter(function(m){return !m.stanby;});}
 function gAccFil(){if(!CU)return[];return (CU.niv<=2||CU.niv===5||CU.fil==='all')?DB.filiales:DB.filiales.filter(f=>f.id===CU.fil);}
 function gAccMiem(){if(!CU)return[];return (CU.niv<=2||CU.niv===5||CU.fil==='all')?DB.miembros:DB.miembros.filter(m=>m.fil===CU.fil);}
 function fmt(n){return'S/. '+Number(n||0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',');}
@@ -2709,7 +2719,7 @@ function savMov(keepOpen){
   // Auditoría
   auditLog(EID?'editar_movimiento':'crear_movimiento',{id:obj.id,desc:obj.desc,mon:obj.mon,tipo:obj.tipo,fil:obj.fil,fec:obj.fec});
 
-  // POS: crear egreso de comisión automáticamente (solo nuevo registro)
+  // POS: crear egreso de comisión en STANBY (no visible hasta consolidar)
   if(esPOS&&!EID&&posComision>0){
     var comId=gid('M');
     var comObj={
@@ -2717,8 +2727,9 @@ function savMov(keepOpen){
       desc:'Comisión POS — '+desc,
       cat:'Comisión POS',fil:fil,
       met:'pos',moneda:obj.moneda||'PEN',
-      comp:obj.comp||'',obs:'Egreso automático por comisión POS',
+      comp:obj.comp||'',obs:'Egreso automático por comisión POS — pendiente de activación',
       esBancario:false,esPOS:true,posRefId:movId,
+      stanby:true, // No visible en movimientos ni en cálculos hasta consolidar
       ts:Date.now()+1,
       regBy:CU?CU.nom:'',regAt:ahora
     };
@@ -7096,32 +7107,58 @@ function renderPosPendientes(){
   if(tnEl)tnEl.textContent='S/. '+totalNeto.toFixed(2);
   if(neEl)neEl.textContent='S/. '+totalNeto.toFixed(2);
 
-  // Set default deposit amount to total neto
-  var depMonto=document.getElementById('pos-dep-monto');
-  if(depMonto&&!depMonto.value)depMonto.value=totalNeto.toFixed(2);
-
-  // Set default date to today
+  // Set default dates
+  var depDesde=document.getElementById('pos-dep-desde');
+  var depHasta=document.getElementById('pos-dep-hasta');
   var depFecha=document.getElementById('pos-dep-fecha');
-  if(depFecha&&!depFecha.value)depFecha.value=today();
+  if(depDesde&&!depDesde.value&&pendientes.length){
+    depDesde.value=pendientes[0].fec; // earliest pending
+    depHasta.value=pendientes[pendientes.length-1].fec; // latest pending
+    if(depFecha)depFecha.value=today();
+    updPosDepResumen();
+  }
 
   if(resumen)resumen.textContent=pendientes.length+' transacciones POS pendientes — Neto esperado: S/. '+totalNeto.toFixed(2);
 }
 
+function updPosDepResumen(){
+  var desde=document.getElementById('pos-dep-desde').value;
+  var hasta=document.getElementById('pos-dep-hasta').value;
+  var resumen=document.getElementById('pos-dep-resumen');
+  var montoEl=document.getElementById('pos-dep-monto');
+  if(!desde||!hasta){if(resumen)resumen.textContent='Seleccione el rango de fechas';return;}
+  if(hasta<desde){if(resumen)resumen.textContent='⚠️ La fecha final debe ser mayor a la inicial';return;}
+
+  var pendientes=(DB.movimientos||[]).filter(function(m){
+    return m.esPOS&&m.tipo==='ingreso'&&m.pendientePOS&&m.fec>=desde&&m.fec<=hasta;
+  });
+  var totalBruto=pendientes.reduce(function(a,m){return a+Number(m.mon);},0);
+  var totalCom=pendientes.reduce(function(a,m){return a+Number(m.posComision||0);},0);
+  var totalNeto=totalBruto-totalCom;
+
+  if(resumen)resumen.innerHTML=pendientes.length+' transacciones &nbsp;|&nbsp; Bruto: <span style="color:#2ECC71">S/. '+totalBruto.toFixed(2)+'</span> &nbsp;|&nbsp; Com: <span style="color:#E74C3C">S/. '+totalCom.toFixed(2)+'</span> &nbsp;|&nbsp; Neto: <span style="color:#5DADE2;font-weight:700">S/. '+totalNeto.toFixed(2)+'</span>';
+  if(montoEl&&!montoEl._userEdited)montoEl.value=totalNeto.toFixed(2);
+}
+
 function registrarDepositoCulqui(){
+  var desde=document.getElementById('pos-dep-desde').value;
+  var hasta=document.getElementById('pos-dep-hasta').value;
   var fecha=document.getElementById('pos-dep-fecha').value;
   var montoStr=document.getElementById('pos-dep-monto').value;
   var monto=parseFloat(montoStr);
   var obs=document.getElementById('pos-dep-obs').value.trim();
 
-  if(!fecha){toast('Seleccione la fecha del depósito','err');return;}
-  if(!montoStr||isNaN(monto)||monto<=0){toast('Ingrese el monto recibido','err');return;}
+  if(!desde||!hasta){toast('Seleccione el rango de fechas (desde/hasta)','err');return;}
+  if(hasta<desde){toast('La fecha final debe ser mayor a la inicial','err');return;}
+  if(!fecha){toast('Seleccione la fecha del depósito en banco','err');return;}
+  if(!montoStr||isNaN(monto)||monto<=0){toast('Ingrese el monto recibido en banco','err');return;}
 
-  // Get all pending POS up to and including deposit date
+  // Get all pending POS in date range
   var pendientes=(DB.movimientos||[]).filter(function(m){
-    return m.esPOS&&m.tipo==='ingreso'&&m.pendientePOS&&m.fec<=fecha;
+    return m.esPOS&&m.tipo==='ingreso'&&m.pendientePOS&&m.fec>=desde&&m.fec<=hasta;
   });
 
-  if(!pendientes.length){toast('No hay entradas POS pendientes hasta esa fecha','err');return;}
+  if(!pendientes.length){toast('No hay entradas POS pendientes en ese rango de fechas','err');return;}
 
   var totalBruto=pendientes.reduce(function(a,m){return a+Number(m.mon);},0);
   var totalCom=pendientes.reduce(function(a,m){return a+Number(m.posComision||0);},0);
@@ -7130,20 +7167,22 @@ function registrarDepositoCulqui(){
   var ahora=new Date().toISOString();
   var depId=gid('BC');
 
-  if(!confirm('¿Registrar depósito Culqui de S/. '+monto.toFixed(2)+' cubriendo '+pendientes.length+' transacciones POS hasta '+fd2(fecha)+'?'))return;
+  var descFechas=fd2(desde)+(desde!==hasta?' al '+fd2(hasta):'');
+  if(!confirm('¿Registrar depósito Culqui de S/. '+monto.toFixed(2)+'\n'+pendientes.length+' transacciones del '+descFechas+'?\n\nNeto calculado: S/. '+totalNeto.toFixed(2)))return;
 
-  // Create bank deposit
+  // 1. Create consolidated bank deposit
   var bancoObj={
     id:depId,
     tipo:'deposito',
     fec:fecha,
     mon:monto,
-    desc:'Depósito Culqui POS — '+(pendientes.length)+' transacciones'+(obs?' — '+obs:''),
+    desc:'Depósito Culqui POS — '+pendientes.length+' transacciones ('+descFechas+')'+(obs?' — '+obs:''),
     fil:filPOS,
-    comp:'',obs:obs||'Depósito automático Culqui POS',
+    comp:'',obs:obs||'Depósito Culqui POS consolidado',
     origen:'culqui_pos',
     posIds:pendientes.map(function(m){return m.id;}),
-    montoNeto:totalNeto,
+    posDesde:desde,posHasta:hasta,
+    montoNeto:totalNeto,montoBruto:totalBruto,totalComision:totalCom,
     reg:CU?CU.nom:'',regFec:today(),
     regBy:CU?CU.nom:'',regAt:ahora
   };
@@ -7151,7 +7190,19 @@ function registrarDepositoCulqui(){
   DB.banco.push(bancoObj);
   fbSave('banco',depId,bancoObj);
 
-  // Mark POS as no longer pending
+  // 2. Activate stanby commission egresos for these transactions
+  var posIds=new Set(pendientes.map(function(m){return m.id;}));
+  var comisionesActivadas=0;
+  DB.movimientos.forEach(function(m){
+    if(m.stanby&&m.esPOS&&m.tipo==='egreso'&&m.posRefId&&posIds.has(m.posRefId)){
+      m.stanby=false;
+      m.depositoId=depId;
+      fbSave('movimientos',m.id,m);
+      comisionesActivadas++;
+    }
+  });
+
+  // 3. Mark POS ingresos as deposited
   pendientes.forEach(function(m){
     m.pendientePOS=false;
     m.depositoId=depId;
@@ -7160,16 +7211,20 @@ function registrarDepositoCulqui(){
   });
 
   try{sd();}catch(e){}
-  auditLog('deposito_culqui_pos',{depId:depId,mon:monto,neto:totalNeto,txCount:pendientes.length,fec:fecha});
+  auditLog('deposito_culqui_pos',{depId:depId,mon:monto,neto:totalNeto,bruto:totalBruto,comision:totalCom,txCount:pendientes.length,desde:desde,hasta:hasta,fec:fecha});
 
   // Reset form
   document.getElementById('pos-dep-monto').value='';
   document.getElementById('pos-dep-obs').value='';
   document.getElementById('pos-dep-fecha').value='';
+  document.getElementById('pos-dep-desde').value='';
+  document.getElementById('pos-dep-hasta').value='';
+  var resumen=document.getElementById('pos-dep-resumen');
+  if(resumen)resumen.textContent='Seleccione el rango de fechas';
 
   renderBanco();
-  renderPosPendientes();
-  toast('✅ Depósito Culqui registrado — '+pendientes.length+' transacciones POS marcadas como depositadas');
+  renderMov();
+  toast('✅ Depósito Culqui registrado — '+pendientes.length+' transacciones POS + '+comisionesActivadas+' comisiones activadas');
 }
 
 // ===================== TRANSFERENCIAS CAJA ↔ BANCO =====================
