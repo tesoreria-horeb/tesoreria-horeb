@@ -2797,6 +2797,10 @@ function savMov(keepOpen){
     if(catVal)selectCat(catVal);
     document.getElementById('m-fil').value=filVal;
     document.getElementById('m-met').value=metVal;
+    onMetChange(); // show/hide POS fields based on restored method
+    // Reset POS comision for new entry
+    var posComEl=document.getElementById('m-pos-comision');if(posComEl)posComEl.value='0';
+    updPosNeto();
     // Restore mes and update date range accordingly
     if(mesVal){
       var mSel=document.getElementById('m-mes-sel');
