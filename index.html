@@ -2462,11 +2462,14 @@ function popMesSel(){
   var curM=now.getMonth()+1;
   var curY=now.getFullYear();
   // Niv 1 y 2: acceso completo (24 meses atrás); todos los demás: mes actual + 2 anteriores
+  // NADIE puede lanzar en meses futuros
   var mesesAtras=CU&&CU.niv<=2?23:2;
   for(var i=mesesAtras;i>=0;i--){
     var d=new Date(curY,curM-1-i,1);
     var m=d.getMonth()+1;
     var y=d.getFullYear();
+    // Skip future months
+    if(y>curY||(y===curY&&m>curM))continue;
     var o=document.createElement('option');
     o.value=y+'-'+String(m).padStart(2,'0');
     var lbl=MESES[m-1]+' '+y;
@@ -2650,11 +2653,12 @@ function savMov(keepOpen){
   var movId=EID||gid('M');
 
   if(!fec){toast('Seleccione la fecha','err');return;}
+  // Validar que la fecha no sea futura
+  if(fec>today()){toast('No se puede registrar una fecha futura','err');return;}
   // Validar que la fecha esté dentro del rango permitido (solo en nuevos, no en edición)
   if(!EID){
     var fechaEl2=document.getElementById('m-fecha');
     if(fechaEl2&&fechaEl2.min&&fec<fechaEl2.min){toast('Fecha fuera del rango permitido — use el selector de Mes','err');return;}
-    if(fechaEl2&&fechaEl2.max&&fec>fechaEl2.max){toast('No se puede registrar una fecha futura','err');return;}
   }
   if(!desc){toast('Ingrese una descripcion','err');return;}
   if(!monStr||isNaN(mon)||mon<=0){toast('Ingrese un monto válido mayor a 0','err');return;}
@@ -2880,7 +2884,15 @@ function renderMov(){
   var ff=(document.getElementById('mov-ff')||{value:''}).value;
   var ftipo=(document.getElementById('mov-ftipo')||{value:''}).value;
   var movs=gAccMov();
-  if(s)movs=movs.filter(function(m){return (m.desc||'').toLowerCase().includes(s)||(m.cat||'').toLowerCase().includes(s)||(m.miem||'').toLowerCase().includes(s);});
+  if(s)movs=movs.filter(function(m){
+    return (m.desc||'').toLowerCase().includes(s)
+      ||(m.cat||'').toLowerCase().includes(s)
+      ||(m.miem||'').toLowerCase().includes(s)
+      ||String(m.mon||'').includes(s)
+      ||(m.comp||'').toLowerCase().includes(s)
+      ||(m.regBy||'').toLowerCase().includes(s)
+      ||(m.obs||'').toLowerCase().includes(s);
+  });
   if(ft)movs=movs.filter(function(m){return m.tipo===ft;});
   if(fa)movs=movs.filter(function(m){return m.fec.split('-')[0]===fa;});
   if(fm)movs=movs.filter(function(m){return m.fec.split('-')[1]===fm.padStart(2,'0');});
@@ -6918,7 +6930,18 @@ function renderAuditoria(){
   var fa=(document.getElementById('aud-fa')||{value:''}).value;
   var logs=(DB.auditoria||[]).slice();
   logs.sort(function(a,b){return b.fecha.localeCompare(a.fecha);});
-  if(s)logs=logs.filter(function(a){return (a.accion+a.usuario+(a.datos&&a.datos.desc?a.datos.desc:'')).toLowerCase().includes(s);});
+  if(s)logs=logs.filter(function(a){
+    var dat=a.datos||{};
+    return (a.accion||'').toLowerCase().includes(s)
+      ||(a.usuario||'').toLowerCase().includes(s)
+      ||(a.userLogin||'').toLowerCase().includes(s)
+      ||(dat.desc||'').toLowerCase().includes(s)
+      ||String(dat.mon||'').includes(s)
+      ||(dat.tipo||'').toLowerCase().includes(s)
+      ||(dat.id||'').toLowerCase().includes(s)
+      ||(dat.obs||'').toLowerCase().includes(s)
+      ||(dat.ref||'').toLowerCase().includes(s);
+  });
   if(fu)logs=logs.filter(function(a){return a.userLogin===fu||a.usuario===fu;});
   if(fa)logs=logs.filter(function(a){return a.fecha&&a.fecha.slice(0,10)===fa;});
 
