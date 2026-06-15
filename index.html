@@ -3618,6 +3618,23 @@ function genCaja(){
     });
   }
 
+  // Saldo anterior para filiales en retención
+  var esFilialRetenida=filObj&&(filObj.tipo||'filial')!=='departamento'&&!esSedeCentral&&filObj.retencion&&filObj.retencion.activa;
+  if(esFilialRetenida){
+    var fechaInicioRetCaja=filObj.retencion.fecha||'1900-01-01';
+    var movsPrevRet=gAccMov().filter(function(m){
+      if(m.fil!==fil)return false;
+      if(m.esBancario||m.origen==='cierre_filial_efectivo'||m.tipo==='transferencia')return false;
+      if(m.fec<fechaInicioRetCaja)return false;
+      var y=parseInt(m.fec.split('-')[0]);
+      var mo=parseInt(m.fec.split('-')[1]);
+      return (y<anio)||(y===anio&&mo<mes);
+    });
+    var ingPrevRet=movsPrevRet.filter(function(m){return m.tipo==='ingreso'&&(m.moneda||'PEN')==='PEN';}).reduce(function(a,m){return a+Number(m.mon);},0);
+    var egPrevRet=movsPrevRet.filter(function(m){return m.tipo==='egreso'&&(m.moneda||'PEN')==='PEN';}).reduce(function(a,m){return a+Number(m.mon);},0);
+    saldoAnterior=ingPrevRet-egPrevRet;
+  }
+
   var movs=gAccMov().filter(function(m){
     var y=parseInt(m.fec.split('-')[0]),mo=parseInt(m.fec.split('-')[1]);
     // Excluir movimientos bancarios y transferencias del Libro Caja
@@ -3628,7 +3645,7 @@ function genCaja(){
   var ti=movs.filter(function(m){return m.tipo==='ingreso'&&(m.moneda||'PEN')==='PEN';}).reduce(function(a,m){return a+Number(m.mon);},0);
   var te=movs.filter(function(m){return m.tipo==='egreso'&&(m.moneda||'PEN')==='PEN';}).reduce(function(a,m){return a+Number(m.mon);},0);
   // Para departamentos y Sede Central, el saldo total incluye el saldo anterior
-  var saldo=(esDepartamento||esSedeCentral)?(saldoAnterior+ti-te):(ti-te);
+  var saldo=(esDepartamento||esSedeCentral||esFilialRetenida)?(saldoAnterior+ti-te):(ti-te);
   var tiUSD=movs.filter(function(m){return m.tipo==='ingreso'&&m.moneda==='USD';}).reduce(function(a,m){return a+Number(m.mon);},0);
   var teUSD=movs.filter(function(m){return m.tipo==='egreso'&&m.moneda==='USD';}).reduce(function(a,m){return a+Number(m.mon);},0);
   var saldoUSD=esSedeCentral?(saldoAnteriorUSD+tiUSD-teUSD):(tiUSD-teUSD);
@@ -3669,6 +3686,17 @@ function genCaja(){
         +'</tr>';
     }
   }
+  // Para filiales en retención: insertar fila de Saldo Anterior
+  if(esFilialRetenida&&saldoAnterior!==0){
+    var saldoAntRetColor=saldoAnterior>=0?'':'color:red;';
+    dataRows+='<tr style="background:#f0f7f0">'
+      +'<td style="border:1px solid #333;padding:3px 5px;font-size:11px;font-weight:bold">01/'+String(mes).padStart(2,'0')+'/'+anio+'</td>'
+      +'<td style="border:1px solid #333;padding:3px 6px;font-size:11px;font-weight:bold;font-style:italic">⟵ Saldo anterior ('+MESES[mes-2>=0?mes-2:11]+' '+(mes-1>=1?anio:anio-1)+') — Retención</td>'
+      +'<td style="border:1px solid #333;padding:3px 5px;font-size:11px;text-align:right;font-weight:bold;'+saldoAntRetColor+'">S/. '+saldoAnterior.toFixed(2)+'</td>'
+      +'<td style="border:1px solid #333;padding:3px 5px;font-size:11px"></td>'
+      +'</tr>';
+  }
+
   // Separar movimientos por moneda
   var movsPEN=movs.filter(function(m){return (m.moneda||'PEN')==='PEN';});
   var movsUSD=movs.filter(function(m){return m.moneda==='USD';});
