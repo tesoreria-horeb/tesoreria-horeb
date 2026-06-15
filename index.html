@@ -2187,6 +2187,7 @@ function renderDash(){
       retHtml+='<div style="font-size:10px;color:rgba(247,243,233,.4)">🔒 En retención desde '+(f.retencion.fecha?fd2(f.retencion.fecha):'—')+(f.retencion.motivo?' — '+f.retencion.motivo:'')+'</div>';
       retHtml+='</div>';
       retHtml+='<div style="text-align:right">';
+      retHtml+='<div style="font-size:10px;color:rgba(247,243,233,.4)">Saldo Anterior: <span style="color:#C9A84C">'+fs(saldoAntRet)+'</span></div>';
       retHtml+='<div style="font-size:11px;color:rgba(247,243,233,.4)">Ing: <span style="color:#2ECC71">'+fs(ingRet)+'</span> / Eg: <span style="color:#E74C3C">'+fs(egRet)+'</span></div>';
       retHtml+='<div style="font-size:16px;font-weight:700;color:#E74C3C">'+fs(saldoRet)+'</div>';
       retHtml+='</div>';
