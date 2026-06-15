@@ -655,6 +655,62 @@ body.contador-mode .modal-ft .btn-d {
           </div>
         </div>
 
+        <!-- POS Pendientes de Depósito Culqui -->
+        <div id="pos-pendientes-section" style="margin-bottom:14px;display:none">
+          <div class="card" style="border-color:rgba(93,173,226,.3);background:rgba(46,134,171,.04)">
+            <div class="card-title" style="display:flex;align-items:center;justify-content:space-between">
+              <span>💳 Entradas POS Pendientes de Depósito</span>
+              <button class="btn btn-s" style="font-size:11px" onclick="togglePosPendientes()">▼ Ver detalles</button>
+            </div>
+            <div id="pos-pendientes-body" style="display:none">
+              <div style="display:grid;grid-template-columns:1fr auto;gap:14px;align-items:start;margin-bottom:12px">
+                <div>
+                  <table style="width:100%">
+                    <thead><tr>
+                      <th style="text-align:left;padding:5px 8px;font-size:10px;color:var(--gold-light)">Fecha</th>
+                      <th style="text-align:left;padding:5px 8px;font-size:10px;color:var(--gold-light)">Descripción</th>
+                      <th style="text-align:right;padding:5px 8px;font-size:10px;color:var(--gold-light)">Bruto</th>
+                      <th style="text-align:right;padding:5px 8px;font-size:10px;color:var(--gold-light)">Comisión</th>
+                      <th style="text-align:right;padding:5px 8px;font-size:10px;color:var(--gold-light)">Neto</th>
+                    </tr></thead>
+                    <tbody id="pos-pendientes-rows"></tbody>
+                    <tfoot>
+                      <tr style="border-top:1px solid rgba(201,168,76,.2)">
+                        <td colspan="2" style="padding:6px 8px;font-size:11px;font-weight:700;color:var(--gold-light)">TOTAL PENDIENTE</td>
+                        <td style="text-align:right;padding:6px 8px;font-size:12px;font-weight:700;color:#2ECC71" id="pos-total-bruto">S/. 0.00</td>
+                        <td style="text-align:right;padding:6px 8px;font-size:12px;font-weight:700;color:#E74C3C" id="pos-total-comision">S/. 0.00</td>
+                        <td style="text-align:right;padding:6px 8px;font-size:14px;font-weight:700;color:#5DADE2" id="pos-total-neto">S/. 0.00</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+                <div style="min-width:240px;padding:12px;background:rgba(46,134,171,.08);border:1px solid rgba(46,134,171,.2);border-radius:8px">
+                  <div style="font-size:11px;font-weight:700;color:#5DADE2;margin-bottom:10px;text-transform:uppercase">Registrar Depósito Culqui</div>
+                  <div class="fld" style="margin-bottom:8px">
+                    <label style="font-size:10px">Fecha depósito Culqui</label>
+                    <input type="date" id="pos-dep-fecha" style="width:100%">
+                  </div>
+                  <div class="fld" style="margin-bottom:8px">
+                    <label style="font-size:10px">Monto recibido en banco</label>
+                    <input type="number" id="pos-dep-monto" placeholder="0.00" step="0.01" style="width:100%">
+                  </div>
+                  <div class="fld" style="margin-bottom:10px">
+                    <label style="font-size:10px">Observación (opcional)</label>
+                    <input type="text" id="pos-dep-obs" placeholder="Ej: Depósito Culqui 15/06" style="width:100%">
+                  </div>
+                  <div style="font-size:10px;color:rgba(247,243,233,.4);margin-bottom:8px">
+                    Neto esperado: <strong id="pos-dep-neto-esp" style="color:#5DADE2">S/. 0.00</strong>
+                  </div>
+                  <button class="btn btn-p" style="width:100%" onclick="registrarDepositoCulqui()">💾 Registrar Depósito</button>
+                </div>
+              </div>
+            </div>
+            <div id="pos-pendientes-resumen" style="font-size:12px;color:rgba(247,243,233,.6)">
+              Cargando...
+            </div>
+          </div>
+        </div>
+
         <!-- Toolbar -->
         <div class="tb" style="margin-top:14px">
           <select class="fs" id="banco-filter-mes" onchange="renderBanco()" style="width:130px">
@@ -4401,6 +4457,7 @@ function delSelectedMov(){delSelected('mov');}
 var bancoPg=1; var BANCO_PP=15;
 
 function renderBanco(){
+  renderPosPendientes();
   if(!DB.banco)DB.banco=[];
   if(!DB.saldos_iniciales)DB.saldos_iniciales={filiales:0,departamentos:0,fecha:''};
 
@@ -5519,7 +5576,7 @@ function refreshCurrentModule(){
     else if(n==='usuarios')renderUsrs();
     else if(n==='cierre-filiales')renderCierreFiliales();
     else if(n==='transferencias')renderTrfRecent();
-    else if(n==='banco')renderBanco();
+    else if(n==='banco'){renderBanco();renderPosPendientes();}
   }catch(e){}
 }
 
@@ -6960,6 +7017,159 @@ function migrarTransferencias(){
     try{sd();}catch(e){}
     console.log('[MIGRACIÓN] Reparadas '+reparadas+' transferencias sin subtipo');
   }
+}
+
+// ===================== POS PENDIENTES =====================
+function togglePosPendientes(){
+  var body=document.getElementById('pos-pendientes-body');
+  var btn=document.querySelector('#pos-pendientes-section .btn-s');
+  if(!body)return;
+  var visible=body.style.display!=='none';
+  body.style.display=visible?'none':'';
+  if(btn)btn.textContent=visible?'▼ Ver detalles':'▲ Ocultar';
+}
+
+function renderPosPendientes(){
+  var section=document.getElementById('pos-pendientes-section');
+  var resumen=document.getElementById('pos-pendientes-resumen');
+  var rows=document.getElementById('pos-pendientes-rows');
+  if(!section)return;
+
+  // Get all pending POS ingresos
+  var pendientes=(DB.movimientos||[]).filter(function(m){
+    return m.esPOS&&m.tipo==='ingreso'&&m.pendientePOS;
+  }).sort(function(a,b){return a.fec.localeCompare(b.fec);});
+
+  if(!pendientes.length){
+    section.style.display='none';
+    return;
+  }
+  section.style.display='';
+
+  var totalBruto=0,totalComision=0,totalNeto=0;
+
+  // Group by date
+  var byDate={};
+  pendientes.forEach(function(m){
+    if(!byDate[m.fec])byDate[m.fec]=[];
+    byDate[m.fec].push(m);
+  });
+
+  var rowsHtml='';
+  Object.keys(byDate).sort().forEach(function(fec){
+    var dayMovs=byDate[fec];
+    var dayBruto=dayMovs.reduce(function(a,m){return a+Number(m.mon);},0);
+    var dayCom=dayMovs.reduce(function(a,m){return a+Number(m.posComision||0);},0);
+    var dayNeto=dayBruto-dayCom;
+    totalBruto+=dayBruto;totalComision+=dayCom;totalNeto+=dayNeto;
+
+    // Add day header row
+    rowsHtml+='<tr style="background:rgba(201,168,76,.05)">'
+      +'<td style="padding:4px 8px;font-size:11px;font-weight:700;color:var(--gold-light)">'+fd2(fec)+'</td>'
+      +'<td style="padding:4px 8px;font-size:11px;color:rgba(247,243,233,.5)">'+dayMovs.length+' transacción'+(dayMovs.length>1?'es':'')+'</td>'
+      +'<td style="text-align:right;padding:4px 8px;font-size:11px;color:#2ECC71">S/. '+dayBruto.toFixed(2)+'</td>'
+      +'<td style="text-align:right;padding:4px 8px;font-size:11px;color:#E74C3C">S/. '+dayCom.toFixed(2)+'</td>'
+      +'<td style="text-align:right;padding:4px 8px;font-size:11px;font-weight:700;color:#5DADE2">S/. '+dayNeto.toFixed(2)+'</td>'
+      +'</tr>';
+
+    // Detail rows
+    dayMovs.forEach(function(m){
+      var com=Number(m.posComision||0);
+      var neto=Number(m.mon)-com;
+      rowsHtml+='<tr>'
+        +'<td style="padding:2px 8px 2px 20px;font-size:10px;color:rgba(247,243,233,.4)">'+fd2(m.fec)+'</td>'
+        +'<td style="padding:2px 8px;font-size:11px">'+m.desc+'</td>'
+        +'<td style="text-align:right;padding:2px 8px;font-size:11px">S/. '+Number(m.mon).toFixed(2)+'</td>'
+        +'<td style="text-align:right;padding:2px 8px;font-size:11px;color:#E74C3C">S/. '+com.toFixed(2)+'</td>'
+        +'<td style="text-align:right;padding:2px 8px;font-size:11px">S/. '+neto.toFixed(2)+'</td>'
+        +'</tr>';
+    });
+  });
+
+  if(rows)rows.innerHTML=rowsHtml;
+  var tbEl=document.getElementById('pos-total-bruto');
+  var tcEl=document.getElementById('pos-total-comision');
+  var tnEl=document.getElementById('pos-total-neto');
+  var neEl=document.getElementById('pos-dep-neto-esp');
+  if(tbEl)tbEl.textContent='S/. '+totalBruto.toFixed(2);
+  if(tcEl)tcEl.textContent='S/. '+totalComision.toFixed(2);
+  if(tnEl)tnEl.textContent='S/. '+totalNeto.toFixed(2);
+  if(neEl)neEl.textContent='S/. '+totalNeto.toFixed(2);
+
+  // Set default deposit amount to total neto
+  var depMonto=document.getElementById('pos-dep-monto');
+  if(depMonto&&!depMonto.value)depMonto.value=totalNeto.toFixed(2);
+
+  // Set default date to today
+  var depFecha=document.getElementById('pos-dep-fecha');
+  if(depFecha&&!depFecha.value)depFecha.value=today();
+
+  if(resumen)resumen.textContent=pendientes.length+' transacciones POS pendientes — Neto esperado: S/. '+totalNeto.toFixed(2);
+}
+
+function registrarDepositoCulqui(){
+  var fecha=document.getElementById('pos-dep-fecha').value;
+  var montoStr=document.getElementById('pos-dep-monto').value;
+  var monto=parseFloat(montoStr);
+  var obs=document.getElementById('pos-dep-obs').value.trim();
+
+  if(!fecha){toast('Seleccione la fecha del depósito','err');return;}
+  if(!montoStr||isNaN(monto)||monto<=0){toast('Ingrese el monto recibido','err');return;}
+
+  // Get all pending POS up to and including deposit date
+  var pendientes=(DB.movimientos||[]).filter(function(m){
+    return m.esPOS&&m.tipo==='ingreso'&&m.pendientePOS&&m.fec<=fecha;
+  });
+
+  if(!pendientes.length){toast('No hay entradas POS pendientes hasta esa fecha','err');return;}
+
+  var totalBruto=pendientes.reduce(function(a,m){return a+Number(m.mon);},0);
+  var totalCom=pendientes.reduce(function(a,m){return a+Number(m.posComision||0);},0);
+  var totalNeto=totalBruto-totalCom;
+  var filPOS=pendientes[0].fil||'F001';
+  var ahora=new Date().toISOString();
+  var depId=gid('BC');
+
+  if(!confirm('¿Registrar depósito Culqui de S/. '+monto.toFixed(2)+' cubriendo '+pendientes.length+' transacciones POS hasta '+fd2(fecha)+'?'))return;
+
+  // Create bank deposit
+  var bancoObj={
+    id:depId,
+    tipo:'deposito',
+    fec:fecha,
+    mon:monto,
+    desc:'Depósito Culqui POS — '+(pendientes.length)+' transacciones'+(obs?' — '+obs:''),
+    fil:filPOS,
+    comp:'',obs:obs||'Depósito automático Culqui POS',
+    origen:'culqui_pos',
+    posIds:pendientes.map(function(m){return m.id;}),
+    montoNeto:totalNeto,
+    reg:CU?CU.nom:'',regFec:today(),
+    regBy:CU?CU.nom:'',regAt:ahora
+  };
+  if(!DB.banco)DB.banco=[];
+  DB.banco.push(bancoObj);
+  fbSave('banco',depId,bancoObj);
+
+  // Mark POS as no longer pending
+  pendientes.forEach(function(m){
+    m.pendientePOS=false;
+    m.depositoId=depId;
+    m.fechaDeposito=fecha;
+    fbSave('movimientos',m.id,m);
+  });
+
+  try{sd();}catch(e){}
+  auditLog('deposito_culqui_pos',{depId:depId,mon:monto,neto:totalNeto,txCount:pendientes.length,fec:fecha});
+
+  // Reset form
+  document.getElementById('pos-dep-monto').value='';
+  document.getElementById('pos-dep-obs').value='';
+  document.getElementById('pos-dep-fecha').value='';
+
+  renderBanco();
+  renderPosPendientes();
+  toast('✅ Depósito Culqui registrado — '+pendientes.length+' transacciones POS marcadas como depositadas');
 }
 
 // ===================== TRANSFERENCIAS CAJA ↔ BANCO =====================
