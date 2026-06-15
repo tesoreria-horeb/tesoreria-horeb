@@ -7194,17 +7194,46 @@ function registrarDepositoCulqui(){
   DB.banco.push(bancoObj);
   fbSave('banco',depId,bancoObj);
 
-  // 2. Activate stanby commission egresos for these transactions
+  // 2. Delete individual stanby commission egresos and create ONE consolidated egreso
   var posIds=new Set(pendientes.map(function(m){return m.id;}));
-  var comisionesActivadas=0;
-  DB.movimientos.forEach(function(m){
-    if(m.stanby&&m.esPOS&&m.tipo==='egreso'&&m.posRefId&&posIds.has(m.posRefId)){
-      m.stanby=false;
-      m.depositoId=depId;
-      fbSave('movimientos',m.id,m);
-      comisionesActivadas++;
-    }
+  var comisionesStanby=DB.movimientos.filter(function(m){
+    return m.stanby&&m.esPOS&&m.tipo==='egreso'&&m.posRefId&&posIds.has(m.posRefId);
   });
+
+  // Delete individual stanby egresos from DB and Firebase
+  var stanbyIds=comisionesStanby.map(function(m){return m.id;});
+  DB.movimientos=DB.movimientos.filter(function(m){return stanbyIds.indexOf(m.id)<0;});
+  stanbyIds.forEach(function(id){fbDelete('movimientos',id);});
+
+  // Create ONE consolidated commission egreso
+  if(totalCom>0){
+    var comConsolidadoId=gid('M');
+    var descCom=desde===hasta
+      ?'Comisión POS — '+pendientes.length+' transacciones '+fd2(desde)
+      :'Comisión POS — '+pendientes.length+' transacciones ('+fd2(desde)+' al '+fd2(hasta)+')';
+    var comConsolidado={
+      id:comConsolidadoId,
+      tipo:'egreso',
+      fec:desde, // fecha del primer día del período
+      mon:totalCom,
+      desc:descCom,
+      cat:'Comisión POS',
+      fil:filPOS,
+      met:'pos',
+      moneda:'PEN',
+      comp:'',
+      obs:'Comisión consolidada Culqui — '+pendientes.length+' transacciones',
+      esBancario:false,
+      esPOS:true,
+      stanby:false,
+      depositoId:depId,
+      posIds:Array.from(posIds),
+      ts:Date.now()+2,
+      regBy:CU?CU.nom:'',regAt:ahora
+    };
+    DB.movimientos.push(comConsolidado);
+    fbSave('movimientos',comConsolidadoId,comConsolidado);
+  }
 
   // 3. Mark POS ingresos as deposited
   pendientes.forEach(function(m){
@@ -7228,7 +7257,7 @@ function registrarDepositoCulqui(){
 
   renderBanco();
   renderMov();
-  toast('✅ Depósito Culqui registrado — '+pendientes.length+' transacciones POS + '+comisionesActivadas+' comisiones activadas');
+  toast('✅ Depósito Culqui registrado — '+pendientes.length+' transacciones POS'+(totalCom>0?' + 1 egreso comisión consolidado S/. '+totalCom.toFixed(2):''));
 }
 
 // ===================== TRANSFERENCIAS CAJA ↔ BANCO =====================
