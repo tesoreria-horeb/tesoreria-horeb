@@ -1052,7 +1052,7 @@ body.contador-mode .modal-ft .btn-d {
       <div style="margin-top:6px;font-size:11px;color:rgba(247,243,233,.5)">Este movimiento irá <strong style="color:#5DADE2">solo al Banco</strong> — no aparecerá en el Libro Caja</div>
     </div>
     <!-- Toggle: es movimiento bancario -->
-    <div style="margin-bottom:10px">
+    <div id="banco-toggle-row" style="margin-bottom:10px">
       <label style="display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none">
         <div style="position:relative;width:42px;height:22px;flex-shrink:0">
           <input type="checkbox" id="m-es-banco" onchange="onToggleBanco()" style="opacity:0;width:0;height:0;position:absolute">
@@ -2453,8 +2453,19 @@ function onMetChange(){
   var met=document.getElementById('m-met').value;
   var posRow=document.getElementById('pos-comision-row');
   var tipoEl=document.getElementById('m-tipo');
+  var esPOSIngreso=met==='pos'&&tipoEl&&tipoEl.value==='ingreso';
   if(posRow){
-    posRow.style.display=(met==='pos'&&tipoEl&&tipoEl.value==='ingreso')?'':'none';
+    posRow.style.display=esPOSIngreso?'':'none';
+  }
+  // Hide banco toggle when POS selected (POS goes to bank automatically via Culqui)
+  var bancoRow=document.getElementById('banco-toggle-row');
+  if(bancoRow){
+    bancoRow.style.display=esPOSIngreso?'none':'';
+  }
+  // Uncheck banco toggle if POS selected
+  if(esPOSIngreso){
+    var cbBanco=document.getElementById('m-es-banco');
+    if(cbBanco){cbBanco.checked=false;onToggleBanco();}
   }
   updPosNeto();
 }
