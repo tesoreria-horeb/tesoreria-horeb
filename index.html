@@ -2457,15 +2457,20 @@ function onMetChange(){
   if(posRow){
     posRow.style.display=esPOSIngreso?'':'none';
   }
-  // Hide banco toggle when POS selected (POS goes to bank automatically via Culqui)
+  // Hide banco toggle when POS selected — POS never goes directly to banco toggle
   var bancoRow=document.getElementById('banco-toggle-row');
   if(bancoRow){
     bancoRow.style.display=esPOSIngreso?'none':'';
   }
-  // Uncheck banco toggle if POS selected
-  if(esPOSIngreso){
-    var cbBanco=document.getElementById('m-es-banco');
-    if(cbBanco){cbBanco.checked=false;onToggleBanco();}
+  // ALWAYS uncheck and reset banco toggle when POS selected
+  var cbBanco=document.getElementById('m-es-banco');
+  if(esPOSIngreso&&cbBanco){
+    cbBanco.checked=false;
+    // Manually reset toggle visual without calling onToggleBanco to avoid side effects
+    var track=document.getElementById('banco-toggle-track');
+    var knob=document.getElementById('banco-toggle-knob');
+    if(track)track.style.background='rgba(247,243,233,.15)';
+    if(knob)knob.style.left='2px';
   }
   updPosNeto();
 }
@@ -2605,6 +2610,8 @@ function savMov(keepOpen){
   var esBancoToggle=!!(document.getElementById('m-es-banco')&&document.getElementById('m-es-banco').checked);
   var metVal=document.getElementById('m-met').value||'efectivo';
   var esPOS=metVal==='pos'&&tipo==='ingreso';
+  // POS ingresos NUNCA son bancarios — van al libro caja como entrada bruta
+  if(esPOS)esBancoToggle=false;
   var posComision=esPOS?(parseFloat(document.getElementById('m-pos-comision').value)||0):0;
 
   var ahora=new Date().toISOString();
