@@ -2045,6 +2045,9 @@ function renderDash(){
     deptIds=[];
   }
 
+  // Define selectedYM early — needed for retención filter
+  var selectedYM=curY+'-'+String(curM).padStart(2,'0');
+
   // Filiales en retención ACTIVA en el mes seleccionado
   // La retención solo aplica si inició en o antes del mes seleccionado
   var filialesRetenidas=DB.filiales.filter(function(f){
@@ -2093,7 +2096,6 @@ function renderDash(){
   var egDept=cm2dept.filter(function(m){return m.tipo==='egreso'&&(m.moneda||'PEN')==='PEN';}).reduce(function(a,m){return a+Number(m.mon);},0);
 
   // Banco saldo filtered by selected month
-  var selectedYM=curY+'-'+String(curM).padStart(2,'0');
   var saldoBanco=(DB.banco||[]).filter(function(m){return m.fec.substring(0,7)===selectedYM;})
     .reduce(function(s,m){return s+(m.tipo==='deposito'?Number(m.mon):-Number(m.mon));},0);
 
