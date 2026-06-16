@@ -2045,10 +2045,17 @@ function renderDash(){
     deptIds=[];
   }
 
-  // Filiales en retención — excluidas del consolidado
-  var filialesRetenidas=DB.filiales.filter(function(f){return f.retencion&&f.retencion.activa&&(f.tipo||'filial')!=='departamento';});
+  // Filiales en retención ACTIVA en el mes seleccionado
+  // La retención solo aplica si inició en o antes del mes seleccionado
+  var filialesRetenidas=DB.filiales.filter(function(f){
+    if(!f.retencion||!f.retencion.activa||(f.tipo||'filial')==='departamento')return false;
+    // La retención aplica solo si su fecha de inicio <= mes seleccionado
+    var fechaInicio=f.retencion.fecha||'1900-01-01';
+    var ymInicio=fechaInicio.substring(0,7); // YYYY-MM
+    return ymInicio<=selectedYM;
+  });
   var retIdsSet=filialesRetenidas.map(function(f){return f.id;});
-  // filIds consolidados = filiales sin retención
+  // filIds consolidados = filiales sin retención activa en el mes seleccionado
   var filIdsConsolidados=filIds.filter(function(id){return retIdsSet.indexOf(id)<0;});
 
   // Filter movements by month
