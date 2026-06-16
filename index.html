@@ -2063,14 +2063,17 @@ function renderDash(){
   var cm2myFil=myFil?cm2.filter(function(m){return m.fil===myFil&&!m.esBancario&&m.origen!=='cierre_filial_efectivo'&&m.tipo!=='transferencia';}):cm2fil;
 
   // Filiales totals current month (admin view)
-  // Totales BRUTOS (incluye POS) — para mostrar en informe
+  // Totales BRUTOS (todas las entradas/salidas del mes) — para informe
   var ingBruto=cm2fil.filter(function(m){return m.tipo==='ingreso'&&(m.moneda||'PEN')==='PEN';}).reduce(function(a,m){return a+Number(m.mon);},0);
   var egBruto=cm2fil.filter(function(m){return m.tipo==='egreso'&&(m.moneda||'PEN')==='PEN';}).reduce(function(a,m){return a+Number(m.mon);},0);
   // POS ingresos del mes (para informativo)
   var ingPOS=cm2fil.filter(function(m){return m.tipo==='ingreso'&&m.esPOS&&(m.moneda||'PEN')==='PEN';}).reduce(function(a,m){return a+Number(m.mon);},0);
-  // Totales EFECTIVO (excluye ingresos POS) — para saldo en caja
-  var ing=cm2filEfectivo.filter(function(m){return m.tipo==='ingreso'&&(m.moneda||'PEN')==='PEN';}).reduce(function(a,m){return a+Number(m.mon);},0);
-  var eg=cm2filEfectivo.filter(function(m){return m.tipo==='egreso'&&(m.moneda||'PEN')==='PEN';}).reduce(function(a,m){return a+Number(m.mon);},0);
+  // Entradas/salidas NO efectivo (van al banco)
+  var ingBancario=cm2fil.filter(function(m){return m.tipo==='ingreso'&&esBancarioMet(m)&&(m.moneda||'PEN')==='PEN';}).reduce(function(a,m){return a+Number(m.mon);},0);
+  var egBancario=cm2fil.filter(function(m){return m.tipo==='egreso'&&esBancarioMet(m)&&(m.moneda||'PEN')==='PEN';}).reduce(function(a,m){return a+Number(m.mon);},0);
+  // Totales EFECTIVO (solo método efectivo) — para saldo en caja físico
+  var ing=cm2fil.filter(function(m){return m.tipo==='ingreso'&&esEfectivo(m)&&(m.moneda||'PEN')==='PEN';}).reduce(function(a,m){return a+Number(m.mon);},0);
+  var eg=cm2fil.filter(function(m){return m.tipo==='egreso'&&esEfectivo(m)&&(m.moneda||'PEN')==='PEN';}).reduce(function(a,m){return a+Number(m.mon);},0);
   var ingUSD=cm2fil.filter(function(m){return m.tipo==='ingreso'&&m.moneda==='USD';}).reduce(function(a,m){return a+Number(m.mon);},0);
   var egUSD=cm2fil.filter(function(m){return m.tipo==='egreso'&&m.moneda==='USD';}).reduce(function(a,m){return a+Number(m.mon);},0);
 
@@ -2102,8 +2105,8 @@ function renderDash(){
 
   var prevMovsFil=allMovsFil.filter(function(m){return m.fec.substring(0,7)<selectedYM&&(m.moneda||'PEN')==='PEN'&&!m.esBancario&&m.origen!=='cierre_filial_efectivo'&&m.tipo!=='transferencia'&&!(m.esPOS&&m.tipo==='ingreso');});
   var prevSaldoTotalFil=siFiliales
-    +prevMovsFil.filter(function(m){return m.tipo==='ingreso';}).reduce(function(a,m){return a+Number(m.mon);},0)
-    -prevMovsFil.filter(function(m){return m.tipo==='egreso';}).reduce(function(a,m){return a+Number(m.mon);},0);
+    +prevMovsFil.filter(function(m){return m.tipo==='ingreso'&&esEfectivo(m);}).reduce(function(a,m){return a+Number(m.mon);},0)
+    -prevMovsFil.filter(function(m){return m.tipo==='egreso'&&esEfectivo(m);}).reduce(function(a,m){return a+Number(m.mon);},0);
   var prevYM='';
   var prevMes=curM-1;var prevAnio=curY;
   if(prevMes===0){prevMes=12;prevAnio=curY-1;}
@@ -2224,11 +2227,11 @@ function renderDash(){
   adminHtml+='<div style="grid-column:1/-1">'+mkCard(
     'Efectivo · Filiales y Sede Central — '+mesLabel,
     [
-      {lbl:'Saldo Anterior',        val:fs(saldoAntFilConTrf), color:'#C9A84C'},
-      {lbl:'Entradas Brutas',       val:fs(ingBruto),          color:'#2ECC71'},
-      {lbl:'Egresos Totales',       val:fs(egBruto),           color:'#E74C3C'},
-      {lbl:'Balance del Mes',       val:(balanceMes>=0?'+':'-')+fs(Math.abs(balanceMes)), color:balanceMes>=0?'#2ECC71':'#E74C3C'},
-      {lbl:'Saldo en Caja (Efectivo)', val:fs(saldoCaja), color:'#C9A84C', bg:'rgba(201,168,76,.1)', big:true, sub:ingPOS>0?'POS pendiente: '+fs(ingPOS):''}
+      {lbl:'Saldo Anterior',           val:fs(saldoAntFilConTrf), color:'#C9A84C'},
+      {lbl:'Total Entradas Brutas',    val:fs(ingBruto),          color:'#2ECC71', sub:ingBancario>0?'Bancario: '+fs(ingBancario):''},
+      {lbl:'Total Egresos',            val:fs(egBruto),           color:'#E74C3C', sub:egBancario>0?'Bancario: '+fs(egBancario):''},
+      {lbl:'Balance del Mes',          val:(balanceMes>=0?'+':'-')+fs(Math.abs(balanceMes)), color:balanceMes>=0?'#2ECC71':'#E74C3C'},
+      {lbl:'Saldo en Caja Efectivo',   val:fs(saldoCaja), color:'#C9A84C', bg:'rgba(201,168,76,.1)', big:true, sub:ingBancario>0?'Entradas bancarias: '+fs(ingBancario)+' (en banco, no en caja)':''}
     ],'201,168,76','🏛️')+'</div>';
 
   adminHtml+='<div style="grid-column:1/-1">'+mkCard(
@@ -3770,8 +3773,8 @@ function genCaja(){
       return (y<anio)||(y===anio&&mo<mes);
     });
 
-    var ingPrevSede=movsPrevSede.filter(function(m){return m.tipo==='ingreso'&&(m.moneda||'PEN')==='PEN';}).reduce(function(a,m){return a+Number(m.mon);},0);
-    var egPrevSede=movsPrevSede.filter(function(m){return m.tipo==='egreso'&&(m.moneda||'PEN')==='PEN';}).reduce(function(a,m){return a+Number(m.mon);},0);
+    var ingPrevSede=movsPrevSede.filter(function(m){return m.tipo==='ingreso'&&(m.moneda||'PEN')==='PEN'&&esEfectivo(m);}).reduce(function(a,m){return a+Number(m.mon);},0);
+    var egPrevSede=movsPrevSede.filter(function(m){return m.tipo==='egreso'&&(m.moneda||'PEN')==='PEN'&&esEfectivo(m);}).reduce(function(a,m){return a+Number(m.mon);},0);
     var ingPrevSedeUSD=movsPrevSede.filter(function(m){return m.tipo==='ingreso'&&m.moneda==='USD';}).reduce(function(a,m){return a+Number(m.mon);},0);
     var egPrevSedeUSD=movsPrevSede.filter(function(m){return m.tipo==='egreso'&&m.moneda==='USD';}).reduce(function(a,m){return a+Number(m.mon);},0);
 
@@ -3818,8 +3821,15 @@ function genCaja(){
   movs.sort(function(a,b){return a.fec.localeCompare(b.fec);});
   var ti=movs.filter(function(m){return m.tipo==='ingreso'&&(m.moneda||'PEN')==='PEN';}).reduce(function(a,m){return a+Number(m.mon);},0);
   var te=movs.filter(function(m){return m.tipo==='egreso'&&(m.moneda||'PEN')==='PEN';}).reduce(function(a,m){return a+Number(m.mon);},0);
-  // Para departamentos y Sede Central, el saldo total incluye el saldo anterior
-  var saldo=(esDepartamento||esSedeCentral||esFilialRetenida)?(saldoAnterior+ti-te):(ti-te);
+  // Efectivo only — for saldo en caja físico
+  var tiEfectivo=movs.filter(function(m){return m.tipo==='ingreso'&&(m.moneda||'PEN')==='PEN'&&esEfectivo(m);}).reduce(function(a,m){return a+Number(m.mon);},0);
+  var teEfectivo=movs.filter(function(m){return m.tipo==='egreso'&&(m.moneda||'PEN')==='PEN'&&esEfectivo(m);}).reduce(function(a,m){return a+Number(m.mon);},0);
+  var tiBancario=ti-tiEfectivo; // entradas no efectivo (van al banco)
+  var teBancario=te-teEfectivo; // egresos no efectivo (salen del banco)
+  // Saldo en caja efectivo = saldo anterior + solo efectivo
+  var saldoEfectivo=(esDepartamento||esSedeCentral||esFilialRetenida)?(saldoAnterior+tiEfectivo-teEfectivo):(tiEfectivo-teEfectivo);
+  // Balance total del mes (bruto)
+  var saldo=(esDepartamento||esSedeCentral||esFilialRetenida)?(saldoAnterior+tiEfectivo-teEfectivo):(tiEfectivo-teEfectivo);
   var tiUSD=movs.filter(function(m){return m.tipo==='ingreso'&&m.moneda==='USD';}).reduce(function(a,m){return a+Number(m.mon);},0);
   var teUSD=movs.filter(function(m){return m.tipo==='egreso'&&m.moneda==='USD';}).reduce(function(a,m){return a+Number(m.mon);},0);
   var saldoUSD=esSedeCentral?(saldoAnteriorUSD+tiUSD-teUSD):(tiUSD-teUSD);
@@ -3976,18 +3986,18 @@ function genCaja(){
     html+='</tr>';
     html+='<tr>';
   }
-  html+='<td style="border:1px solid #333;padding:5px 8px;font-size:12px;font-weight:bold">Entradas</td>';
-  html+='<td style="border:1px solid #333;padding:5px 8px;font-size:11px;text-align:right">S/. '+ti.toFixed(2)+'</td>';
+  html+='<td style="border:1px solid #333;padding:5px 8px;font-size:12px;font-weight:bold">Total Entradas Brutas</td>';
+  html+='<td style="border:1px solid #333;padding:5px 8px;font-size:11px;text-align:right">S/. '+ti.toFixed(2)+(tiBancario>0?'<br><span style=\"font-size:9px;color:#5DADE2\">Bancario: S/. '+tiBancario.toFixed(2)+'</span>':'')+'</td>';
   html+='<td style="border:2px solid #333;padding:5px;background:#000;width:80px">&nbsp;</td>';
   html+='</tr>';
   html+='<tr>';
-  html+='<td style="border:1px solid #333;padding:5px 8px;font-size:12px;font-weight:bold">Sal&iacute;das</td>';
-  html+='<td style="border:1px solid #333;padding:5px 8px;background:#000">&nbsp;</td>';
-  html+='<td style="border:2px solid #333;padding:5px 8px;font-size:11px;text-align:right">S/. '+te.toFixed(2)+'</td>';
+  html+='<td style="border:1px solid #333;padding:5px 8px;font-size:12px;font-weight:bold">Total Egresos</td>';
+  html+='<td style="border:1px solid #333;padding:5px;background:#000">&nbsp;</td>';
+  html+='<td style="border:2px solid #333;padding:5px 8px;font-size:11px;text-align:right">S/. '+te.toFixed(2)+(teBancario>0?'<br><span style=\"font-size:9px;color:#5DADE2\">Bancario: S/. '+teBancario.toFixed(2)+'</span>':'')+'</td>';
   html+='</tr>';
   html+='<tr>';
-  html+='<td style="border:1px solid #333;padding:5px 8px;font-size:12px;font-weight:bold">Saldo</td>';
-  html+='<td style="border:1px solid #333;padding:5px 8px;font-size:11px;text-align:right">S/. '+saldo.toFixed(2)+'</td>';
+  html+='<td style="border:1px solid #333;padding:5px 8px;font-size:12px;font-weight:bold">Saldo en Caja Efectivo</td>';
+  html+='<td style="border:1px solid #333;padding:5px 8px;font-size:11px;text-align:right;font-weight:bold;'+(saldoEfectivo<0?'color:red;':'')+'">S/. '+saldoEfectivo.toFixed(2)+'</td>';
   html+='<td style="border:2px solid #333;padding:5px;background:#000">&nbsp;</td>';
   html+='</tr>';
   html+='</table>';
@@ -7031,6 +7041,17 @@ function migrarFilSede(){
     if(b.fil==='sede'){b.fil='F001';fbSave('banco',b.id,b);reparados++;}
   });
   if(reparados>0){try{sd();}catch(e){}console.log('[MIGRACIÓN] fil:sede → F001:',reparados,'registros');}
+}
+
+function esEfectivo(m){
+  // Solo el método 'efectivo' cuenta como dinero físico en caja
+  return (m.met||'efectivo')==='efectivo';
+}
+
+function esBancarioMet(m){
+  // Métodos que van directo al banco — no son efectivo físico
+  var mets=['transferencia','deposito','debito','pos','yape','plin','lukita','tunki','cheque'];
+  return mets.indexOf(m.met||'efectivo')>-1;
 }
 
 // ===================== MIGRACIÓN: reparar transferencias sin subtipo =====================
