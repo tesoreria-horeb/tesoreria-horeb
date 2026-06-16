@@ -2360,7 +2360,9 @@ function renderDash(){
       +'</div>'
     +'</div>';
 
-  document.getElementById('dash-stats').innerHTML=CU&&(CU.niv<=2||CU.niv===5)?adminHtml:filialHtml;
+  document.getElementById('dash-stats').innerHTML=CU&&(CU.niv<=2||CU.niv===5)
+    ?'<div style="display:grid;grid-template-columns:1fr;gap:14px;width:100%">'+adminHtml+'</div>'
+    :filialHtml;
 
   // ===== CHARTS =====
   var mn=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
