@@ -2063,28 +2063,34 @@ function renderDash(){
 
   // Filter movements by month
   var cm2=movs.filter(function(m){var p=m.fec.split('-').map(Number);return p[0]===curY&&p[1]===curM;});
-  // cm2fil incluye TODOS los movimientos — bancarios y efectivo — para totales brutos
-  var cm2fil=cm2.filter(function(m){return filIdsConsolidados.indexOf(m.fil)>-1&&m.origen!=='cierre_filial_efectivo'&&m.tipo!=='transferencia';});
+  // cm2fil = TODAS las filiales consolidadas (no retenidas, no departamentos, no cierre, no transferencia)
+  var cm2fil=cm2.filter(function(m){
+    return filIdsConsolidados.indexOf(m.fil)>-1
+      &&m.origen!=='cierre_filial_efectivo'
+      &&m.tipo!=='transferencia';
+  });
   // cm2filEfectivo = solo efectivo — para saldo en caja físico
-  var cm2filEfectivo=cm2fil.filter(function(m){return !m.esBancario&&!(m.esPOS&&m.tipo==='ingreso')&&!esBancarioMet(m);});
+  var cm2filEfectivo=cm2fil.filter(function(m){
+    return !m.esBancario&&!(m.esPOS&&m.tipo==='ingreso')&&!esBancarioMet(m);
+  });
   var cm2dept=cm2.filter(function(m){return deptIds.indexOf(m.fil)>-1&&m.origen!=='cierre_filial_efectivo'&&m.tipo!=='transferencia';});
 
-  // FIX 2: For filial users (niv>=3), filter only their filial
+  // For filial users (niv>=3), filter only their filial
   var myFil=CU&&CU.fil&&CU.fil!=='all'?CU.fil:null;
   var cm2myFil=myFil?cm2.filter(function(m){return m.fil===myFil&&m.origen!=='cierre_filial_efectivo'&&m.tipo!=='transferencia';}):cm2fil;
 
   // Filiales totals current month (admin view)
-  // Totales BRUTOS (todas las entradas/salidas del mes) — para informe
+  // Totales BRUTOS — todas las filiales consolidadas (sin cierre, sin transferencia)
   var ingBruto=cm2fil.filter(function(m){return m.tipo==='ingreso'&&(m.moneda||'PEN')==='PEN';}).reduce(function(a,m){return a+Number(m.mon);},0);
   var egBruto=cm2fil.filter(function(m){return m.tipo==='egreso'&&(m.moneda||'PEN')==='PEN';}).reduce(function(a,m){return a+Number(m.mon);},0);
   // POS ingresos del mes (para informativo)
   var ingPOS=cm2fil.filter(function(m){return m.tipo==='ingreso'&&m.esPOS&&(m.moneda||'PEN')==='PEN';}).reduce(function(a,m){return a+Number(m.mon);},0);
-  // Entradas/salidas NO efectivo (van al banco)
-  var ingBancario=cm2fil.filter(function(m){return m.tipo==='ingreso'&&esBancarioMet(m)&&(m.moneda||'PEN')==='PEN';}).reduce(function(a,m){return a+Number(m.mon);},0);
-  var egBancario=cm2fil.filter(function(m){return m.tipo==='egreso'&&esBancarioMet(m)&&(m.moneda||'PEN')==='PEN';}).reduce(function(a,m){return a+Number(m.mon);},0);
-  // Totales EFECTIVO (solo método efectivo) — para saldo en caja físico
-  var ing=cm2fil.filter(function(m){return m.tipo==='ingreso'&&esEfectivo(m)&&(m.moneda||'PEN')==='PEN';}).reduce(function(a,m){return a+Number(m.mon);},0);
-  var eg=cm2fil.filter(function(m){return m.tipo==='egreso'&&esEfectivo(m)&&(m.moneda||'PEN')==='PEN';}).reduce(function(a,m){return a+Number(m.mon);},0);
+  // Bancario informativo (esBancario o método bancario)
+  var ingBancario=cm2fil.filter(function(m){return m.tipo==='ingreso'&&(m.esBancario||esBancarioMet(m))&&(m.moneda||'PEN')==='PEN';}).reduce(function(a,m){return a+Number(m.mon);},0);
+  var egBancario=cm2fil.filter(function(m){return m.tipo==='egreso'&&(m.esBancario||esBancarioMet(m))&&(m.moneda||'PEN')==='PEN';}).reduce(function(a,m){return a+Number(m.mon);},0);
+  // Totales EFECTIVO — para saldo en caja físico (solo método efectivo, sin esBancario)
+  var ing=cm2fil.filter(function(m){return m.tipo==='ingreso'&&esEfectivo(m)&&!m.esBancario&&(m.moneda||'PEN')==='PEN';}).reduce(function(a,m){return a+Number(m.mon);},0);
+  var eg=cm2fil.filter(function(m){return m.tipo==='egreso'&&esEfectivo(m)&&!m.esBancario&&(m.moneda||'PEN')==='PEN';}).reduce(function(a,m){return a+Number(m.mon);},0);
   var ingUSD=cm2fil.filter(function(m){return m.tipo==='ingreso'&&m.moneda==='USD';}).reduce(function(a,m){return a+Number(m.mon);},0);
   var egUSD=cm2fil.filter(function(m){return m.tipo==='egreso'&&m.moneda==='USD';}).reduce(function(a,m){return a+Number(m.mon);},0);
 
@@ -2132,6 +2138,7 @@ function renderDash(){
     if(m.esPOS&&m.tipo==='ingreso')return false;
     return true;
   });
+  // Saldo anterior efectivo = saldo acumulado de todas las filiales consolidadas
   var prevSaldoTotalFil=siFiliales
     +prevMovsFil.filter(function(m){return m.tipo==='ingreso'&&esEfectivo(m);}).reduce(function(a,m){return a+Number(m.mon);},0)
     -prevMovsFil.filter(function(m){return m.tipo==='egreso'&&esEfectivo(m);}).reduce(function(a,m){return a+Number(m.mon);},0);
