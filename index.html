@@ -2105,12 +2105,20 @@ function renderDash(){
   var siDeptos=Number((DB.saldos_iniciales||{}).departamentos)||0;
 
   var allMovsFil=gAccMov().filter(function(m){
-    // Excluir departamentos y filiales en retención
     var f=DB.filiales.find(function(x){return x.id===m.fil;});
     var esDept=f&&f.tipo==='departamento';
-    var esRetenida=retIdsSet.indexOf(m.fil)>-1;
+    if(esDept)return false;
     var esFilial=m.fil==='F001'||m.fil==='sede'||!f||(f.tipo||'filial')!=='departamento';
-    return esFilial&&!esDept&&!esRetenida;
+    if(!esFilial)return false;
+    // Para filiales retenidas: incluir movimientos ANTERIORES a la fecha de inicio de retención
+    var retIdx=retIdsSet.indexOf(m.fil);
+    if(retIdx>-1){
+      var filRet=filialesRetenidas[retIdx];
+      var fechaInicioRet=filRet&&filRet.retencion?filRet.retencion.fecha||'9999-12-31':'9999-12-31';
+      // Incluir si el movimiento es anterior al inicio de retención
+      return m.fec<fechaInicioRet;
+    }
+    return true;
   });
   var allMovsDept=gAccMov().filter(function(m){var f=DB.filiales.find(function(x){return x.id===m.fil;});return f&&f.tipo==='departamento';});
   var allMovsMyFil=myFil?gAccMov().filter(function(m){return m.fil===myFil;}):allMovsFil;
@@ -2119,8 +2127,7 @@ function renderDash(){
     if(m.fec.substring(0,7)>=selectedYM)return false;
     if((m.moneda||'PEN')!=='PEN')return false;
     if(m.esBancario)return false;
-    // Excluir solo egresos de cierre filial (no los ingresos que llegan a Sede)
-    if(m.tipo==='egreso'&&m.origen==='cierre_filial_efectivo')return false;
+    if(m.origen==='cierre_filial_efectivo')return false;
     if(m.tipo==='transferencia')return false;
     if(m.esPOS&&m.tipo==='ingreso')return false;
     return true;
