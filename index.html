@@ -4038,6 +4038,28 @@ function genCaja(){
   html+='<td style="border:1px solid #333;padding:5px 8px;font-size:11px;text-align:right;font-weight:bold;'+(saldoEfectivo<0?'color:red;':'')+'">S/. '+saldoEfectivo.toFixed(2)+'</td>';
   html+='<td style="border:2px solid #333;padding:5px;background:#000">&nbsp;</td>';
   html+='</tr>';
+
+  // Transferencias del mes — informativo
+  if(trfsMesCaja.length>0){
+    var trfCajaBanco=trfsMesCaja.filter(function(m){return m.subtipo==='salida_caja_banco'||(m.desc&&m.desc.indexOf('Caja → Banco')>-1);}).reduce(function(a,m){return a+Number(m.mon);},0);
+    var trfBancoCaja=trfsMesCaja.filter(function(m){return m.subtipo==='entrada_banco_caja'||(m.desc&&m.desc.indexOf('Banco → Caja')>-1);}).reduce(function(a,m){return a+Number(m.mon);},0);
+    html+='<tr style="background:#f5f5f5"><td colspan="3" style="border:1px solid #ccc;padding:4px 8px;font-size:10px;font-weight:bold;color:#555;text-align:center;letter-spacing:.5px;text-transform:uppercase">Transferencias del Mes (informativo)</td></tr>';
+    if(trfCajaBanco>0){
+      html+='<tr style="background:#f5f5f5">';
+      html+='<td style="border:1px solid #ccc;padding:3px 8px;font-size:11px;color:#1A7A4A">💰→🏦 Caja → Banco</td>';
+      html+='<td style="border:1px solid #ccc;padding:3px 8px;font-size:11px;text-align:right;color:#1A7A4A;font-weight:bold">S/. '+trfCajaBanco.toFixed(2)+'</td>';
+      html+='<td style="border:1px solid #ccc;padding:3px;background:#eee">&nbsp;</td>';
+      html+='</tr>';
+    }
+    if(trfBancoCaja>0){
+      html+='<tr style="background:#f5f5f5">';
+      html+='<td style="border:1px solid #ccc;padding:3px 8px;font-size:11px;color:#2E86AB">🏦→💰 Banco → Caja</td>';
+      html+='<td style="border:1px solid #ccc;padding:3px;background:#eee">&nbsp;</td>';
+      html+='<td style="border:1px solid #ccc;padding:3px 8px;font-size:11px;text-align:right;color:#2E86AB;font-weight:bold">S/. '+trfBancoCaja.toFixed(2)+'</td>';
+      html+='</tr>';
+    }
+  }
+
   html+='</table>';
 
   // Totals section — USD (solo si hay movimientos en dólares, o saldo anterior USD en Sede Central)
