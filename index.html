@@ -4612,10 +4612,11 @@ function renderBanco(){
   if(ft)movs=movs.filter(function(m){return m.tipo===ft;});
   if(ff&&ff!=='all'&&ff!=='')movs=movs.filter(function(m){return m.fil===ff;});
 
-  // Calc saldo on filtered movs
-  var sorted=[...movs].sort(function(a,b){return a.fec.localeCompare(b.fec);});
+  // Calc saldo TOTAL acumulado (todos los movimientos, no solo los filtrados)
   var siBanco=Number((DB.saldos_iniciales||{}).banco)||0;
-  var saldoTotal=siBanco+sorted.reduce(function(s,m){return s+(m.tipo==='deposito'?Number(m.mon):-Number(m.mon));},0);
+  var allBancoSorted=[...DB.banco].sort(function(a,b){return a.fec.localeCompare(b.fec);});
+  var saldoTotal=siBanco+allBancoSorted.reduce(function(s,m){return s+(m.tipo==='deposito'?Number(m.mon):-Number(m.mon));},0);
+  // Totales del mes filtrado (para mostrar en la cabecera del módulo)
   var totalDep=movs.filter(function(m){return m.tipo==='deposito';}).reduce(function(a,m){return a+Number(m.mon);},0);
   var totalRet=movs.filter(function(m){return m.tipo==='retiro';}).reduce(function(a,m){return a+Number(m.mon);},0);
   var numDep=movs.filter(function(m){return m.tipo==='deposito';}).length;
@@ -4640,7 +4641,7 @@ function renderBanco(){
     if(elRet)elRet.textContent=fmt(totalRet);
     var elUlt=document.getElementById('banco-ultima-mov');
     if(elUlt&&DB.banco.length>0){
-      var last=sorted[sorted.length-1];
+      var last=allBancoSorted[allBancoSorted.length-1];
       elUlt.textContent='Último: '+fd2(last.fec)+' — '+(last.tipo==='deposito'?'Depósito':'Retiro');
     }
     var elNd=document.getElementById('banco-num-dep');
