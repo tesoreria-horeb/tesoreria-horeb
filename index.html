@@ -6479,21 +6479,37 @@ function genEjecutivo(){
   var mesPrev=mes>1?mes-1:12;
 
   var allMovs=gAccMov();
+  var selectedYMEj=anio+'-'+String(mes).padStart(2,'0');
 
   // Solo filiales (sin departamentos)
   var filiales=DB.filiales.filter(function(f){return (f.tipo||'filial')!=='departamento';});
+  if(!filiales.find(function(f){return f.id==='F001'||f.id==='sede';})){
+    var sedeCentral=DB.filiales.find(function(f){return f.id==='sede';});
+    if(sedeCentral)filiales.push(sedeCentral);
+  }
 
-  // Movimientos del mes — solo filiales
+  // Filiales en retención para este mes
+  var filialesRetEj=DB.filiales.filter(function(f){
+    if(!f.retencion||!f.retencion.activa||(f.tipo||'filial')==='departamento')return false;
+    var ymInicio=(f.retencion.fecha||'1900-01-01').substring(0,7);
+    return ymInicio<=selectedYMEj;
+  });
+  var retIdsEjSet=new Set(filialesRetEj.map(function(f){return f.id;}));
+
+  // Filiales consolidadas = filiales sin retención en el mes seleccionado
+  var filialesConsolidadas=filiales.filter(function(f){return !retIdsEjSet.has(f.id);});
+
+  // Movimientos del mes — solo filiales consolidadas
   var movsMes=allMovs.filter(function(m){
     var y=parseInt(m.fec.split('-')[0]),mo=parseInt(m.fec.split('-')[1]);
-    var esFilial=m.fil==='sede'||m.fil==='F001'||filiales.some(function(f){return f.id===m.fil;});
+    var esFilial=m.fil==='sede'||m.fil==='F001'||filialesConsolidadas.some(function(f){return f.id===m.fil;});
     return y===anio&&mo===mes&&(m.moneda||'PEN')==='PEN'&&esFilial&&!m.esBancario&&m.origen!=='cierre_filial_efectivo'&&m.tipo!=='transferencia';
   });
 
-  // Movimientos mes anterior — solo filiales (para comparativo)
+  // Movimientos mes anterior — solo filiales consolidadas
   var movsPrev=allMovs.filter(function(m){
     var y=parseInt(m.fec.split('-')[0]),mo=parseInt(m.fec.split('-')[1]);
-    var esFilial=m.fil==='sede'||m.fil==='F001'||filiales.some(function(f){return f.id===m.fil;});
+    var esFilial=m.fil==='sede'||m.fil==='F001'||filialesConsolidadas.some(function(f){return f.id===m.fil;});
     return y===anioPrev&&mo===mesPrev&&(m.moneda||'PEN')==='PEN'&&esFilial&&m.tipo!=='transferencia';
   });
 
@@ -6504,36 +6520,43 @@ function genEjecutivo(){
   var varIng=tiMes-tiPrev;
   var varEg=teMes-tePrev;
 
-  // Saldo anterior = Saldo en Caja del mes anterior
-  // = Saldo inicial + todos los movimientos hasta fin del mes anterior − banco acumulado hasta fin del mes anterior
+  // Saldo anterior — incluir filiales retenidas para meses anteriores a su retención
   var siFiliales=Number((DB.saldos_iniciales||{}).filiales)||0;
   var todosPrevios=allMovs.filter(function(m){
     var y=parseInt(m.fec.split('-')[0]),mo=parseInt(m.fec.split('-')[1]);
-    var esFilial=m.fil==='sede'||m.fil==='F001'||filiales.some(function(f){return f.id===m.fil;});
-    return esFilial&&(m.moneda||'PEN')==='PEN'&&!m.esBancario&&m.origen!=='cierre_filial_efectivo'&&m.tipo!=='transferencia'&&((y<anio)||(y===anio&&mo<mes));
+    var esConsolidada=m.fil==='sede'||m.fil==='F001'||filialesConsolidadas.some(function(f){return f.id===m.fil;});
+    var esRetAntes=false;
+    if(retIdsEjSet.has(m.fil)){
+      var filRet=filialesRetEj.find(function(f){return f.id===m.fil;});
+      var fechaRet=filRet&&filRet.retencion?filRet.retencion.fecha||'9999-12-31':'9999-12-31';
+      esRetAntes=m.fec<fechaRet;
+    }
+    return (esConsolidada||esRetAntes)&&(m.moneda||'PEN')==='PEN'&&!m.esBancario&&m.origen!=='cierre_filial_efectivo'&&m.tipo!=='transferencia'&&((y<anio)||(y===anio&&mo<mes));
   });
   var grandSA=siFiliales
-    +todosPrevios.filter(function(m){return m.tipo==='ingreso';}).reduce(function(a,m){return a+Number(m.mon);},0)
-    -todosPrevios.filter(function(m){return m.tipo==='egreso';}).reduce(function(a,m){return a+Number(m.mon);},0);
+    +todosPrevios.filter(function(m){return m.tipo==='ingreso'&&esEfectivo(m);}).reduce(function(a,m){return a+Number(m.mon);},0)
+    -todosPrevios.filter(function(m){return m.tipo==='egreso'&&esEfectivo(m);}).reduce(function(a,m){return a+Number(m.mon);},0);
 
   // Impacto de transferencias ANTERIORES al mes en el saldo anterior
   var trfsPrevEj=allMovs.filter(function(m){
     var y=parseInt(m.fec.split('-')[0]),mo=parseInt(m.fec.split('-')[1]);
-    var esFilial=m.fil==='sede'||m.fil==='F001'||filiales.some(function(f){return f.id===m.fil;});
+    var esFilial=m.fil==='sede'||m.fil==='F001'||filialesConsolidadas.some(function(f){return f.id===m.fil;});
     return esFilial&&m.tipo==='transferencia'&&(m.moneda||'PEN')==='PEN'&&((y<anio)||(y===anio&&mo<mes));
   });
   var grandSAconTrf=grandSA+trfsPrevEj.reduce(function(a,m){
-    return a+(m.subtipo==='entrada_banco_caja'?Number(m.mon):-Number(m.mon));
+    var esSalida=m.subtipo==='salida_caja_banco'||(m.desc&&m.desc.indexOf('Caja → Banco')>-1);
+    return a+(esSalida?-Number(m.mon):Number(m.mon));
   },0);
 
   // Impacto de transferencias DEL MES en el saldo final de caja
   var trfsMesEj=allMovs.filter(function(m){
     var y=parseInt(m.fec.split('-')[0]),mo=parseInt(m.fec.split('-')[1]);
-    var esFilial=m.fil==='sede'||m.fil==='F001'||filiales.some(function(f){return f.id===m.fil;});
+    var esFilial=m.fil==='sede'||m.fil==='F001'||filialesConsolidadas.some(function(f){return f.id===m.fil;});
     return esFilial&&m.tipo==='transferencia'&&(m.moneda||'PEN')==='PEN'&&y===anio&&mo===mes;
   });
   var trfsMesImpactoEj=trfsMesEj.reduce(function(a,m){
-    return a+(m.subtipo==='entrada_banco_caja'?Number(m.mon):-Number(m.mon));
+    var esSalida=m.subtipo==='salida_caja_banco'||(m.desc&&m.desc.indexOf('Caja → Banco')>-1);
+    return a+(esSalida?-Number(m.mon):Number(m.mon));
   },0);
 
   // Transferido a Banco = solo movimientos bancarios DEL MES seleccionado
@@ -6552,8 +6575,8 @@ function genEjecutivo(){
     .reduce(function(s,b){return s+(b.tipo==='deposito'?Number(b.mon):-Number(b.mon));},0);
   var saldoFinalBanco=saldoAntBanco+bancoDep-bancoRet;
 
-  // Por cada filial: Saldo en Caja = todos sus movimientos hasta fin del mes actual
-  var rowsFiliales=filiales.map(function(f){
+  // Por cada filial consolidada: Saldo en Caja
+  var rowsFiliales=filialesConsolidadas.map(function(f){
     var todosHasta=allMovs.filter(function(m){
       if(m.fil!==f.id||(m.moneda||'PEN')!=='PEN'||m.tipo==='transferencia'||m.esBancario)return false;
       var y=parseInt(m.fec.split('-')[0]),mo=parseInt(m.fec.split('-')[1]);
@@ -6717,11 +6740,44 @@ function genEjecutivo(){
   html+='</tr></thead>';
   html+='<tbody>'+(trFiliales||'<tr><td colspan="4" style="text-align:center;padding:16px;color:#888">Sin movimientos en este período</td></tr>')+'</tbody>';
   html+='<tfoot><tr style="background:#f8f5ef">';
-  html+='<td style="border:1px solid #C9A84C;padding:7px 8px;font-weight:bold">TOTALES ('+filiales.length+' sedes)</td>';
+  html+='<td style="border:1px solid #C9A84C;padding:7px 8px;font-weight:bold">TOTALES ('+filialesConsolidadas.length+' sedes)</td>';
   html+='<td style="border:1px solid #C9A84C;padding:7px 8px;text-align:right;font-weight:bold;color:#1A7A4A">S/. '+grandTi.toFixed(2)+'</td>';
   html+='<td style="border:1px solid #C9A84C;padding:7px 8px;text-align:right;font-weight:bold;color:#C0392B">S/. '+grandTe.toFixed(2)+'</td>';
   html+='<td style="border:1px solid #C9A84C;padding:7px 8px;text-align:right;font-weight:bold;color:'+(grandBal>=0?'#1A7A4A':'#C0392B')+'">S/. '+grandBal.toFixed(2)+'</td>';
   html+='</tr></tfoot></table>';
+
+  // Transferencias del mes — informativo
+  if(trfsMesEj.length>0){
+    var trfCBEj=trfsMesEj.filter(function(m){return m.subtipo==='salida_caja_banco'||(m.desc&&m.desc.indexOf('Caja → Banco')>-1);}).reduce(function(a,m){return a+Number(m.mon);},0);
+    var trfBCEj=trfsMesEj.filter(function(m){return m.subtipo==='entrada_banco_caja'||(m.desc&&m.desc.indexOf('Banco → Caja')>-1);}).reduce(function(a,m){return a+Number(m.mon);},0);
+    html+='<div style="margin:12px 0;padding:10px 14px;background:#f5f5f5;border:1px solid #ddd;border-radius:6px">';
+    html+='<div style="font-size:10px;font-weight:bold;color:#555;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Transferencias del Mes (informativo)</div>';
+    if(trfCBEj>0)html+='<div style="font-size:12px;color:#1A7A4A;margin-bottom:4px">💰→🏦 Caja → Banco: <strong>S/. '+trfCBEj.toFixed(2)+'</strong></div>';
+    if(trfBCEj>0)html+='<div style="font-size:12px;color:#2E86AB">🏦→💰 Banco → Caja: <strong>S/. '+trfBCEj.toFixed(2)+'</strong></div>';
+    html+='</div>';
+  }
+
+  // Filiales en retención — informativo
+  if(filialesRetEj.length>0){
+    html+='<div style="margin:12px 0;padding:10px 14px;background:#fff5f5;border:1px solid #ffcccc;border-radius:6px">';
+    html+='<div style="font-size:10px;font-weight:bold;color:#C0392B;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">🔒 Congregaciones en Retención (informativo — no consolidan en Sede Central)</div>';
+    filialesRetEj.forEach(function(f){
+      var fechaRet=f.retencion.fecha||'';
+      var movsRet=allMovs.filter(function(m){
+        return m.fil===f.id&&!m.esBancario&&(m.moneda||'PEN')==='PEN'&&m.tipo!=='transferencia'&&m.fec>=fechaRet;
+        var y=parseInt(m.fec.split('-')[0]),mo=parseInt(m.fec.split('-')[1]);
+        return (y<anio)||(y===anio&&mo<=mes);
+      });
+      var ingRet=movsRet.filter(function(m){return m.tipo==='ingreso';var y=parseInt(m.fec.split('-')[0]),mo=parseInt(m.fec.split('-')[1]);return y===anio&&mo===mes;}).reduce(function(a,m){return a+Number(m.mon);},0);
+      var egRet=movsRet.filter(function(m){return m.tipo==='egreso';}).reduce(function(a,m){return a+Number(m.mon);},0);
+      var saldoRet=ingRet-egRet;
+      html+='<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #ffeeee">';
+      html+='<div><strong>'+f.nom+'</strong> <span style="font-size:10px;color:#888">— desde '+fd2(fechaRet)+(f.retencion.motivo?' ('+f.retencion.motivo+')':'')+'</span></div>';
+      html+='<div style="font-size:12px"><span style="color:#1A7A4A">Ing: S/. '+ingRet.toFixed(2)+'</span> &nbsp; <span style="color:#C0392B">Eg: S/. '+egRet.toFixed(2)+'</span> &nbsp; <strong>Saldo: S/. '+saldoRet.toFixed(2)+'</strong></div>';
+      html+='</div>';
+    });
+    html+='</div>';
+  }
 
   html+='<div style="font-size:10px;color:#888;margin-bottom:16px">* Saldo Anterior = arrastre acumulado hasta fin de '+mesPrevNom+'. &nbsp; Saldo en Caja = Saldo Anterior + Ingresos − Egresos. &nbsp; Saldo Mensual = Neto bancario del mes.</div>';
   html+=rptSign('Tesorero Principal','Pastor Principal');
