@@ -3950,12 +3950,12 @@ function genCaja(){
   movsPEN.forEach(function(m){
     var esBanc=m.esBancario||esBancarioMet(m);
     var rowBg=esBanc?'background:rgba(93,173,226,.05);':'';
-    var bancNote=esBanc?'<span style="font-size:9px;color:#5DADE2;margin-left:4px">[banco]</span>':'';
+    var bancNote=esBanc?'<span style="font-size:9px;color:#1565C0;font-weight:bold;margin-left:4px">[banco]</span>':'';
     dataRows+='<tr style="'+rowBg+'">'
       +'<td style="border:1px solid #333;padding:3px 5px;font-size:11px">'+fd2(m.fec)+'</td>'
       +'<td style="border:1px solid #333;padding:3px 6px;font-size:11px">'+m.desc+(m.cat?' ('+m.cat+')':'')+bancNote+'</td>'
-      +'<td style="border:1px solid #333;padding:3px 5px;font-size:11px;text-align:right'+(esBanc&&m.tipo==='ingreso'?';color:#5DADE2':'')+'">'+(m.tipo==='ingreso'?'S/. '+Number(m.mon).toFixed(2):'')+'</td>'
-      +'<td style="border:1px solid #333;padding:3px 5px;font-size:11px;text-align:right'+(esBanc&&m.tipo==='egreso'?';color:#5DADE2':'')+'">'+(m.tipo==='egreso'?'S/. '+Number(m.mon).toFixed(2):'')+'</td>'
+      +'<td style="border:1px solid #333;padding:3px 5px;font-size:11px;text-align:right'+(esBanc&&m.tipo==='ingreso'?';color:#1565C0;font-weight:bold':'')+'">'+(m.tipo==='ingreso'?'S/. '+Number(m.mon).toFixed(2):'')+'</td>'
+      +'<td style="border:1px solid #333;padding:3px 5px;font-size:11px;text-align:right'+(esBanc&&m.tipo==='egreso'?';color:#1565C0;font-weight:bold':'')+'">'+(m.tipo==='egreso'?'S/. '+Number(m.mon).toFixed(2):'')+'</td>'
       +'</tr>';
   });
   // Empty rows for soles section
