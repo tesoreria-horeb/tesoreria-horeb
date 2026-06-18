@@ -2115,7 +2115,16 @@ function renderDash(){
   var allMovsDept=gAccMov().filter(function(m){var f=DB.filiales.find(function(x){return x.id===m.fil;});return f&&f.tipo==='departamento';});
   var allMovsMyFil=myFil?gAccMov().filter(function(m){return m.fil===myFil;}):allMovsFil;
 
-  var prevMovsFil=allMovsFil.filter(function(m){return m.fec.substring(0,7)<selectedYM&&(m.moneda||'PEN')==='PEN'&&!m.esBancario&&m.origen!=='cierre_filial_efectivo'&&m.tipo!=='transferencia'&&!(m.esPOS&&m.tipo==='ingreso');});
+  var prevMovsFil=allMovsFil.filter(function(m){
+    if(m.fec.substring(0,7)>=selectedYM)return false;
+    if((m.moneda||'PEN')!=='PEN')return false;
+    if(m.esBancario)return false;
+    // Excluir solo egresos de cierre filial (no los ingresos que llegan a Sede)
+    if(m.tipo==='egreso'&&m.origen==='cierre_filial_efectivo')return false;
+    if(m.tipo==='transferencia')return false;
+    if(m.esPOS&&m.tipo==='ingreso')return false;
+    return true;
+  });
   var prevSaldoTotalFil=siFiliales
     +prevMovsFil.filter(function(m){return m.tipo==='ingreso'&&esEfectivo(m);}).reduce(function(a,m){return a+Number(m.mon);},0)
     -prevMovsFil.filter(function(m){return m.tipo==='egreso'&&esEfectivo(m);}).reduce(function(a,m){return a+Number(m.mon);},0);
