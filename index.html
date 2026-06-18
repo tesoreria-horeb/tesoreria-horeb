@@ -4612,10 +4612,19 @@ function renderBanco(){
   if(ft)movs=movs.filter(function(m){return m.tipo===ft;});
   if(ff&&ff!=='all'&&ff!=='')movs=movs.filter(function(m){return m.fil===ff;});
 
-  // Calc saldo TOTAL acumulado (todos los movimientos, no solo los filtrados)
+  // Calc saldo TOTAL acumulado hasta el fin del mes filtrado (o total si no hay filtro)
   var siBanco=Number((DB.saldos_iniciales||{}).banco)||0;
   var allBancoSorted=[...DB.banco].sort(function(a,b){return a.fec.localeCompare(b.fec);});
-  var saldoTotal=siBanco+allBancoSorted.reduce(function(s,m){return s+(m.tipo==='deposito'?Number(m.mon):-Number(m.mon));},0);
+  var bancoParaSaldo=allBancoSorted;
+  if(filterMes&&filterAnio){
+    // Si hay filtro de mes, calcular saldo hasta el último día de ese mes
+    var cutoffYM=filterAnio+'-'+filterMes;
+    bancoParaSaldo=allBancoSorted.filter(function(m){return m.fec.substring(0,7)<=cutoffYM;});
+  } else if(filterAnio){
+    // Si solo hay filtro de año, calcular hasta el último día del año
+    bancoParaSaldo=allBancoSorted.filter(function(m){return m.fec.substring(0,4)<=String(filterAnio);});
+  }
+  var saldoTotal=siBanco+bancoParaSaldo.reduce(function(s,m){return s+(m.tipo==='deposito'?Number(m.mon):-Number(m.mon));},0);
   // Totales del mes filtrado (para mostrar en la cabecera del módulo)
   var totalDep=movs.filter(function(m){return m.tipo==='deposito';}).reduce(function(a,m){return a+Number(m.mon);},0);
   var totalRet=movs.filter(function(m){return m.tipo==='retiro';}).reduce(function(a,m){return a+Number(m.mon);},0);
@@ -4640,9 +4649,14 @@ function renderBanco(){
     var elRet=document.getElementById('banco-total-ret');
     if(elRet)elRet.textContent=fmt(totalRet);
     var elUlt=document.getElementById('banco-ultima-mov');
-    if(elUlt&&DB.banco.length>0){
-      var last=allBancoSorted[allBancoSorted.length-1];
-      elUlt.textContent='Último: '+fd2(last.fec)+' — '+(last.tipo==='deposito'?'Depósito':'Retiro');
+    var elUlt=document.getElementById('banco-ultima-mov');
+    if(elUlt){
+      if(filterMes&&filterAnio){
+        elUlt.textContent='Al cierre de '+MESES[parseInt(filterMes)-1]+' '+filterAnio;
+      } else if(DB.banco.length>0){
+        var last=allBancoSorted[allBancoSorted.length-1];
+        elUlt.textContent='Último: '+fd2(last.fec)+' — '+(last.tipo==='deposito'?'Depósito':'Retiro');
+      }
     }
     var elNd=document.getElementById('banco-num-dep');
     if(elNd)elNd.textContent=numDep+' depósito'+(numDep!==1?'s':'');
