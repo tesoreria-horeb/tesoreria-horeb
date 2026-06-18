@@ -2105,9 +2105,12 @@ function renderDash(){
   var siDeptos=Number((DB.saldos_iniciales||{}).departamentos)||0;
 
   var allMovsFil=gAccMov().filter(function(m){
+    // Excluir departamentos y filiales en retención
     var f=DB.filiales.find(function(x){return x.id===m.fil;});
-    var esFilConsolidada=filIdsConsolidados.indexOf(m.fil)>-1||(m.fil==='sede'&&retIdsSet.indexOf('sede')<0)||(m.fil==='F001'&&retIdsSet.indexOf('F001')<0);
-    return esFilConsolidada||(!f||(f.tipo||'filial')!=='departamento')&&retIdsSet.indexOf(m.fil)<0;
+    var esDept=f&&f.tipo==='departamento';
+    var esRetenida=retIdsSet.indexOf(m.fil)>-1;
+    var esFilial=m.fil==='F001'||m.fil==='sede'||!f||(f.tipo||'filial')!=='departamento';
+    return esFilial&&!esDept&&!esRetenida;
   });
   var allMovsDept=gAccMov().filter(function(m){var f=DB.filiales.find(function(x){return x.id===m.fil;});return f&&f.tipo==='departamento';});
   var allMovsMyFil=myFil?gAccMov().filter(function(m){return m.fil===myFil;}):allMovsFil;
