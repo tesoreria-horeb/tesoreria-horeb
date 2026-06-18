@@ -1115,7 +1115,7 @@ body.contador-mode .modal-ft .btn-d {
     </div>
     <div id="banco-auto-note" style="display:none;background:rgba(46,134,171,.15);border:1px solid rgba(46,134,171,.4);border-radius:8px;padding:10px 14px;font-size:12px;color:#5DADE2;margin-bottom:8px">
       🏦 <strong id="banco-auto-note-txt"></strong>
-      <div style="margin-top:6px;font-size:11px;color:rgba(247,243,233,.5)">Este movimiento irá <strong style="color:#5DADE2">solo al Banco</strong> — no aparecerá en el Libro Caja</div>
+      <div style="margin-top:6px;font-size:11px;color:rgba(247,243,233,.5)">Este movimiento irá al <strong style="color:#5DADE2">Banco</strong> — aparecerá en el Libro Caja <strong style="color:#5DADE2">marcado como bancario</strong></div>
     </div>
     <!-- Toggle: es movimiento bancario -->
     <div id="banco-toggle-row" style="margin-bottom:10px">
@@ -1125,7 +1125,7 @@ body.contador-mode .modal-ft .btn-d {
           <div id="banco-toggle-track" style="position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(247,243,233,.15);border-radius:11px;transition:.2s;border:1px solid rgba(247,243,233,.2)"></div>
           <div id="banco-toggle-knob" style="position:absolute;top:2px;left:2px;width:16px;height:16px;background:rgba(247,243,233,.5);border-radius:50%;transition:.2s"></div>
         </div>
-        <span style="font-size:13px">🏦 <strong>Movimiento Bancario</strong> <span style="color:rgba(247,243,233,.4);font-weight:normal;font-size:11px">(solo va al banco, no al Libro Caja)</span></span>
+        <span style="font-size:13px">🏦 <strong>Movimiento Bancario</strong> <span style="color:rgba(247,243,233,.4);font-weight:normal;font-size:11px">(aparecerá en el Libro Caja marcado como bancario)</span></span>
       </label>
     </div>
     <div class="fr">
@@ -3814,6 +3814,9 @@ function genCaja(){
 
   // Saldo anterior para filiales en retención
   var esFilialRetenida=filObj&&(filObj.tipo||'filial')!=='departamento'&&!esSedeCentral&&filObj.retencion&&filObj.retencion.activa;
+  // todasFilIds needed for transferencias calculation
+  var todasFilIdsCaja=DB.filiales.filter(function(f){return (f.tipo||'filial')!=='departamento';}).map(function(f){return f.id;});
+  if(todasFilIdsCaja.indexOf('F001')<0)todasFilIdsCaja.push('F001');
   if(esFilialRetenida){
     var fechaInicioRetCaja=filObj.retencion.fecha||'1900-01-01';
     var movsPrevRet=gAccMov().filter(function(m){
@@ -3841,12 +3844,27 @@ function genCaja(){
   // Efectivo only — for saldo en caja físico
   var tiEfectivo=movs.filter(function(m){return m.tipo==='ingreso'&&(m.moneda||'PEN')==='PEN'&&esEfectivo(m);}).reduce(function(a,m){return a+Number(m.mon);},0);
   var teEfectivo=movs.filter(function(m){return m.tipo==='egreso'&&(m.moneda||'PEN')==='PEN'&&esEfectivo(m);}).reduce(function(a,m){return a+Number(m.mon);},0);
-  var tiBancario=ti-tiEfectivo; // entradas no efectivo (van al banco)
-  var teBancario=te-teEfectivo; // egresos no efectivo (salen del banco)
-  // Saldo en caja efectivo = saldo anterior + solo efectivo
-  var saldoEfectivo=(esDepartamento||esSedeCentral||esFilialRetenida)?(saldoAnterior+tiEfectivo-teEfectivo):(tiEfectivo-teEfectivo);
+  var tiBancario=ti-tiEfectivo;
+  var teBancario=te-teEfectivo;
+
+  // Transferencias del mes — impacto en saldo efectivo
+  var trfsMesCaja=gAccMov().filter(function(m){
+    if(m.tipo!=='transferencia')return false;
+    var filOk=(fil==='all')?(todasFilIdsCaja.indexOf(m.fil)>-1||m.fil==='F001'):m.fil===fil;
+    var y=parseInt(m.fec.split('-')[0]),mo=parseInt(m.fec.split('-')[1]);
+    return filOk&&y===anio&&mo===mes;
+  });
+  var trfsMesImpactoCaja=trfsMesCaja.reduce(function(a,m){
+    var esSalida=m.subtipo==='salida_caja_banco'||(m.desc&&m.desc.indexOf('Caja → Banco')>-1);
+    return a+(esSalida?-Number(m.mon):Number(m.mon));
+  },0);
+
+  // Saldo en caja efectivo = saldo anterior + efectivo del mes + impacto transferencias
+  var saldoEfectivo=(esDepartamento||esSedeCentral||esFilialRetenida)
+    ?(saldoAnterior+tiEfectivo-teEfectivo+trfsMesImpactoCaja)
+    :(tiEfectivo-teEfectivo+trfsMesImpactoCaja);
   // Balance total del mes (bruto)
-  var saldo=(esDepartamento||esSedeCentral||esFilialRetenida)?(saldoAnterior+tiEfectivo-teEfectivo):(tiEfectivo-teEfectivo);
+  var saldo=saldoEfectivo;
   var tiUSD=movs.filter(function(m){return m.tipo==='ingreso'&&m.moneda==='USD';}).reduce(function(a,m){return a+Number(m.mon);},0);
   var teUSD=movs.filter(function(m){return m.tipo==='egreso'&&m.moneda==='USD';}).reduce(function(a,m){return a+Number(m.mon);},0);
   var saldoUSD=esSedeCentral?(saldoAnteriorUSD+tiUSD-teUSD):(tiUSD-teUSD);
