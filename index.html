@@ -6506,11 +6506,11 @@ function genEjecutivo(){
   // Filiales consolidadas = filiales sin retención en el mes seleccionado
   var filialesConsolidadas=filiales.filter(function(f){return !retIdsEjSet.has(f.id);});
 
-  // Movimientos del mes — solo filiales consolidadas
+  // Movimientos del mes — solo filiales consolidadas (incluye esBancario para total bruto)
   var movsMes=allMovs.filter(function(m){
     var y=parseInt(m.fec.split('-')[0]),mo=parseInt(m.fec.split('-')[1]);
     var esFilial=m.fil==='sede'||m.fil==='F001'||filialesConsolidadas.some(function(f){return f.id===m.fil;});
-    return y===anio&&mo===mes&&(m.moneda||'PEN')==='PEN'&&esFilial&&!m.esBancario&&m.origen!=='cierre_filial_efectivo'&&m.tipo!=='transferencia';
+    return y===anio&&mo===mes&&(m.moneda||'PEN')==='PEN'&&esFilial&&m.origen!=='cierre_filial_efectivo'&&m.tipo!=='transferencia';
   });
 
   // Movimientos mes anterior — solo filiales consolidadas
@@ -6599,12 +6599,15 @@ function genEjecutivo(){
 
   var grandTi=rowsFiliales.reduce(function(a,r){return a+r.i;},0);
   var grandTe=rowsFiliales.reduce(function(a,r){return a+r.e;},0);
+  // Efectivo only for saldo calculation
+  var grandTiEf=movsMes.filter(function(m){return m.tipo==='ingreso'&&esEfectivo(m)&&!m.esBancario&&(m.moneda||'PEN')==='PEN';}).reduce(function(a,m){return a+Number(m.mon);},0);
+  var grandTeEf=movsMes.filter(function(m){return m.tipo==='egreso'&&esEfectivo(m)&&!m.esBancario&&(m.moneda||'PEN')==='PEN';}).reduce(function(a,m){return a+Number(m.mon);},0);
 
-  // Ingresos Totales = solo ingresos de caja (igual que Libro Caja)
+  // Ingresos Totales = todos los ingresos brutos
   var ingTotales=grandTi;
 
-  // Saldo en caja total = Saldo Anterior (con transferencias previas) + ingresos − egresos + impacto transferencias del mes
-  var grandSaldo=grandSAconTrf+grandTi-grandTe+trfsMesImpactoEj;
+  // Saldo en caja efectivo = Saldo Anterior + efectivo del mes + impacto transferencias
+  var grandSaldo=grandSAconTrf+grandTiEf-grandTeEf+trfsMesImpactoEj;
 
   function fmtC(v,pg){
     var col=v>=0?(pg?'#1A7A4A':'#C0392B'):(pg?'#C0392B':'#1A7A4A');
