@@ -2608,6 +2608,12 @@ function openMovModal(id){
       mSel.value=ymVal;
       onMesSelChange(true);
     }
+    // In edit mode, remove date restrictions to allow the original date
+    var fechaEdEl=document.getElementById('m-fecha');
+    if(fechaEdEl){
+      fechaEdEl.min='';
+      fechaEdEl.max=today();
+    }
     document.getElementById('m-fecha').value=m.fec;
     document.getElementById('m-monto').value=m.mon;
     document.getElementById('m-desc').value=m.desc;
@@ -3756,15 +3762,15 @@ function genCaja(){
     // Calcular todos los movimientos ANTERIORES al mes seleccionado
     var movsPrevios=gAccMov().filter(function(m){
       if(m.fil!==fil)return false;
-      if(m.esBancario||m.origen==='cierre_filial_efectivo'||m.tipo==='transferencia')return false;
+      if(m.origen==='cierre_filial_efectivo'||m.tipo==='transferencia')return false;
       var y=parseInt(m.fec.split('-')[0]);
       var mo=parseInt(m.fec.split('-')[1]);
       return (y<anio)||(y===anio&&mo<mes);
     });
 
-    // Sumar ingresos y restar egresos de los movimientos previos
-    var ingPrev=movsPrevios.filter(function(m){return m.tipo==='ingreso'&&(m.moneda||'PEN')==='PEN';}).reduce(function(a,m){return a+Number(m.mon);},0);
-    var egPrev=movsPrevios.filter(function(m){return m.tipo==='egreso'&&(m.moneda||'PEN')==='PEN';}).reduce(function(a,m){return a+Number(m.mon);},0);
+    // Sumar ingresos y restar egresos SOLO EFECTIVO de los movimientos previos
+    var ingPrev=movsPrevios.filter(function(m){return m.tipo==='ingreso'&&(m.moneda||'PEN')==='PEN'&&esEfectivo(m);}).reduce(function(a,m){return a+Number(m.mon);},0);
+    var egPrev=movsPrevios.filter(function(m){return m.tipo==='egreso'&&(m.moneda||'PEN')==='PEN'&&esEfectivo(m);}).reduce(function(a,m){return a+Number(m.mon);},0);
 
     saldoAnterior=siDept+ingPrev-egPrev;
   }
@@ -3778,7 +3784,7 @@ function genCaja(){
     var todasFilIds=DB.filiales.filter(function(f){return (f.tipo||'filial')!=='departamento';}).map(function(f){return f.id;});
     var movsPrevSede=gAccMov().filter(function(m){
       if(todasFilIds.indexOf(m.fil)<0)return false;
-      if(m.esBancario||m.origen==='cierre_filial_efectivo'||m.tipo==='transferencia')return false;
+      if(m.origen==='cierre_filial_efectivo'||m.tipo==='transferencia')return false;
       var y=parseInt(m.fec.split('-')[0]);
       var mo=parseInt(m.fec.split('-')[1]);
       return (y<anio)||(y===anio&&mo<mes);
@@ -3812,7 +3818,7 @@ function genCaja(){
     var fechaInicioRetCaja=filObj.retencion.fecha||'1900-01-01';
     var movsPrevRet=gAccMov().filter(function(m){
       if(m.fil!==fil)return false;
-      if(m.esBancario||m.origen==='cierre_filial_efectivo'||m.tipo==='transferencia')return false;
+      if(m.origen==='cierre_filial_efectivo'||m.tipo==='transferencia')return false;
       if(m.fec<fechaInicioRetCaja)return false;
       var y=parseInt(m.fec.split('-')[0]);
       var mo=parseInt(m.fec.split('-')[1]);
@@ -3825,8 +3831,8 @@ function genCaja(){
 
   var movs=gAccMov().filter(function(m){
     var y=parseInt(m.fec.split('-')[0]),mo=parseInt(m.fec.split('-')[1]);
-    // Excluir movimientos bancarios y transferencias del Libro Caja
-    if(m.esBancario||m.origen==='cierre_filial_efectivo'||m.tipo==='transferencia')return false;
+    // Excluir transferencias internas y cierres — pero incluir movimientos bancarios para mostrarlos en el libro
+    if(m.origen==='cierre_filial_efectivo'||m.tipo==='transferencia')return false;
     return y===anio&&mo===mes&&(fil==='all'||m.fil===fil);
   });
   movs.sort(function(a,b){return a.fec.localeCompare(b.fec);});
@@ -3898,11 +3904,14 @@ function genCaja(){
 
   // Filas en SOLES
   movsPEN.forEach(function(m){
-    dataRows+='<tr>'
+    var esBanc=m.esBancario||esBancarioMet(m);
+    var rowBg=esBanc?'background:rgba(93,173,226,.05);':'';
+    var bancNote=esBanc?'<span style="font-size:9px;color:#5DADE2;margin-left:4px">[banco]</span>':'';
+    dataRows+='<tr style="'+rowBg+'">'
       +'<td style="border:1px solid #333;padding:3px 5px;font-size:11px">'+fd2(m.fec)+'</td>'
-      +'<td style="border:1px solid #333;padding:3px 6px;font-size:11px">'+m.desc+(m.cat?' ('+m.cat+')':'')+'</td>'
-      +'<td style="border:1px solid #333;padding:3px 5px;font-size:11px;text-align:right">'+(m.tipo==='ingreso'?'S/. '+Number(m.mon).toFixed(2):'')+'</td>'
-      +'<td style="border:1px solid #333;padding:3px 5px;font-size:11px;text-align:right">'+(m.tipo==='egreso'?'S/. '+Number(m.mon).toFixed(2):'')+'</td>'
+      +'<td style="border:1px solid #333;padding:3px 6px;font-size:11px">'+m.desc+(m.cat?' ('+m.cat+')':'')+bancNote+'</td>'
+      +'<td style="border:1px solid #333;padding:3px 5px;font-size:11px;text-align:right'+(esBanc&&m.tipo==='ingreso'?';color:#5DADE2':'')+'">'+(m.tipo==='ingreso'?'S/. '+Number(m.mon).toFixed(2):'')+'</td>'
+      +'<td style="border:1px solid #333;padding:3px 5px;font-size:11px;text-align:right'+(esBanc&&m.tipo==='egreso'?';color:#5DADE2':'')+'">'+(m.tipo==='egreso'?'S/. '+Number(m.mon).toFixed(2):'')+'</td>'
       +'</tr>';
   });
   // Empty rows for soles section
@@ -7333,6 +7342,7 @@ function openTransferenciaCajaBanco(){
   if(obsEl)obsEl.value='';
   var refEl=document.getElementById('trf-ref');
   if(refEl)refEl.value='';
+  document.getElementById('trf-edit-id').value='';
   // Set direction default
   var dirEl=document.getElementById('trf-dir');
   if(dirEl)dirEl.value='caja_banco';
@@ -7340,6 +7350,11 @@ function openTransferenciaCajaBanco(){
   // Show current balances
   updTrfSaldos();
   om('ov-transferencia');
+  // Focus fecha field
+  setTimeout(function(){
+    var f=document.getElementById('trf-fecha');
+    if(f)f.focus();
+  },200);
 }
 
 function onChangeTrfDir(){
@@ -7537,9 +7552,15 @@ function savTransferencia(){
   auditLog(accionAud,{trfId:trfId,mon:mon,dir:dir,saldoCajaAntes:saldoCajaAntes,saldoBancoAntes:saldoBancoAntes,fec:fecha,obs:obs,ref:ref});
 
   cm('ov-transferencia');
+  // Reset modal fields for next use
+  document.getElementById('trf-monto').value='';
+  document.getElementById('trf-ref').value='';
+  document.getElementById('trf-obs').value='';
+  document.getElementById('trf-fecha').value=today();
+  updTrfSaldos();
   renderTrfRecent();
   renderMov();
-  if(document.getElementById('mod-banco').classList.contains('active'))renderBanco();
+  if(document.getElementById('mod-banco')&&document.getElementById('mod-banco').classList.contains('active'))renderBanco();
   toast(dir==='caja_banco'?'✅ Transferencia Caja → Banco registrada':'✅ Transferencia Banco → Caja registrada');
 }
 
