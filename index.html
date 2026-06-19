@@ -356,6 +356,7 @@ body.contador-mode .modal-ft .btn-d {
       <div class="nav-item" onclick="sm('rpt-consolidado')"><span class="ic">📈</span>Consolidado</div>
       <div class="nav-item" onclick="sm('rpt-comparativo')"><span class="ic">📉</span>Comparativo Anual</div>
       <div class="nav-item" onclick="sm('rpt-diezmos')"><span class="ic">💵</span>Diezmos x Filial</div>
+      <div class="nav-item" onclick="sm('rpt-diezmantes')"><span class="ic">👤</span>Diezmantes del Mes</div>
       <div class="nav-item" onclick="sm('rpt-fidelidad')"><span class="ic">⭐</span>Fidelidad</div>
       <div class="nav-item nav-no-contador" onclick="sm('rpt-votos')"><span class="ic">📜</span>Votos y Cumplimiento</div>
       <div class="nav-item nav-admin" onclick="sm('rpt-banco')"><span class="ic">🏦</span>Informe Bancario</div>
@@ -811,6 +812,26 @@ body.contador-mode .modal-ft .btn-d {
           <button class="btn btn-pr" onclick="prtRpt('rdz-prev')">🖨️ Imprimir</button>
         </div>
         <div id="rdz-prev"></div>
+      </div>
+
+      <!-- RPT DIEZMANTES DEL MES -->
+      <div class="mod" id="mod-rpt-diezmantes">
+        <div class="tb">
+          <select class="fs" id="rdm-mes">
+            <option value="1">Enero</option><option value="2">Febrero</option>
+            <option value="3">Marzo</option><option value="4">Abril</option>
+            <option value="5">Mayo</option><option value="6">Junio</option>
+            <option value="7">Julio</option><option value="8">Agosto</option>
+            <option value="9">Septiembre</option><option value="10">Octubre</option>
+            <option value="11">Noviembre</option><option value="12">Diciembre</option>
+          </select>
+          <select class="fs" id="rdm-anio"></select>
+          <select class="fs" id="rdm-fil"><option value="all">Todas las sedes</option></select>
+          <button class="btn btn-p" onclick="genDiezmantes()">💵 Generar</button>
+          <button class="btn btn-pr" onclick="prtRpt('rdm-prev')">🖨️ Imprimir</button>
+          <button class="btn btn-s" onclick="exportDiezmantesExcel()">📊 Excel</button>
+        </div>
+        <div id="rdm-prev"></div>
       </div>
 
       <!-- RPT FIDELIDAD -->
@@ -1670,7 +1691,7 @@ function _finishLogin(usr){
 function doLogout(){CU=null;try{localStorage.removeItem('horeb_session');}catch(e){}document.getElementById('app').style.display='none';document.getElementById('login-screen').style.display='flex';document.getElementById('lu').value='';document.getElementById('lp').value='';}
 
 // ===================== NAV =====================
-const TITLES={dashboard:'Menú Principal',usuarios:'Gestion de Usuarios',backup:'Sistema de Backup',banco:'Control Bancario','rpt-banco':'Informe Bancario',movimientos:'Movimientos',filiales:'Filiales',miembros:'Miembros',votos:'Votos',categorias:'Categorías y Usuarios','rpt-caja':'Informe: Libro Caja Mensual','rpt-consolidado':'Informe: Consolidado General','rpt-comparativo':'Informe: Comparativo Anual','rpt-diezmos':'Informe: Diezmos por Filial','rpt-fidelidad':'Informe: Fidelidad Individual','rpt-votos':'Informe: Votos y Cumplimiento','rpt-ejecutivo':'Informe: Resumen Ejecutivo Mensual','rpt-departamentos':'Informe: Estado de Cuenta — Departamentos','rpt-categorias':'Informe: Gastos por Categoría','cierre-filiales':'Cierre de Filiales — Transferencia de Saldos','transferencias':'Transferencias Caja ↔ Banco','rpt-transferencias':'Informe: Transferencias Caja ↔ Banco','auditoria':'Registro de Auditoría del Sistema'};
+const TITLES={dashboard:'Menú Principal',usuarios:'Gestion de Usuarios',backup:'Sistema de Backup',banco:'Control Bancario','rpt-banco':'Informe Bancario',movimientos:'Movimientos',filiales:'Filiales',miembros:'Miembros',votos:'Votos',categorias:'Categorías y Usuarios','rpt-caja':'Informe: Libro Caja Mensual','rpt-consolidado':'Informe: Consolidado General','rpt-comparativo':'Informe: Comparativo Anual','rpt-diezmos':'Informe: Diezmos por Filial','rpt-diezmantes':'Informe: Diezmantes del Mes','rpt-fidelidad':'Informe: Fidelidad Individual','rpt-votos':'Informe: Votos y Cumplimiento','rpt-ejecutivo':'Informe: Resumen Ejecutivo Mensual','rpt-departamentos':'Informe: Estado de Cuenta — Departamentos','rpt-categorias':'Informe: Gastos por Categoría','cierre-filiales':'Cierre de Filiales — Transferencia de Saldos','transferencias':'Transferencias Caja ↔ Banco','rpt-transferencias':'Informe: Transferencias Caja ↔ Banco','auditoria':'Registro de Auditoría del Sistema'};
 
 function sm(n){
   // Save current module to restore after F5
@@ -1690,7 +1711,7 @@ function sm(n){
   else if(n==='votos')renderVot();
   else if(n==='categorias')renderCats();
   else if(n==='rpt-fidelidad'){updFidMiems();}
-  else if(n==='rpt-caja'||n==='rpt-consolidado'||n==='rpt-comparativo'||n==='rpt-diezmos'){
+  else if(n==='rpt-caja'||n==='rpt-consolidado'||n==='rpt-comparativo'||n==='rpt-diezmos'||n==='rpt-diezmantes'){
     // Auto-sincronizar al abrir cualquier informe
     if(DB.movimientos.length===0){
       toast('⏳ Cargando datos...');
@@ -1785,7 +1806,7 @@ function stab(p,t){document.querySelectorAll('#'+p+'-tabs .tab-btn').forEach(b=>
 
 function popFil(){
   const fils=DB.filiales;
-  const sids=['m-fil','mi-fil','v-fil','mov-ff','vot-ff','miem-ff','rc-fil','rcon-fil','rfid-fil','rvot-fil','banco-filter-fil','banco-filial'];
+  const sids=['m-fil','mi-fil','v-fil','mov-ff','vot-ff','miem-ff','rc-fil','rcon-fil','rfid-fil','rvot-fil','banco-filter-fil','banco-filial','rdm-fil'];
   sids.forEach(sid=>{
     const sel=document.getElementById(sid);if(!sel)return;
     sel.querySelectorAll('[data-dyn]').forEach(o=>o.remove());
@@ -1837,7 +1858,7 @@ function popRcatFil(){
 
 function popYrs(){
   const yrs=[];for(let y=2020;y<=new Date().getFullYear()+1;y++)yrs.push(y);
-  ['ch-year','rc-anio','rcon-anio','rcomp-a1','rcomp-a2','rdz-anio','rfid-anio','mov-fa','rban-anio','dash-anio','rej-anio','rdept-anio','rcat-anio','cf-anio','rtrfanio'].forEach(sid=>{
+  ['ch-year','rc-anio','rcon-anio','rcomp-a1','rcomp-a2','rdz-anio','rfid-anio','mov-fa','rban-anio','dash-anio','rej-anio','rdept-anio','rcat-anio','cf-anio','rtrfanio','rdm-anio'].forEach(sid=>{
     const sel=document.getElementById(sid);if(!sel)return;
     sel.innerHTML='';yrs.forEach(y=>{const o=document.createElement('option');o.value=y;o.textContent=y;sel.appendChild(o);});
     sel.value=new Date().getFullYear();
@@ -1851,6 +1872,7 @@ function popYrs(){
   var rdM=document.getElementById('rdept-mes');if(rdM)rdM.value=nowMo;
   var rcM=document.getElementById('rcat-mes');if(rcM)rcM.value=nowMo;
   var rtrfM=document.getElementById('rtrfmes');if(rtrfM)rtrfM.value=nowMo;
+  var rdmM=document.getElementById('rdm-mes');if(rdmM)rdmM.value=nowMo;
   popRcatFil();
 }
 
@@ -4255,6 +4277,141 @@ function genDiez(){
   }).join('');
   document.getElementById('rdz-prev').innerHTML=`<div class="rpt-wrap">${rptHd('Diezmos por Filial — 12 Meses','Año '+anio)}<div class="rpt-body" style="overflow-x:auto"><table><thead><tr><th>Cód.</th><th>Sede / Filial</th>${MESES.map(m=>`<th style="text-align:right;min-width:48px">${m.slice(0,3)}</th>`).join('')}<th style="text-align:right">Total</th><th>Fidel.</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
   toast('Informe de diezmos generado');
+}
+
+// RPT DIEZMANTES DEL MES
+function genDiezmantes(){
+  var mes=parseInt(document.getElementById('rdm-mes').value);
+  var anio=parseInt(document.getElementById('rdm-anio').value);
+  var fil=document.getElementById('rdm-fil').value;
+  if(!mes||!anio){toast('Seleccione mes y año','err');return;}
+
+  var mesNom=MESES[mes-1]+' '+anio;
+  var filNom=fil==='all'?'Todas las Sedes':(gfn(fil)||fil);
+
+  // Movimientos de diezmos del mes seleccionado
+  var movsDiezmos=gAccMov().filter(function(m){
+    var y=parseInt(m.fec.split('-')[0]),mo=parseInt(m.fec.split('-')[1]);
+    var filOk=fil==='all'||m.fil===fil;
+    return m.tipo==='ingreso'&&m.cat==='Diezmos'&&y===anio&&mo===mes&&filOk;
+  }).sort(function(a,b){return a.fec.localeCompare(b.fec);});
+
+  if(!movsDiezmos.length){
+    document.getElementById('rdm-prev').innerHTML='<div class="empty"><span class="ic">💵</span><p>No hay diezmos registrados en '+mesNom+'</p></div>';
+    toast('Sin diezmos en el período','err');
+    return;
+  }
+
+  // Group by member
+  var porMiem={};
+  movsDiezmos.forEach(function(m){
+    var miemId=m.miem||'_sin_miem';
+    if(!porMiem[miemId])porMiem[miemId]={movs:[],total:0,fil:m.fil};
+    porMiem[miemId].movs.push(m);
+    porMiem[miemId].total+=Number(m.mon);
+  });
+
+  var totalGeneral=movsDiezmos.reduce(function(a,m){return a+Number(m.mon);},0);
+  var rows='';
+  var n=0;
+  Object.keys(porMiem).sort(function(a,b){
+    var na=getMiemNom(a),nb=getMiemNom(b);
+    return na.localeCompare(nb);
+  }).forEach(function(miemId){
+    var entry=porMiem[miemId];
+    var nomMiem=getMiemNom(miemId);
+    var filNomRow=gfn(entry.fil)||entry.fil;
+    entry.movs.forEach(function(m,i){
+      n++;
+      rows+='<tr'+(n%2===0?' style="background:#f9f7f3"':'')+'>'
+        +'<td style="border:1px solid #ddd;padding:4px 7px;font-size:11px">'+n+'</td>'
+        +'<td style="border:1px solid #ddd;padding:4px 7px;font-size:11px">'+fd2(m.fec)+'</td>'
+        +'<td style="border:1px solid #ddd;padding:4px 7px;font-size:11px;font-weight:'+(i===0?'bold':'normal')+'">'+nomMiem+'</td>'
+        +(fil==='all'?'<td style="border:1px solid #ddd;padding:4px 7px;font-size:11px">'+filNomRow+'</td>':'')
+        +'<td style="border:1px solid #ddd;padding:4px 7px;font-size:11px;text-align:right;font-weight:bold;color:#1A7A4A">S/. '+Number(m.mon).toFixed(2)+'</td>'
+        +'<td style="border:1px solid #ddd;padding:4px 7px;font-size:11px">'+(m.met||'efectivo')+'</td>'
+        +'<td style="border:1px solid #ddd;padding:4px 7px;font-size:11px">'+(m.comp||'—')+'</td>'
+        +'</tr>';
+    });
+  });
+
+  var totalDiezmantes=Object.keys(porMiem).length;
+  var html='<div class="rpt-wrap">'+rptHd('Informe de Diezmantes',mesNom+' — '+filNom)
+    +'<div class="rpt-body">'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">'
+    +'<div style="padding:10px;background:#fffde7;border:1px solid #C9A84C;border-radius:5px;text-align:center"><div style="font-size:9px;color:#888;font-weight:bold">TOTAL DIEZMANTES</div><div style="font-size:22px;font-weight:bold;color:#8B6914">'+totalDiezmantes+'</div></div>'
+    +'<div style="padding:10px;background:#e8f5e9;border:1px solid #2ECC71;border-radius:5px;text-align:center"><div style="font-size:9px;color:#888;font-weight:bold">TOTAL DIEZMOS</div><div style="font-size:22px;font-weight:bold;color:#1A7A4A">S/. '+totalGeneral.toFixed(2)+'</div></div>'
+    +'</div>'
+    +'<table><thead><tr>'
+    +'<th style="background:#0D1B2A;color:#C9A84C;padding:6px 7px">#</th>'
+    +'<th style="background:#0D1B2A;color:#C9A84C;padding:6px 7px">Fecha</th>'
+    +'<th style="background:#0D1B2A;color:#C9A84C;padding:6px 7px">Miembro</th>'
+    +(fil==='all'?'<th style="background:#0D1B2A;color:#C9A84C;padding:6px 7px">Sede/Filial</th>':'')
+    +'<th style="background:#0D1B2A;color:#C9A84C;padding:6px 7px;text-align:right">Monto</th>'
+    +'<th style="background:#0D1B2A;color:#C9A84C;padding:6px 7px">Método</th>'
+    +'<th style="background:#0D1B2A;color:#C9A84C;padding:6px 7px">Comprobante</th>'
+    +'</tr></thead><tbody>'+rows+'</tbody>'
+    +'<tfoot><tr>'
+    +'<td colspan="'+(fil==='all'?'4':'3')+'" style="border:1px solid #C9A84C;padding:6px 8px;font-weight:bold;background:#f8f5ef">TOTAL — '+totalDiezmantes+' diezmantes / '+movsDiezmos.length+' registros</td>'
+    +'<td style="border:1px solid #C9A84C;padding:6px 8px;font-weight:bold;color:#1A7A4A;text-align:right;background:#f8f5ef">S/. '+totalGeneral.toFixed(2)+'</td>'
+    +'<td colspan="2" style="border:1px solid #C9A84C;background:#f8f5ef"></td>'
+    +'</tr></tfoot>'
+    +'</table>'
+    +rptSign('Tesorero Principal','Pastor Principal')
+    +'</div></div>';
+
+  document.getElementById('rdm-prev').innerHTML=html;
+  toast('Informe de Diezmantes generado ✅');
+}
+
+function getMiemNom(miemId){
+  if(miemId==='_sin_miem')return '— Sin miembro asignado —';
+  var m=DB.miembros.find(function(x){return x.id===miemId;});
+  return m?(m.nom+' '+(m.ape||'')).trim():'Miembro desconocido';
+}
+
+function exportDiezmantesExcel(){
+  var mes=parseInt(document.getElementById('rdm-mes').value);
+  var anio=parseInt(document.getElementById('rdm-anio').value);
+  var fil=document.getElementById('rdm-fil').value;
+  if(!mes||!anio){toast('Genere el informe primero','err');return;}
+
+  var mesNom=MESES[mes-1]+' '+anio;
+  var movsDiezmos=gAccMov().filter(function(m){
+    var y=parseInt(m.fec.split('-')[0]),mo=parseInt(m.fec.split('-')[1]);
+    var filOk=fil==='all'||m.fil===fil;
+    return m.tipo==='ingreso'&&m.cat==='Diezmos'&&y===anio&&mo===mes&&filOk;
+  }).sort(function(a,b){return a.fec.localeCompare(b.fec);});
+
+  if(!movsDiezmos.length){toast('Sin datos para exportar','err');return;}
+
+  // Build CSV
+  var bom='\uFEFF';
+  var header=['#','Fecha','Miembro','Sede/Filial','Monto','Método','Comprobante'].join(';');
+  var rows=movsDiezmos.map(function(m,i){
+    return [
+      i+1,
+      fd2(m.fec),
+      getMiemNom(m.miem||'_sin_miem'),
+      gfn(m.fil)||m.fil,
+      Number(m.mon).toFixed(2),
+      m.met||'efectivo',
+      m.comp||''
+    ].join(';');
+  });
+  var total=';;;TOTAL;'+movsDiezmos.reduce(function(a,m){return a+Number(m.mon);},0).toFixed(2)+';;';
+  var csv=bom+header+'\n'+rows.join('\n')+'\n'+total;
+
+  var blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');
+  a.href=url;
+  a.download='Diezmantes_'+mesNom.replace(' ','_')+'.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast('Excel descargado ✅');
 }
 
 // RPT FIDELIDAD
