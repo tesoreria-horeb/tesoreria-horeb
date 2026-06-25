@@ -936,7 +936,7 @@ body.contador-mode .modal-ft .btn-d {
           </select>
           <select class="fs" id="rcat-anio"></select>
           <select class="fs" id="rcat-fil"><option value="all">Todas las sedes y Depts.</option></select>
-          <select class="fs" id="rcat-tipo">
+          <select class="fs" id="rcat-tipo" onchange="popRcatCat()">
             <option value="egreso">Egresos (Gastos)</option>
             <option value="ingreso">Ingresos</option>
             <option value="">Ambos</option>
@@ -1789,6 +1789,7 @@ function sm(n){
       var rejM=document.getElementById('rej-mes');if(rejM&&!rejM._init){rejM.value=nowM;rejM._init=true;}
       var rdM=document.getElementById('rdept-mes');if(rdM&&!rdM._init){rdM.value=nowM;rdM._init=true;}
       var rcM=document.getElementById('rcat-mes');if(rcM&&!rcM._init){rcM.value=nowM;rcM._init=true;}
+      if(n==='rpt-categorias')popRcatCat();
     } else {toast('Sin acceso','err');sm('dashboard');}
   }
   else if(n==='miembros'||n==='votos'||n==='categorias'||n==='usuarios'||n==='backup'){
