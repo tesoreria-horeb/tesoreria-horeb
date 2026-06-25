@@ -7085,10 +7085,20 @@ function popRcatCat(){
   var tipo=tipoEl?tipoEl.value:'';
   catEl.innerHTML='<option value="all">Todas las categorías</option>';
   var cats=[];
+  // Get categories from actual movements
+  (DB.movimientos||[]).forEach(function(m){
+    if(!m.cat)return;
+    if(tipo&&m.tipo!==tipo)return;
+    if(cats.indexOf(m.cat)<0)cats.push(m.cat);
+  });
+  // Also from DB.cats if available
   if(!tipo||tipo==='ingreso')(DB.cats&&DB.cats.ing||[]).forEach(function(c){if(cats.indexOf(c)<0)cats.push(c);});
   if(!tipo||tipo==='egreso')(DB.cats&&DB.cats.eg||[]).forEach(function(c){if(cats.indexOf(c)<0)cats.push(c);});
-  gAccMov().forEach(function(m){if(m.cat&&cats.indexOf(m.cat)<0)cats.push(m.cat);});
-  cats.sort().forEach(function(c){var o=document.createElement('option');o.value=c;o.textContent=c;catEl.appendChild(o);});
+  cats.sort().forEach(function(c){
+    var o=document.createElement('option');
+    o.value=c;o.textContent=c;
+    catEl.appendChild(o);
+  });
 }
 
 function genCategorias(){
