@@ -4876,22 +4876,68 @@ function renderBanco(){
       :(m.comp?'<span style="font-size:10px;color:rgba(247,243,233,.4)">'+m.comp+'</span>':'—');
     var acciones='<button class="btn btn-sm btn-d" onclick="delBanco(this)" data-id="'+m.id+'" title="Eliminar">&#128465;</button>';
     if(isAdmin)acciones='<button class="btn btn-sm btn-s" onclick="edBanco(this)" data-id="'+m.id+'" title="Editar">&#9999;</button> '+acciones;
-    return '<tr>'
+
+    // Culqui POS detail button
+    var isCulqui=m.origen==='culqui_pos'&&m.posIds&&m.posIds.length>0;
+    var culquiBtn=isCulqui
+      ?'&nbsp;<button class="btn btn-sm btn-s" onclick="toggleCulquiDetail(\'culqui-'+m.id+'\')" style="font-size:9px;padding:2px 6px">▼ '+m.posIds.length+' trans.</button>'
+      :'';
+
+    var mainRow='<tr>'
       +'<td style="color:rgba(247,243,233,.35);font-size:10px">'+(((bancoPg-1)*BANCO_PP)+i+1)+'</td>'
       +'<td>'+fd2(m.fec)+'</td>'
       +'<td>'+tipoCell+'</td>'
-      +'<td>'+m.desc+(m.esBancario?'&nbsp;<span style="font-size:9px;background:rgba(46,134,171,.2);color:#5DADE2;padding:1px 5px;border-radius:3px;border:1px solid rgba(46,134,171,.3)">🏦 Banco</span>':'')+'</td>'
+      +'<td>'+m.desc+(m.esBancario?'&nbsp;<span style="font-size:9px;background:rgba(46,134,171,.2);color:#5DADE2;padding:1px 5px;border-radius:3px;border:1px solid rgba(46,134,171,.3)">🏦 Banco</span>':'')+culquiBtn+'</td>'
       +'<td style="font-size:10px">'+gfn(m.fil)+'</td>'
       +'<td>'+montoCell+'</td>'
       +(isAdmin?'<td>'+saldoCell+'</td>':'')
       +'<td>'+compCell+'</td>'
       +'<td>'+acciones+'</td>'
       +'</tr>';
+
+    // Culqui detail rows (hidden by default)
+    var detailRow='';
+    if(isCulqui){
+      var posMovs=m.posIds.map(function(pid){return DB.movimientos.find(function(x){return x.id===pid;});}).filter(Boolean);
+      var totalBruto=posMovs.reduce(function(a,x){return a+Number(x.mon);},0);
+      var totalCom=posMovs.reduce(function(a,x){return a+Number(x.posComision||0);},0);
+      var detailRows=posMovs.map(function(pm){
+        return '<tr style="background:rgba(46,134,171,.05)">'
+          +'<td></td>'
+          +'<td style="font-size:10px;padding-left:20px;color:rgba(247,243,233,.5)">└─ '+fd2(pm.fec)+'</td>'
+          +'<td colspan="2" style="font-size:11px;padding-left:8px">'+pm.desc+'</td>'
+          +'<td style="font-size:10px">'+gfn(pm.fil)+'</td>'
+          +'<td style="font-size:11px;color:#2ECC71;font-weight:bold">'+fmt(pm.mon)+'</td>'
+          +(isAdmin?'<td style="font-size:10px;color:#E74C3C">'+(pm.posComision?'Com: '+fmt(pm.posComision):'—')+'</td>':'')
+          +'<td colspan="2" style="font-size:10px;color:rgba(247,243,233,.4)">'+(pm.met||'pos')+'</td>'
+          +'</tr>';
+      }).join('');
+      var summaryRow='<tr style="background:rgba(46,134,171,.08)">'
+        +'<td colspan="4" style="font-size:10px;padding-left:28px;color:rgba(247,243,233,.5)">Bruto: '+fmt(totalBruto)+' — Comisiones: '+fmt(totalCom)+' — Neto depositado: <strong style="color:#5DADE2">'+fmt(m.mon)+'</strong></td>'
+        +(isAdmin?'<td colspan="5"></td>':'<td colspan="4"></td>')
+        +'</tr>';
+      detailRow='<tbody id="culqui-'+m.id+'" style="display:none">'+detailRows+summaryRow+'</tbody>';
+    }
+
+    return mainRow+detailRow;
   }).join('');
 
   // Pagination
   var pag=document.getElementById('banco-pag');pag.innerHTML='';
   if(pgs>1)for(var p=1;p<=pgs;p++){var b=document.createElement('button');b.className='pg-btn'+(p===bancoPg?' active':'');b.textContent=p;b.onclick=(function(pp){return function(){bancoPg=pp;renderBanco();};})(p);pag.appendChild(b);}
+}
+
+function toggleCulquiDetail(id){
+  var el=document.getElementById(id);
+  if(!el)return;
+  var btn=el.previousElementSibling&&el.previousElementSibling.querySelector('button[onclick*="'+id+'"]');
+  if(el.style.display==='none'){
+    el.style.display='';
+    if(btn)btn.textContent=btn.textContent.replace('▼','▲');
+  } else {
+    el.style.display='none';
+    if(btn)btn.textContent=btn.textContent.replace('▲','▼');
+  }
 }
 
 function openBancoModal(tipo,id){
