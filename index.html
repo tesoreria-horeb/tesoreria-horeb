@@ -2835,7 +2835,8 @@ function savMov(keepOpen){
   // Banco: usar el toggle explícito del usuario
   var metodosBanco=['transferencia','yape','plin','deposito','pos','debito','lukita','tunki'];
   var esBanco=esBancoToggle;
-  if(esBanco){
+  // No crear depósito automático en banco para movimientos POS — se consolidan via Culqui
+  if(esBanco&&!obj.esPOS){
     if(!DB.banco)DB.banco=[];
   if(!DB.saldos_iniciales)DB.saldos_iniciales={filiales:0,departamentos:0,fecha:''};
     var existeBanco=DB.banco.find(function(b){return b.movId===obj.id;});
