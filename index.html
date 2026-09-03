@@ -3340,7 +3340,8 @@ function cfSaldoMes(filId, mes, anio){
   var allMovs=gAccMov();
   var movs=allMovs.filter(function(m){
     var y=parseInt(m.fec.split('-')[0]),mo=parseInt(m.fec.split('-')[1]);
-    return m.fil===filId&&y===anio&&mo===mes&&(m.moneda||'PEN')=='PEN';
+    return m.fil===filId&&y===anio&&mo===mes&&(m.moneda||'PEN')==='PEN'
+      &&m.origen!=='cierre_filial_efectivo'&&m.tipo!=='transferencia';
   });
   var ing=movs.filter(function(m){return m.tipo==='ingreso';}).reduce(function(a,m){return a+Number(m.mon);},0);
   var eg=movs.filter(function(m){return m.tipo==='egreso';}).reduce(function(a,m){return a+Number(m.mon);},0);
@@ -3373,7 +3374,11 @@ function renderCierreFiliales(){
   var mes=parseInt(document.getElementById('cf-mes').value);
   var anio=parseInt(document.getElementById('cf-anio').value);
   if(!anio){toast('Seleccione el año','err');return;}
-  var todasFiliales=DB.filiales.filter(function(f){return (f.tipo||'filial')!=='departamento';});
+  var todasFiliales=DB.filiales.filter(function(f){
+    return (f.tipo||'filial')!=='departamento'
+      && f.id!=='F001'
+      && f.id!=='sede';
+  });
   if(!todasFiliales.length){
     document.getElementById('cf-panel').innerHTML='<div class="empty"><span class="ic">🏛️</span>No hay filiales ni departamentos registrados</div>';
     return;
