@@ -3481,7 +3481,7 @@ function openCierreModal(filId, filNom, saldo, mes, anio, cierreId){
   om('ov-cierre');
 }
 
-function savCierreDeposito(){
+async function savCierreDeposito(){
   var filId=document.getElementById('cf-fil-id').value;
   var mes=parseInt(document.getElementById('cf-mes-cierre').value);
   var anio=parseInt(document.getElementById('cf-anio-cierre').value);
@@ -3496,6 +3496,12 @@ function savCierreDeposito(){
   if(!fecha){toast('Ingrese la fecha','err');return;}
   if(!monto||monto<=0){toast('El monto debe ser mayor a 0','err');return;}
 
+  // Bloquear el botón mientras se guarda, para evitar doble clic / registros duplicados
+  var btnConfirm=document.getElementById('cf-btn-confirm');
+  if(btnConfirm){btnConfirm.disabled=true;btnConfirm.textContent='Guardando...';}
+
+  try{
+
   // Si es edición, revertir registros anteriores (banco o movimiento efectivo)
   if(esEdicion){
     var cierreViejo=(DB.cierres||[]).find(function(c){return c.id===editId;});
@@ -3503,35 +3509,29 @@ function savCierreDeposito(){
       // Eliminar movimiento bancario anterior si existía
       if(cierreViejo.bancId){
         DB.banco=(DB.banco||[]).filter(function(b){return b.id!==cierreViejo.bancId;});
-        try{
-          if(typeof db!=='undefined')db.collection('banco').doc(cierreViejo.bancId).delete();
-        }catch(e){}
+        await fbDelete('banco',cierreViejo.bancId);
       }
       // Eliminar movimiento efectivo anterior si existía
       if(cierreViejo.movId){
         DB.movimientos=(DB.movimientos||[]).filter(function(m){return m.id!==cierreViejo.movId;});
-        try{
-          if(typeof db!=='undefined')db.collection('movimientos').doc(cierreViejo.movId).delete();
-        }catch(e){}
+        await fbDelete('movimientos',cierreViejo.movId);
       }
       // Eliminar el cierre viejo del array
       DB.cierres=(DB.cierres||[]).filter(function(c){return c.id!==editId;});
-      try{
-        if(typeof db!=='undefined')db.collection('cierres').doc(editId).delete();
-      }catch(e){}
+      await fbDelete('cierres',editId);
     }
   }
 
-  // Construir nuevo cierre
+  // Construir nuevo cierre (sin campos undefined — Firestore los rechaza)
   var cierreObj={
     id:esEdicion?editId:'CF'+Date.now(),
     filId:filId,filNom:filNom,
     mes:mes,anio:anio,monto:monto,fecha:fecha,
     obs:obs,tipoEntrega:tipoEntrega,
     reg:new Date().toISOString(),
-    regBy:CU?CU.nom:'Sistema',
-    editado:esEdicion?new Date().toISOString():undefined
+    regBy:CU?CU.nom:'Sistema'
   };
+  if(esEdicion)cierreObj.editado=new Date().toISOString();
 
   if(tipoEntrega==='banco'){
     var codOp=document.getElementById('cf-cod-op').value.trim();
@@ -3547,11 +3547,26 @@ function savCierreDeposito(){
       fil:filId,comp:codOp,banco:bancoNom,origen:'cierre_filial'
     };
     if(compB64)bancMov.voucher=compB64;
+
+    // PASO 1: guardar el depósito y CONFIRMAR que llegó al servidor antes de seguir
+    var okBanco=await fbSave('banco',bancId,bancMov);
+    if(!okBanco){
+      toast('❌ No se pudo guardar el depósito en el servidor. Verifica tu conexión o la cuota de Firebase, e inténtalo de nuevo. No se registró nada.','err');
+      return;
+    }
     if(!DB.banco)DB.banco=[];
     DB.banco.push(bancMov);
-    fbSave('banco',bancId,bancMov);
     cierreObj.codOp=codOp;cierreObj.bancoNom=bancoNom;cierreObj.bancId=bancId;
-    toast((esEdicion?'✅ Cierre actualizado → Banco — Op: ':'✅ Depósito registrado — Op: ')+codOp);
+
+    // PASO 2: guardar el cierre. Si esto falla, DESHACER el depósito del paso 1
+    var okCierre=await fbSave('cierres',cierreObj.id,cierreObj);
+    if(!okCierre){
+      DB.banco=(DB.banco||[]).filter(function(b){return b.id!==bancId;});
+      await fbDelete('banco',bancId);
+      toast('❌ El depósito se guardó pero el registro de cierre falló — se revirtió automáticamente para no dejar nada a medias. Inténtalo de nuevo.','err');
+      return;
+    }
+    toast((esEdicion?'✅ Cierre actualizado → Banco — Op: ':'✅ Depósito registrado → Op: ')+codOp);
   } else {
     var recibidoPor=document.getElementById('cf-recibido-por').value.trim();
     var movId='M'+Date.now();
@@ -3561,19 +3576,40 @@ function savCierreDeposito(){
       desc:'Efectivo recibido de '+filNom+' — '+MESES[mes-1]+' '+anio+(obs?' — '+obs:''),
       obs:obs,origen:'cierre_filial_efectivo'
     };
+
+    // PASO 1: guardar el movimiento efectivo y CONFIRMAR antes de seguir
+    var okMov=await fbSave('movimientos',movId,movEfectivo);
+    if(!okMov){
+      toast('❌ No se pudo guardar la entrega en el servidor. Verifica tu conexión o la cuota de Firebase, e inténtalo de nuevo. No se registró nada.','err');
+      return;
+    }
     if(!DB.movimientos)DB.movimientos=[];
     DB.movimientos.push(movEfectivo);
-    fbSave('movimientos',movId,movEfectivo);
     cierreObj.recibidoPor=recibidoPor;cierreObj.movId=movId;
+
+    // PASO 2: guardar el cierre. Si esto falla, DESHACER el movimiento del paso 1
+    var okCierre2=await fbSave('cierres',cierreObj.id,cierreObj);
+    if(!okCierre2){
+      DB.movimientos=(DB.movimientos||[]).filter(function(m){return m.id!==movId;});
+      await fbDelete('movimientos',movId);
+      toast('❌ La entrega se guardó pero el registro de cierre falló — se revirtió automáticamente para no dejar nada a medias. Inténtalo de nuevo.','err');
+      return;
+    }
     toast((esEdicion?'✅ Cierre actualizado → Efectivo':'✅ Recepción en efectivo registrada')+' — S/. '+monto.toFixed(2));
   }
 
   if(!DB.cierres)DB.cierres=[];
   DB.cierres.push(cierreObj);
   sd();
-  fbSave('cierres',cierreObj.id,cierreObj);
   cm('ov-cierre');
   renderCierreFiliales();
+
+  }catch(e){
+    console.warn('Error en savCierreDeposito:',e);
+    toast('❌ Ocurrió un error inesperado. Nada se guardó. Inténtalo de nuevo.','err');
+  }finally{
+    if(btnConfirm){btnConfirm.disabled=false;btnConfirm.textContent=tipoEntrega==='banco'?'🏦 Confirmar Depósito':'💵 Confirmar Recepción en Efectivo';}
+  }
 }
 
 document.addEventListener('change',function(e){
@@ -5725,16 +5761,18 @@ var _fbListeners = []; // store unsubscribe functions
 
 async function fbSave(coleccion, id, data){
   try{
-    if(!window.FB_DB)return;
+    if(!window.FB_DB){console.warn('Firebase no conectado — guardado NO enviado al servidor:',coleccion,id);return false;}
     await window.FB_DB.collection(coleccion).doc(id).set(data);
-  }catch(e){console.warn('Firebase save error:',e);}
+    return true;
+  }catch(e){console.warn('Firebase save error:',e);return false;}
 }
 
 async function fbDelete(coleccion, id){
   try{
-    if(!window.FB_DB)return;
+    if(!window.FB_DB)return false;
     await window.FB_DB.collection(coleccion).doc(id).delete();
-  }catch(e){console.warn('Firebase delete error:',e);}
+    return true;
+  }catch(e){console.warn('Firebase delete error:',e);return false;}
 }
 
 async function fbLoadAll(coleccion){
