@@ -3681,7 +3681,11 @@ async function repararCierresBancariosAntiguos(btn){
 
   if(!candidatos.length){toast('No hay cierres bancarios pendientes de reparar','ok');return;}
 
-  if(!confirm('Se van a corregir '+candidatos.length+' cierre(s) bancario(s) desde abril 2026, agregando la transferencia Caja→Banco que les falta.\n\nEsto va a bajar el "Saldo en Caja" de las filiales afectadas por el monto correspondiente (el dinero ya se había depositado, así que sale de Caja).\n\n¿Confirmas que quieres continuar?'))return;
+  var listaDetalle=candidatos.map(function(c){
+    return '• '+c.filNom+' — '+MESES[c.mes-1]+' '+c.anio+' — S/. '+Number(c.monto).toFixed(2);
+  }).join('\n');
+
+  if(!confirm('Se van a corregir '+candidatos.length+' cierre(s) bancario(s) desde abril 2026, agregando la transferencia Caja→Banco que les falta:\n\n'+listaDetalle+'\n\nEsto va a bajar el "Saldo en Caja" de cada filial listada por su monto correspondiente (el dinero ya se había depositado, así que sale de Caja).\n\n¿Confirmas que quieres continuar?'))return;
 
   var btn2=btn;
   if(btn2){btn2.disabled=true;btn2.textContent='Reparando...';}
