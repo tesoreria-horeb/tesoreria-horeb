@@ -629,6 +629,13 @@ body.contador-mode .modal-ft .btn-d {
             <button class="btn btn-p" onclick="renderCierreFiliales()">🔄 Cargar Saldos</button>
           </div>
         </div>
+        <div class="card" id="cf-reparar-card" style="margin-bottom:14px;display:none;border-color:rgba(231,76,60,.3);background:rgba(231,76,60,.05)">
+          <div class="card-title" style="color:#E74C3C">🛠️ Mantenimiento — Cierres Bancarios Antiguos</div>
+          <p style="font-size:12px;color:rgba(247,243,233,.6);margin:0 0 10px 0">
+            Antes de esta corrección, un cierre tipo Banco no restaba el monto de la Caja de la filial — esto dejaba el dinero contado dos veces (en Caja y en Banco). Este botón revisa todos los cierres bancarios registrados desde abril 2026 y agrega, solo a los que les falte, la transferencia Caja→Banco que corresponde. Es seguro ejecutarlo varias veces: los que ya están corregidos se omiten automáticamente.
+          </p>
+          <button class="btn btn-d" onclick="repararCierresBancariosAntiguos(this)">🛠️ Reparar Cierres Bancarios Antiguos (desde Abril 2026)</button>
+        </div>
         <div id="cf-panel"></div>
       </div>
 
@@ -3371,6 +3378,8 @@ function cfSetTipo(tipo){
 }
 
 function renderCierreFiliales(){
+  var repCard=document.getElementById('cf-reparar-card');
+  if(repCard)repCard.style.display=(CU&&CU.niv<=2)?'':'none';
   var mes=parseInt(document.getElementById('cf-mes').value);
   var anio=parseInt(document.getElementById('cf-anio').value);
   if(!anio){toast('Seleccione el año','err');return;}
@@ -3516,6 +3525,11 @@ async function savCierreDeposito(){
         DB.movimientos=(DB.movimientos||[]).filter(function(m){return m.id!==cierreViejo.movId;});
         await fbDelete('movimientos',cierreViejo.movId);
       }
+      // Eliminar egreso de caja anterior (por depósito a banco) si existía
+      if(cierreViejo.egId){
+        DB.movimientos=(DB.movimientos||[]).filter(function(m){return m.id!==cierreViejo.egId;});
+        await fbDelete('movimientos',cierreViejo.egId);
+      }
       // Eliminar el cierre viejo del array
       DB.cierres=(DB.cierres||[]).filter(function(c){return c.id!==editId;});
       await fbDelete('cierres',editId);
@@ -3558,11 +3572,47 @@ async function savCierreDeposito(){
     DB.banco.push(bancMov);
     cierreObj.codOp=codOp;cierreObj.bancoNom=bancoNom;cierreObj.bancId=bancId;
 
-    // PASO 2: guardar el cierre. Si esto falla, DESHACER el depósito del paso 1
+    // Si la filial NO está en retención, hay que restar este monto de su Caja
+    // (el dinero ya salió de efectivo y entró al banco), para que no quede duplicado
+    // en "Total General Real" (Caja + Retención + Banco). Se usa el mismo tipo de
+    // movimiento que "Transferencia Caja → Banco" para que aparezca correctamente
+    // en el Libro Caja, y no como un "gasto" (evita ensuciar el informe de gastos).
+    var filialObj=DB.filiales.find(function(f){return f.id===filId;});
+    var ymCierre=anio+'-'+String(mes).padStart(2,'0');
+    var esRetenida=!!(filialObj&&filialObj.retencion&&filialObj.retencion.activa&&(filialObj.retencion.fecha||'9999-12-31').substring(0,7)<=ymCierre);
+
+    if(!esRetenida){
+      var egId='M'+Date.now()+'E';
+      var egMov={
+        id:egId,tipo:'transferencia',subtipo:'salida_caja_banco',
+        fec:fecha,mon:monto,moneda:'PEN',
+        cat:'Transferencia',met:'transferencia',fil:filId,
+        desc:'Transferencia Caja → Banco — cierre '+MESES[mes-1]+' '+anio+(obs?' — '+obs:''),
+        comp:codOp,obs:obs,origen:'cierre_filial_deposito',
+        regBy:CU?CU.nom:'Sistema',regAt:new Date().toISOString(),ts:Date.now()
+      };
+      var okEgreso=await fbSave('movimientos',egId,egMov);
+      if(!okEgreso){
+        // Revertir el depósito ya guardado, para no dejar Caja y Banco descuadrados
+        DB.banco=(DB.banco||[]).filter(function(b){return b.id!==bancId;});
+        await fbDelete('banco',bancId);
+        toast('❌ El depósito se guardó pero no se pudo registrar la salida de Caja — se revirtió todo. Inténtalo de nuevo.','err');
+        return;
+      }
+      if(!DB.movimientos)DB.movimientos=[];
+      DB.movimientos.push(egMov);
+      cierreObj.egId=egId;
+    }
+
+    // PASO 2: guardar el cierre. Si esto falla, DESHACER el depósito y el egreso del paso 1
     var okCierre=await fbSave('cierres',cierreObj.id,cierreObj);
     if(!okCierre){
       DB.banco=(DB.banco||[]).filter(function(b){return b.id!==bancId;});
       await fbDelete('banco',bancId);
+      if(cierreObj.egId){
+        DB.movimientos=(DB.movimientos||[]).filter(function(m){return m.id!==cierreObj.egId;});
+        await fbDelete('movimientos',cierreObj.egId);
+      }
       toast('❌ El depósito se guardó pero el registro de cierre falló — se revirtió automáticamente para no dejar nada a medias. Inténtalo de nuevo.','err');
       return;
     }
@@ -3611,6 +3661,72 @@ async function savCierreDeposito(){
     if(btnConfirm){btnConfirm.disabled=false;btnConfirm.textContent=tipoEntrega==='banco'?'🏦 Confirmar Depósito':'💵 Confirmar Recepción en Efectivo';}
   }
 }
+
+async function repararCierresBancariosAntiguos(btn){
+  if(!CU||CU.niv>2){toast('Sin acceso','err');return;}
+  if(!(DB.cierres&&DB.cierres.length)){toast('No hay cierres registrados','err');return;}
+
+  var candidatos=(DB.cierres||[]).filter(function(c){
+    if(c.tipoEntrega!=='banco')return false;
+    if(c.egId)return false; // ya reparado antes
+    var esDesdeAbril=(c.anio>2026)||(c.anio===2026&&c.mes>=4);
+    if(!esDesdeAbril)return false;
+    var filialObj=DB.filiales.find(function(f){return f.id===c.filId;});
+    if(!filialObj)return false; // filial no encontrada, se omite por seguridad
+    var ymCierre=c.anio+'-'+String(c.mes).padStart(2,'0');
+    var esRetenida=!!(filialObj.retencion&&filialObj.retencion.activa&&(filialObj.retencion.fecha||'9999-12-31').substring(0,7)<=ymCierre);
+    if(esRetenida)return false; // política: retenidas nunca se envían a banco
+    return true;
+  });
+
+  if(!candidatos.length){toast('No hay cierres bancarios pendientes de reparar','ok');return;}
+
+  if(!confirm('Se van a corregir '+candidatos.length+' cierre(s) bancario(s) desde abril 2026, agregando la transferencia Caja→Banco que les falta.\n\nEsto va a bajar el "Saldo en Caja" de las filiales afectadas por el monto correspondiente (el dinero ya se había depositado, así que sale de Caja).\n\n¿Confirmas que quieres continuar?'))return;
+
+  var btn2=btn;
+  if(btn2){btn2.disabled=true;btn2.textContent='Reparando...';}
+
+  var reparados=0,errores=0;
+  for(var i=0;i<candidatos.length;i++){
+    var c=candidatos[i];
+    var egId='M'+Date.now()+'E'+i;
+    var egMov={
+      id:egId,tipo:'transferencia',subtipo:'salida_caja_banco',
+      fec:c.fecha,mon:c.monto,moneda:'PEN',
+      cat:'Transferencia',met:'transferencia',fil:c.filId,
+      desc:'Transferencia Caja → Banco — cierre '+MESES[c.mes-1]+' '+c.anio+' (reparación retroactiva)'+(c.obs?' — '+c.obs:''),
+      comp:c.codOp||'',obs:c.obs||'',origen:'cierre_filial_deposito',
+      regBy:CU?CU.nom:'Sistema',regAt:new Date().toISOString(),ts:Date.now()
+    };
+    var okEg=await fbSave('movimientos',egId,egMov);
+    if(!okEg){errores++;continue;}
+
+    var cActualizado=Object.assign({},c,{egId:egId});
+    var okC=await fbSave('cierres',c.id,cActualizado);
+    if(!okC){
+      // revertir el movimiento si no se pudo vincular al cierre
+      await fbDelete('movimientos',egId);
+      errores++;
+      continue;
+    }
+
+    if(!DB.movimientos)DB.movimientos=[];
+    DB.movimientos.push(egMov);
+    var idx=DB.cierres.findIndex(function(x){return x.id===c.id;});
+    if(idx>-1)DB.cierres[idx]=cActualizado;
+    reparados++;
+  }
+
+  sd();
+  if(btn2){btn2.disabled=false;btn2.textContent='🛠️ Reparar Cierres Bancarios Antiguos (desde Abril 2026)';}
+  renderCierreFiliales();
+  if(errores===0){
+    toast('✅ Se repararon '+reparados+' cierre(s) correctamente.');
+  } else {
+    toast('⚠️ Se repararon '+reparados+' cierre(s), pero '+errores+' fallaron. Vuelve a intentarlo para esos.','err');
+  }
+}
+
 
 document.addEventListener('change',function(e){
   if(e.target&&e.target.id==='cf-comp-file'){
@@ -5896,7 +6012,7 @@ function canEditTransferencia(){
 function renderTrfRecent(){
   var tbody=document.getElementById('trf-recent-body');
   if(!tbody)return;
-  var trfs=(DB.movimientos||[]).filter(function(m){return m.tipo==='transferencia';})
+  var trfs=(DB.movimientos||[]).filter(function(m){return m.tipo==='transferencia'&&m.origen!=='cierre_filial_deposito';})
     .sort(function(a,b){return b.fec.localeCompare(a.fec)||((b.ts||0)-(a.ts||0));}).slice(0,20);
   if(!trfs.length){tbody.innerHTML='<tr><td colspan="6" style="text-align:center;padding:16px;color:rgba(247,243,233,.3)">Sin transferencias registradas</td></tr>';return;}
   var puedeEditar=canEditTransferencia();
