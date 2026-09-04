@@ -1001,6 +1001,14 @@ body.contador-mode .modal-ft .btn-d {
           <div class="alert alert-info" style="margin-bottom:12px;max-width:540px">
             💡 Para ver el historial e informe de transferencias, usa <strong>Informe Transferencias</strong> en el menú lateral.
           </div>
+          <div class="card" id="trf-verificar-card" style="margin-bottom:12px;max-width:540px;display:none;border-color:rgba(201,168,76,.3);background:rgba(201,168,76,.06)">
+            <div class="card-title" style="color:var(--gold-light)">🔍 Verificar Transferencias (solo lectura)</div>
+            <p style="font-size:12px;color:rgba(247,243,233,.6);margin:0 0 10px 0">
+              Revisa si alguna transferencia quedó a medias — por ejemplo, el depósito guardado en Banco pero sin el movimiento que resta de Caja (o viceversa). No modifica nada, solo muestra el resultado.
+            </p>
+            <button class="btn btn-s" onclick="verificarTransferencias()">🔍 Verificar Transferencias</button>
+            <div id="trf-verificar-resultado" style="margin-top:10px;font-size:12px"></div>
+          </div>
           <div class="card" style="margin-top:6px">
             <div class="card-title">Últimas Transferencias</div>
             <div class="tw" style="overflow-x:auto"><table style="min-width:680px"><thead><tr>
@@ -1764,6 +1772,8 @@ function sm(n){
     if(canDoTransferencia()){
       updTrfSaldos();
       renderTrfRecent();
+      var trfVerCard=document.getElementById('trf-verificar-card');
+      if(trfVerCard)trfVerCard.style.display=(CU&&CU.niv<=2)?'':'none';
     } else {toast('Sin acceso','err');sm('dashboard');}
   }
   else if(n==='rpt-transferencias'){
@@ -6011,6 +6021,53 @@ function startRealtimeSync(){
 function canEditTransferencia(){
   if(!CU)return false;
   return CU.niv<=2||CU.rol==='auxiliar_central';
+}
+
+function verificarTransferencias(){
+  var resDiv=document.getElementById('trf-verificar-resultado');
+  if(!resDiv)return;
+  resDiv.innerHTML='Revisando...';
+
+  // Depósitos/retiros de Banco generados por el módulo de Transferencias manuales
+  var bancoTrf=(DB.banco||[]).filter(function(b){return b.origen==='transferencia_caja_banco'&&b.trfId;});
+  // Movimientos de tipo transferencia generados por ese mismo módulo (tienen trfId)
+  var movTrf=(DB.movimientos||[]).filter(function(m){return m.tipo==='transferencia'&&m.trfId;});
+
+  var movTrfIds={};
+  movTrf.forEach(function(m){movTrfIds[m.trfId]=m;});
+  var bancoTrfIds={};
+  bancoTrf.forEach(function(b){bancoTrfIds[b.trfId]=b;});
+
+  // Caso A: el depósito/retiro está en Banco pero falta el movimiento que ajusta Caja
+  var faltaMovimiento=bancoTrf.filter(function(b){return !movTrfIds[b.trfId];});
+  // Caso B: existe el movimiento que ajusta Caja pero falta su contraparte en Banco
+  var faltaBanco=movTrf.filter(function(m){return !bancoTrfIds[m.trfId];});
+
+  if(!faltaMovimiento.length&&!faltaBanco.length){
+    resDiv.innerHTML='<div style="color:#2ECC71;font-weight:bold">✅ Todo correcto — '+bancoTrf.length+' transferencia(s) revisada(s), ninguna quedó a medias.</div>';
+    return;
+  }
+
+  var html='';
+  if(faltaMovimiento.length){
+    html+='<div style="color:#E74C3C;font-weight:bold;margin-bottom:6px">⚠️ '+faltaMovimiento.length+' transferencia(s) con depósito/retiro en Banco, pero SIN el movimiento que ajusta la Caja (la Caja quedó inflada o desinflada por este monto):</div>';
+    html+='<ul style="margin:0 0 10px 18px;padding:0">';
+    faltaMovimiento.forEach(function(b){
+      var dir=b.tipo==='deposito'?'Caja → Banco':'Banco → Caja';
+      html+='<li>'+fd2(b.fec)+' — '+dir+' — S/. '+Number(b.mon).toFixed(2)+' — trfId: '+b.trfId+' — Ref: '+(b.comp||'—')+'</li>';
+    });
+    html+='</ul>';
+  }
+  if(faltaBanco.length){
+    html+='<div style="color:#F39C12;font-weight:bold;margin-bottom:6px">⚠️ '+faltaBanco.length+' transferencia(s) con movimiento que ajusta Caja, pero SIN su dep\u00f3sito/retiro en Banco:</div>';
+    html+='<ul style="margin:0 0 0 18px;padding:0">';
+    faltaBanco.forEach(function(m){
+      var dir=m.subtipo==='salida_caja_banco'?'Caja → Banco':'Banco → Caja';
+      html+='<li>'+fd2(m.fec)+' — '+dir+' — S/. '+Number(m.mon).toFixed(2)+' — trfId: '+m.trfId+' — Ref: '+(m.comp||'—')+'</li>';
+    });
+    html+='</ul>';
+  }
+  resDiv.innerHTML=html;
 }
 
 function renderTrfRecent(){
