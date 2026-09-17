@@ -4088,10 +4088,11 @@ function genCaja(){
     return a+(esSalida?-Number(m.mon):Number(m.mon));
   },0);
 
-  // Saldo en caja efectivo = saldo anterior + efectivo del mes + impacto transferencias
+  // Saldo en caja efectivo = saldo anterior + efectivo del mes (las transferencias del mes
+  // se muestran abajo solo como informativo — NO afectan este saldo; sí afectan Dashboard y Resumen Ejecutivo)
   var saldoEfectivo=(esDepartamento||esSedeCentral||esFilialRetenida)
-    ?(saldoAnterior+tiEfectivo-teEfectivo+trfsMesImpactoCaja)
-    :(tiEfectivo-teEfectivo+trfsMesImpactoCaja);
+    ?(saldoAnterior+tiEfectivo-teEfectivo)
+    :(tiEfectivo-teEfectivo);
   // Balance total del mes (bruto)
   var saldo=saldoEfectivo;
   var tiUSD=movs.filter(function(m){return m.tipo==='ingreso'&&m.moneda==='USD';}).reduce(function(a,m){return a+Number(m.mon);},0);
