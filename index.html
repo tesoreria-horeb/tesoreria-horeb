@@ -999,15 +999,7 @@ body.contador-mode .modal-ft .btn-d {
             </button>
           </div>
           <div class="alert alert-info" style="margin-bottom:12px;max-width:540px">
-            💡 Para ver el historial e informe de transferencias, usa <strong>Informe Transferencias</strong> en el menú lateral.
-          </div>
-          <div class="card" id="trf-verificar-card" style="margin-bottom:12px;max-width:540px;display:none;border-color:rgba(201,168,76,.3);background:rgba(201,168,76,.06)">
-            <div class="card-title" style="color:var(--gold-light)">🔍 Verificar Transferencias (solo lectura)</div>
-            <p style="font-size:12px;color:rgba(247,243,233,.6);margin:0 0 10px 0">
-              Revisa si alguna transferencia quedó a medias — por ejemplo, el depósito guardado en Banco pero sin el movimiento que resta de Caja (o viceversa). No modifica nada, solo muestra el resultado.
-            </p>
-            <button class="btn btn-s" onclick="verificarTransferencias()">🔍 Verificar Transferencias</button>
-            <div id="trf-verificar-resultado" style="margin-top:10px;font-size:12px"></div>
+            💡 Para ver el historial e informe de transferencias, usa <strong>Informe Transferencias</strong> en el menú lateral. Para verificar que ninguna transferencia haya quedado a medias, usa <strong>Diagnóstico del Sistema</strong> en Registro de Auditoría.
           </div>
           <div class="card" style="margin-top:6px">
             <div class="card-title">Últimas Transferencias</div>
@@ -1027,6 +1019,27 @@ body.contador-mode .modal-ft .btn-d {
 
       <!-- AUDITORIA -->
       <div class="mod" id="mod-auditoria">
+        <div class="card" id="diag-card" style="margin-bottom:14px;border-color:rgba(201,168,76,.3);background:rgba(201,168,76,.06)">
+          <div class="card-title" style="color:var(--gold-light)">🩺 Diagnóstico del Sistema <span style="font-size:11px;color:rgba(247,243,233,.4);font-family:'Lato',sans-serif;font-weight:400">(Solo lectura — verifica, no modifica nada)</span></div>
+          <p style="font-size:12px;color:rgba(247,243,233,.6);margin:0 0 12px 0">
+            Estas verificaciones revisan si hay dinero mal contado por registros incompletos o desconectados entre sí. No cambian ningún dato — solo muestran el resultado.
+          </p>
+
+          <div style="margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid rgba(247,243,233,.1)">
+            <div style="font-weight:bold;margin-bottom:6px">🔍 Transferencias Caja ↔ Banco</div>
+            <p style="font-size:12px;color:rgba(247,243,233,.6);margin:0 0 8px 0">Revisa si alguna transferencia manual quedó a medias (depósito en Banco sin su movimiento en Caja, o viceversa).</p>
+            <button class="btn btn-s" onclick="verificarTransferencias()">Verificar Transferencias</button>
+            <div id="trf-verificar-resultado" style="margin-top:10px;font-size:12px"></div>
+          </div>
+
+          <div>
+            <div style="font-weight:bold;margin-bottom:6px">🏦 Depósitos Bancarios Huérfanos</div>
+            <p style="font-size:12px;color:rgba(247,243,233,.6);margin:0 0 8px 0">Revisa si algún movimiento vinculado a un depósito bancario fue editado (quitándole la marca "Es Banco") sin borrar el depósito correspondiente — lo que dejaría ese dinero contado dos veces.</p>
+            <button class="btn btn-s" onclick="verificarBancoHuerfano()">Verificar Depósitos Huérfanos</button>
+            <div id="banco-huerfano-resultado" style="margin-top:10px;font-size:12px"></div>
+          </div>
+        </div>
+
         <div class="tb">
           <input class="sb" id="aud-s" placeholder="🔍 Buscar acción, usuario..." oninput="renderAuditoria()">
           <input type="date" class="fs" id="aud-fa" onchange="renderAuditoria()" title="Filtrar por fecha">
@@ -1772,8 +1785,6 @@ function sm(n){
     if(canDoTransferencia()){
       updTrfSaldos();
       renderTrfRecent();
-      var trfVerCard=document.getElementById('trf-verificar-card');
-      if(trfVerCard)trfVerCard.style.display=(CU&&CU.niv<=2)?'':'none';
     } else {toast('Sin acceso','err');sm('dashboard');}
   }
   else if(n==='rpt-transferencias'){
@@ -6001,6 +6012,39 @@ function startRealtimeSync(){
 function canEditTransferencia(){
   if(!CU)return false;
   return CU.niv<=2||CU.rol==='auxiliar_central';
+}
+
+function verificarBancoHuerfano(){
+  var resDiv=document.getElementById('banco-huerfano-resultado');
+  if(!resDiv)return;
+  resDiv.innerHTML='Revisando...';
+
+  // Depósitos/retiros vinculados a un movimiento (creados desde "Nuevo Movimiento" con "Es Banco")
+  var bancoVinculados=(DB.banco||[]).filter(function(b){return b.movId;});
+
+  var huerfanos=[];
+  bancoVinculados.forEach(function(b){
+    var mov=(DB.movimientos||[]).find(function(m){return m.id===b.movId;});
+    if(!mov){
+      huerfanos.push({b:b,motivo:'El movimiento vinculado ya no existe (fue eliminado sin borrar el depósito)'});
+    } else if(!mov.esBancario){
+      huerfanos.push({b:b,motivo:'El movimiento vinculado ya no está marcado "Es Banco" (fue editado y desmarcado)'});
+    }
+  });
+
+  if(!huerfanos.length){
+    resDiv.innerHTML='<div style="color:#2ECC71;font-weight:bold">✅ Todo correcto — '+bancoVinculados.length+' depósito(s) vinculado(s) revisado(s), ninguno quedó huérfano.</div>';
+    return;
+  }
+
+  var html='<div style="color:#E74C3C;font-weight:bold;margin-bottom:6px">⚠️ '+huerfanos.length+' depósito(s) bancario(s) huérfano(s) — este dinero puede estar contado dos veces (en Caja y en Banco):</div>';
+  html+='<ul style="margin:0 0 0 18px;padding:0">';
+  huerfanos.forEach(function(h){
+    var b=h.b;
+    html+='<li>'+fd2(b.fec)+' — '+gfn(b.fil)+' — S/. '+Number(b.mon).toFixed(2)+' — '+(b.desc||'')+' — <em>'+h.motivo+'</em></li>';
+  });
+  html+='</ul>';
+  resDiv.innerHTML=html;
 }
 
 function verificarTransferencias(){
