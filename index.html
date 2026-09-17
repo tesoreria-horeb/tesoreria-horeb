@@ -6019,8 +6019,13 @@ function verificarBancoHuerfano(){
   if(!resDiv)return;
   resDiv.innerHTML='Revisando...';
 
-  // Depósitos/retiros vinculados a un movimiento (creados desde "Nuevo Movimiento" con "Es Banco")
-  var bancoVinculados=(DB.banco||[]).filter(function(b){return b.movId;});
+  // Depósitos/retiros vinculados a un movimiento de "Nuevo Movimiento" (Es Banco).
+  // Se excluyen los generados por Transferencias Caja↔Banco (origen: transferencia_caja_banco,
+  // con su propio trfId) y por cierres de filial (origen: cierre_filial / cierre_filial_deposito) —
+  // esos ya se verifican por separado y no usan el campo esBancario para su lógica.
+  var bancoVinculados=(DB.banco||[]).filter(function(b){
+    return b.movId&&b.origen!=='transferencia_caja_banco'&&b.origen!=='cierre_filial'&&b.origen!=='culqui_pos';
+  });
 
   var huerfanos=[];
   bancoVinculados.forEach(function(b){
