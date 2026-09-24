@@ -4257,7 +4257,7 @@ function genCaja(){
   // Totals section — Soles
   html+='<table style="width:100%;border-collapse:collapse;border-top:2px solid #333">';
   html+='<tr>';
-  html+='<td style="padding:6px 8px;font-size:11px;font-style:italic;width:55%" rowspan="'+((esDepartamento||esSedeCentral)?'4':'3')+'">Valores en Moneda Nacional - Soles Peruano.<br><br>FECHA _______/_______/________</td>';
+  html+='<td style="padding:6px 8px;font-size:11px;font-style:italic;width:55%" rowspan="'+((esDepartamento||esSedeCentral)?'5':'3')+'">Valores en Moneda Nacional - Soles Peruano.<br><br>FECHA _______/_______/________</td>';
   if(esDepartamento||esSedeCentral){
     html+='<td style="border:1px solid #333;padding:5px 8px;font-size:12px;font-weight:bold">Saldo Anterior</td>';
     html+='<td style="border:1px solid #333;padding:5px 8px;font-size:11px;text-align:right;'+(saldoAnterior<0?'color:red;':'')+'">S/. '+saldoAnterior.toFixed(2)+'</td>';
@@ -4274,6 +4274,14 @@ function genCaja(){
   html+='<td style="border:1px solid #333;padding:5px;background:#000">&nbsp;</td>';
   html+='<td style="border:2px solid #333;padding:5px 8px;font-size:11px;text-align:right">S/. '+te.toFixed(2)+(teBancario>0?'<br><span style=\"font-size:9px;color:#5DADE2\">Bancario: S/. '+teBancario.toFixed(2)+'</span>':'')+'</td>';
   html+='</tr>';
+  if(esDepartamento||esSedeCentral){
+    var balanceMes=tiEfectivo-teEfectivo;
+    html+='<tr>';
+    html+='<td style="border:1px solid #333;padding:5px 8px;font-size:12px;font-weight:bold">Balance del Mes</td>';
+    html+='<td style="border:1px solid #333;padding:5px 8px;font-size:11px;text-align:right;'+(balanceMes<0?'color:red;':'')+'">'+(balanceMes>=0?'+':'')+'S/. '+balanceMes.toFixed(2)+'</td>';
+    html+='<td style="border:2px solid #333;padding:5px;background:#000">&nbsp;</td>';
+    html+='</tr>';
+  }
   html+='<tr>';
   html+='<td style="border:1px solid #333;padding:5px 8px;font-size:12px;font-weight:bold">Saldo en Caja Efectivo</td>';
   html+='<td style="border:1px solid #333;padding:5px 8px;font-size:11px;text-align:right;font-weight:bold;'+(saldoEfectivo<0?'color:red;':'')+'">S/. '+saldoEfectivo.toFixed(2)+'</td>';
