@@ -1832,6 +1832,57 @@ function sm(n){
 // ===================== HELPERS =====================
 var movPg=1;
 function gAccMov(){if(!CU)return[];var all=(CU.niv<=2||CU.niv===5||CU.fil==='all')?DB.movimientos:DB.movimientos.filter(m=>m.fil===CU.fil);return all.filter(function(m){return !m.stanby;});}
+
+// ===== FÓRMULA ÚNICA: Saldo en Caja Efectivo consolidado (Filiales + Sede Central) =====
+// Usada por el Dashboard, el Resumen Ejecutivo y el Libro Caja (Sede Central) — los tres
+// deben dar SIEMPRE el mismo número para el mismo mes, porque llaman a esta misma función.
+// Calcula el saldo AL CIERRE del mes/año dado (inclusive). Excluye filiales en retención
+// activa a esa fecha, departamentos, movimientos bancarios, transferencias (que se suman
+// aparte con su propio impacto) y entradas POS pendientes.
+function calcSaldoCajaConsolidado(anioLimite,mesLimite){
+  var ymLimite=anioLimite+'-'+String(mesLimite).padStart(2,'0');
+
+  var filIdsConsol=DB.filiales.filter(function(f){
+    if((f.tipo||'filial')==='departamento')return false;
+    var esRet=!!(f.retencion&&f.retencion.activa&&(f.retencion.fecha||'9999-12-31').substring(0,7)<=ymLimite);
+    return !esRet;
+  }).map(function(f){return f.id;});
+  if(filIdsConsol.indexOf('F001')<0)filIdsConsol.push('F001');
+
+  var siFiliales=Number((DB.saldos_iniciales||{}).filiales)||0;
+
+  var movsHasta=gAccMov().filter(function(m){
+    if(filIdsConsol.indexOf(m.fil)<0)return false;
+    if((m.moneda||'PEN')!=='PEN')return false;
+    if(m.origen==='cierre_filial_efectivo')return false;
+    if(m.tipo==='transferencia')return false;
+    if(m.esPOS&&m.tipo==='ingreso')return false;
+    var y=parseInt(m.fec.split('-')[0]),mo=parseInt(m.fec.split('-')[1]);
+    return (y<anioLimite)||(y===anioLimite&&mo<=mesLimite);
+  });
+  var ingHasta=movsHasta.filter(function(m){return m.tipo==='ingreso'&&esEfectivo(m)&&!m.esBancario;}).reduce(function(a,m){return a+Number(m.mon);},0);
+  var egHasta=movsHasta.filter(function(m){return m.tipo==='egreso'&&esEfectivo(m)&&!m.esBancario;}).reduce(function(a,m){return a+Number(m.mon);},0);
+
+  var trfsHasta=gAccMov().filter(function(m){
+    if(filIdsConsol.indexOf(m.fil)<0)return false;
+    if(m.tipo!=='transferencia'||(m.moneda||'PEN')!=='PEN')return false;
+    var y=parseInt(m.fec.split('-')[0]),mo=parseInt(m.fec.split('-')[1]);
+    return (y<anioLimite)||(y===anioLimite&&mo<=mesLimite);
+  });
+  var trfsImpactoHasta=trfsHasta.reduce(function(a,m){
+    var esSalida=m.subtipo==='salida_caja_banco'||(m.desc&&m.desc.indexOf('Caja → Banco')>-1);
+    return a+(esSalida?-Number(m.mon):Number(m.mon));
+  },0);
+
+  return siFiliales+ingHasta-egHasta+trfsImpactoHasta;
+}
+
+// "Saldo Anterior" de un mes = saldo consolidado al cierre del mes previo
+function calcSaldoAnteriorConsolidado(anio,mes){
+  var pm=mes-1,pa=anio;
+  if(pm===0){pm=12;pa=anio-1;}
+  return calcSaldoCajaConsolidado(pa,pm);
+}
 function gAccFil(){if(!CU)return[];return (CU.niv<=2||CU.niv===5||CU.fil==='all')?DB.filiales:DB.filiales.filter(f=>f.id===CU.fil);}
 function gAccMiem(){if(!CU)return[];return (CU.niv<=2||CU.niv===5||CU.fil==='all')?DB.miembros:DB.miembros.filter(m=>m.fil===CU.fil);}
 function fmt(n){return'S/. '+Number(n||0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',');}
@@ -2193,25 +2244,14 @@ function renderDash(){
   var allMovsDept=gAccMov().filter(function(m){var f=DB.filiales.find(function(x){return x.id===m.fil;});return f&&f.tipo==='departamento';});
   var allMovsMyFil=myFil?gAccMov().filter(function(m){return m.fil===myFil;}):allMovsFil;
 
-  var prevMovsFil=allMovsFil.filter(function(m){
-    if(m.fec.substring(0,7)>=selectedYM)return false;
-    if((m.moneda||'PEN')!=='PEN')return false;
-    if(m.origen==='cierre_filial_efectivo')return false;
-    if(m.tipo==='transferencia')return false;
-    if(m.esPOS&&m.tipo==='ingreso')return false;
-    return true;
-  });
-  // Saldo anterior efectivo = saldo acumulado de todas las filiales consolidadas
-  var prevSaldoTotalFil=siFiliales
-    +prevMovsFil.filter(function(m){return m.tipo==='ingreso'&&esEfectivo(m);}).reduce(function(a,m){return a+Number(m.mon);},0)
-    -prevMovsFil.filter(function(m){return m.tipo==='egreso'&&esEfectivo(m);}).reduce(function(a,m){return a+Number(m.mon);},0);
   var prevYM='';
   var prevMes=curM-1;var prevAnio=curY;
   if(prevMes===0){prevMes=12;prevAnio=curY-1;}
   prevYM=prevAnio+'-'+String(prevMes).padStart(2,'0');
   var prevBanco=(DB.banco||[]).filter(function(m){return m.fec.substring(0,7)===prevYM;})
     .reduce(function(s,m){return s+(m.tipo==='deposito'?Number(m.mon):-Number(m.mon));},0);
-  var saldoAntFil=prevSaldoTotalFil;
+  // Saldo Anterior consolidado — misma fórmula que usan el Resumen Ejecutivo y el Libro Caja
+  var saldoAntFilConTrf=calcSaldoAnteriorConsolidado(curY,curM);
   // Transferencias del mes actual (afectan saldo caja pero no aparecen en ing/eg)
   var trfsMes=allMovsFil.filter(function(m){
     return m.tipo==='transferencia'&&m.fec.substring(0,7)===selectedYM&&(m.moneda||'PEN')==='PEN';
@@ -2219,14 +2259,6 @@ function renderDash(){
   var trfsMesImpacto=trfsMes.reduce(function(a,m){
     return a+(m.subtipo==='entrada_banco_caja'?Number(m.mon):-Number(m.mon));
   },0);
-  // Transferencias de meses anteriores (para el saldo anterior)
-  var trfsPrev=allMovsFil.filter(function(m){
-    return m.tipo==='transferencia'&&m.fec.substring(0,7)<selectedYM&&(m.moneda||'PEN')==='PEN';
-  });
-  var trfsPrevImpacto=trfsPrev.reduce(function(a,m){
-    return a+(m.subtipo==='entrada_banco_caja'?Number(m.mon):-Number(m.mon));
-  },0);
-  var saldoAntFilConTrf=saldoAntFil+trfsPrevImpacto;
   var saldoTotalFil=saldoAntFilConTrf+(ing-eg)+trfsMesImpacto;
   var saldoCajaFil=saldoTotalFil;
 
@@ -4142,45 +4174,29 @@ function genCaja(){
   }
 
   if(esSedeCentral){
-    // Saldo inicial global de todas las filiales
-    var siFilPEN=Number((DB.saldos_iniciales||{}).filiales)||0;
+    // Saldo inicial global de todas las filiales (solo para USD, que queda fuera de la fórmula única)
     var siFilUSD=Number((DB.saldos_iniciales||{}).filialesUSD)||0;
 
-    // Movimientos de TODAS las filiales consolidadas (no departamentos, no en retención) anteriores al mes
-    var ymSaldoAnt=anio+'-'+String(mes).padStart(2,'0');
-    var todasFilIds=DB.filiales.filter(function(f){
+    // Saldo Anterior en Soles — misma fórmula que usan el Dashboard y el Resumen Ejecutivo
+    saldoAnterior=calcSaldoAnteriorConsolidado(anio,mes);
+
+    // USD: se mantiene aparte (fuera del alcance de la fórmula única, de uso poco frecuente)
+    var ymSaldoAntUSD=anio+'-'+String(mes).padStart(2,'0');
+    var todasFilIdsUSD=DB.filiales.filter(function(f){
       if((f.tipo||'filial')==='departamento')return false;
-      var esRetSA=!!(f.retencion&&f.retencion.activa&&(f.retencion.fecha||'9999-12-31').substring(0,7)<=ymSaldoAnt);
-      return !esRetSA;
+      var esRetSAU=!!(f.retencion&&f.retencion.activa&&(f.retencion.fecha||'9999-12-31').substring(0,7)<=ymSaldoAntUSD);
+      return !esRetSAU;
     }).map(function(f){return f.id;});
-    var movsPrevSede=gAccMov().filter(function(m){
-      if(todasFilIds.indexOf(m.fil)<0)return false;
+    var movsPrevSedeUSD=gAccMov().filter(function(m){
+      if(todasFilIdsUSD.indexOf(m.fil)<0)return false;
       if(m.origen==='cierre_filial_efectivo'||m.tipo==='transferencia')return false;
       var y=parseInt(m.fec.split('-')[0]);
       var mo=parseInt(m.fec.split('-')[1]);
       return (y<anio)||(y===anio&&mo<mes);
     });
-
-    var ingPrevSede=movsPrevSede.filter(function(m){return m.tipo==='ingreso'&&(m.moneda||'PEN')==='PEN'&&esEfectivo(m);}).reduce(function(a,m){return a+Number(m.mon);},0);
-    var egPrevSede=movsPrevSede.filter(function(m){return m.tipo==='egreso'&&(m.moneda||'PEN')==='PEN'&&esEfectivo(m);}).reduce(function(a,m){return a+Number(m.mon);},0);
-    var ingPrevSedeUSD=movsPrevSede.filter(function(m){return m.tipo==='ingreso'&&m.moneda==='USD';}).reduce(function(a,m){return a+Number(m.mon);},0);
-    var egPrevSedeUSD=movsPrevSede.filter(function(m){return m.tipo==='egreso'&&m.moneda==='USD';}).reduce(function(a,m){return a+Number(m.mon);},0);
-
-    saldoAnterior=siFilPEN+ingPrevSede-egPrevSede;
+    var ingPrevSedeUSD=movsPrevSedeUSD.filter(function(m){return m.tipo==='ingreso'&&m.moneda==='USD';}).reduce(function(a,m){return a+Number(m.mon);},0);
+    var egPrevSedeUSD=movsPrevSedeUSD.filter(function(m){return m.tipo==='egreso'&&m.moneda==='USD';}).reduce(function(a,m){return a+Number(m.mon);},0);
     saldoAnteriorUSD=siFilUSD+ingPrevSedeUSD-egPrevSedeUSD;
-
-    // Incluir impacto de transferencias anteriores al mes en el saldo anterior
-    var trfsPrevSede=gAccMov().filter(function(m){
-      if(todasFilIds.indexOf(m.fil)<0)return false;
-      if(m.tipo!=='transferencia')return false;
-      var y=parseInt(m.fec.split('-')[0]);
-      var mo=parseInt(m.fec.split('-')[1]);
-      return (y<anio)||(y===anio&&mo<mes);
-    });
-    trfsPrevSede.forEach(function(m){
-      var esSalida=m.subtipo==='salida_caja_banco'||(m.desc&&m.desc.indexOf('Caja → Banco')>-1);
-      saldoAnterior+=(esSalida?-Number(m.mon):Number(m.mon));
-    });
   }
 
   // Saldo anterior para filiales en retención
@@ -7160,31 +7176,8 @@ function genEjecutivo(){
 
   // Saldo anterior — incluir filiales retenidas para meses anteriores a su retención
   var siFiliales=Number((DB.saldos_iniciales||{}).filiales)||0;
-  var todosPrevios=allMovs.filter(function(m){
-    var y=parseInt(m.fec.split('-')[0]),mo=parseInt(m.fec.split('-')[1]);
-    var esConsolidada=m.fil==='sede'||m.fil==='F001'||filialesConsolidadas.some(function(f){return f.id===m.fil;});
-    var esRetAntes=false;
-    if(retIdsEjSet.has(m.fil)){
-      var filRet=filialesRetEj.find(function(f){return f.id===m.fil;});
-      var fechaRet=filRet&&filRet.retencion?filRet.retencion.fecha||'9999-12-31':'9999-12-31';
-      esRetAntes=m.fec<fechaRet;
-    }
-    return (esConsolidada||esRetAntes)&&(m.moneda||'PEN')==='PEN'&&!m.esBancario&&m.origen!=='cierre_filial_efectivo'&&m.tipo!=='transferencia'&&((y<anio)||(y===anio&&mo<mes));
-  });
-  var grandSA=siFiliales
-    +todosPrevios.filter(function(m){return m.tipo==='ingreso'&&esEfectivo(m);}).reduce(function(a,m){return a+Number(m.mon);},0)
-    -todosPrevios.filter(function(m){return m.tipo==='egreso'&&esEfectivo(m);}).reduce(function(a,m){return a+Number(m.mon);},0);
-
-  // Impacto de transferencias ANTERIORES al mes en el saldo anterior
-  var trfsPrevEj=allMovs.filter(function(m){
-    var y=parseInt(m.fec.split('-')[0]),mo=parseInt(m.fec.split('-')[1]);
-    var esFilial=m.fil==='sede'||m.fil==='F001'||filialesConsolidadas.some(function(f){return f.id===m.fil;});
-    return esFilial&&m.tipo==='transferencia'&&(m.moneda||'PEN')==='PEN'&&((y<anio)||(y===anio&&mo<mes));
-  });
-  var grandSAconTrf=grandSA+trfsPrevEj.reduce(function(a,m){
-    var esSalida=m.subtipo==='salida_caja_banco'||(m.desc&&m.desc.indexOf('Caja → Banco')>-1);
-    return a+(esSalida?-Number(m.mon):Number(m.mon));
-  },0);
+  // Saldo Anterior consolidado — misma fórmula que usan el Dashboard y el Libro Caja
+  var grandSAconTrf=calcSaldoAnteriorConsolidado(anio,mes);
 
   // Impacto de transferencias DEL MES en el saldo final de caja
   var trfsMesEj=allMovs.filter(function(m){
