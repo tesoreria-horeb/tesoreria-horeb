@@ -4181,7 +4181,7 @@ function genCaja(){
     var siSedeUSD=Number((DB.saldos_iniciales||{}).filialesUSD)||0; // sin campo propio en USD; se mantiene como estaba
 
     var movsPrevSede=gAccMov().filter(function(m){
-      if(m.fil!==filId)return false;
+      if(m.fil!==fil)return false;
       if(m.origen==='cierre_filial_efectivo')return false;
       var y=parseInt(m.fec.split('-')[0]);
       var mo=parseInt(m.fec.split('-')[1]);
