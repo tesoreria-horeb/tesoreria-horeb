@@ -4174,29 +4174,34 @@ function genCaja(){
   }
 
   if(esSedeCentral){
-    // Saldo inicial global de todas las filiales (solo para USD, que queda fuera de la fórmula única)
-    var siFilUSD=Number((DB.saldos_iniciales||{}).filialesUSD)||0;
+    // Sede Central es su propio libro, igual que cualquier filial/departamento —
+    // solo sus propios movimientos (fil==='F001'), sin mezclar el resto de filiales.
+    // El consolidado real (todas las filiales + Sede) sigue estando en Dashboard/Resumen Ejecutivo.
+    var siSede=Number(filObj&&filObj.saldo_inicial||0);
+    var siSedeUSD=Number((DB.saldos_iniciales||{}).filialesUSD)||0; // sin campo propio en USD; se mantiene como estaba
 
-    // Saldo Anterior en Soles — misma fórmula que usan el Dashboard y el Resumen Ejecutivo
-    saldoAnterior=calcSaldoAnteriorConsolidado(anio,mes);
-
-    // USD: se mantiene aparte (fuera del alcance de la fórmula única, de uso poco frecuente)
-    var ymSaldoAntUSD=anio+'-'+String(mes).padStart(2,'0');
-    var todasFilIdsUSD=DB.filiales.filter(function(f){
-      if((f.tipo||'filial')==='departamento')return false;
-      var esRetSAU=!!(f.retencion&&f.retencion.activa&&(f.retencion.fecha||'9999-12-31').substring(0,7)<=ymSaldoAntUSD);
-      return !esRetSAU;
-    }).map(function(f){return f.id;});
-    var movsPrevSedeUSD=gAccMov().filter(function(m){
-      if(todasFilIdsUSD.indexOf(m.fil)<0)return false;
-      if(m.origen==='cierre_filial_efectivo'||m.tipo==='transferencia')return false;
+    var movsPrevSede=gAccMov().filter(function(m){
+      if(m.fil!==filId)return false;
+      if(m.origen==='cierre_filial_efectivo')return false;
       var y=parseInt(m.fec.split('-')[0]);
       var mo=parseInt(m.fec.split('-')[1]);
       return (y<anio)||(y===anio&&mo<mes);
     });
-    var ingPrevSedeUSD=movsPrevSedeUSD.filter(function(m){return m.tipo==='ingreso'&&m.moneda==='USD';}).reduce(function(a,m){return a+Number(m.mon);},0);
-    var egPrevSedeUSD=movsPrevSedeUSD.filter(function(m){return m.tipo==='egreso'&&m.moneda==='USD';}).reduce(function(a,m){return a+Number(m.mon);},0);
-    saldoAnteriorUSD=siFilUSD+ingPrevSedeUSD-egPrevSedeUSD;
+    var ingPrevSede=movsPrevSede.filter(function(m){return m.tipo==='ingreso'&&(m.moneda||'PEN')==='PEN'&&esEfectivo(m)&&!m.esBancario&&m.tipo!=='transferencia';}).reduce(function(a,m){return a+Number(m.mon);},0);
+    var egPrevSede=movsPrevSede.filter(function(m){return m.tipo==='egreso'&&(m.moneda||'PEN')==='PEN'&&esEfectivo(m)&&!m.esBancario&&m.tipo!=='transferencia';}).reduce(function(a,m){return a+Number(m.mon);},0);
+    var ingPrevSedeUSD=movsPrevSede.filter(function(m){return m.tipo==='ingreso'&&m.moneda==='USD';}).reduce(function(a,m){return a+Number(m.mon);},0);
+    var egPrevSedeUSD=movsPrevSede.filter(function(m){return m.tipo==='egreso'&&m.moneda==='USD';}).reduce(function(a,m){return a+Number(m.mon);},0);
+
+    saldoAnterior=siSede+ingPrevSede-egPrevSede;
+    saldoAnteriorUSD=siSedeUSD+ingPrevSedeUSD-egPrevSedeUSD;
+
+    // Las transferencias propias de Sede (Caja→Banco) sí afectan su propio libro —
+    // es dinero real que salió de la caja física de Sede.
+    var trfsPrevSedeSola=movsPrevSede.filter(function(m){return m.tipo==='transferencia'&&(m.moneda||'PEN')==='PEN';});
+    trfsPrevSedeSola.forEach(function(m){
+      var esSalida=m.subtipo==='salida_caja_banco'||(m.desc&&m.desc.indexOf('Caja → Banco')>-1);
+      saldoAnterior+=(esSalida?-Number(m.mon):Number(m.mon));
+    });
   }
 
   // Saldo anterior para filiales en retención
