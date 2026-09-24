@@ -1842,14 +1842,29 @@ function gAccMov(){if(!CU)return[];var all=(CU.niv<=2||CU.niv===5||CU.fil==='all
 function calcSaldoCajaConsolidado(anioLimite,mesLimite){
   var ymLimite=anioLimite+'-'+String(mesLimite).padStart(2,'0');
 
+  // Mapa de fecha de inicio de retención por filial (solo para las que están en retención activa)
+  var fechaRetPorFilial={};
+  DB.filiales.forEach(function(f){
+    if(f.retencion&&f.retencion.activa){
+      fechaRetPorFilial[f.id]=f.retencion.fecha||'9999-12-31';
+    }
+  });
+
+  // Todas las filiales consolidables (no departamentos) — la exclusión por retención
+  // se aplica DESPUÉS, movimiento por movimiento, no filial por filial completa,
+  // para no perder la actividad previa a la fecha en que empezó la retención.
   var filIdsConsol=DB.filiales.filter(function(f){
-    if((f.tipo||'filial')==='departamento')return false;
-    var esRet=!!(f.retencion&&f.retencion.activa&&(f.retencion.fecha||'9999-12-31').substring(0,7)<=ymLimite);
-    return !esRet;
+    return (f.tipo||'filial')!=='departamento';
   }).map(function(f){return f.id;});
   if(filIdsConsol.indexOf('F001')<0)filIdsConsol.push('F001');
 
   var siFiliales=Number((DB.saldos_iniciales||{}).filiales)||0;
+
+  function noEstaRetenidaEnEstaFecha(m){
+    var fechaRet=fechaRetPorFilial[m.fil];
+    if(!fechaRet)return true; // esta filial nunca ha estado en retención
+    return m.fec<fechaRet; // solo cuenta si el movimiento es ANTERIOR al inicio de la retención
+  }
 
   var movsHasta=gAccMov().filter(function(m){
     if(filIdsConsol.indexOf(m.fil)<0)return false;
@@ -1857,6 +1872,7 @@ function calcSaldoCajaConsolidado(anioLimite,mesLimite){
     if(m.origen==='cierre_filial_efectivo')return false;
     if(m.tipo==='transferencia')return false;
     if(m.esPOS&&m.tipo==='ingreso')return false;
+    if(!noEstaRetenidaEnEstaFecha(m))return false;
     var y=parseInt(m.fec.split('-')[0]),mo=parseInt(m.fec.split('-')[1]);
     return (y<anioLimite)||(y===anioLimite&&mo<=mesLimite);
   });
@@ -1866,6 +1882,7 @@ function calcSaldoCajaConsolidado(anioLimite,mesLimite){
   var trfsHasta=gAccMov().filter(function(m){
     if(filIdsConsol.indexOf(m.fil)<0)return false;
     if(m.tipo!=='transferencia'||(m.moneda||'PEN')!=='PEN')return false;
+    if(!noEstaRetenidaEnEstaFecha(m))return false;
     var y=parseInt(m.fec.split('-')[0]),mo=parseInt(m.fec.split('-')[1]);
     return (y<anioLimite)||(y===anioLimite&&mo<=mesLimite);
   });
