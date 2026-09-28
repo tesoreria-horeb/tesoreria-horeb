@@ -2340,7 +2340,7 @@ function renderDash(){
   ];
   var cita=citas[(curM-1)%citas.length];
 
-  function mkCard(title,items,accentColor,icon){
+  function mkCard(title,items,accentColor,icon,footnote){
     var headerBg='rgba('+accentColor+',0.08)';
     var borderCol='rgba('+accentColor+',0.25)';
     var html='<div style="border-radius:10px;border:1px solid '+borderCol+';overflow:hidden;background:rgba(13,27,42,.6)">';
@@ -2357,7 +2357,9 @@ function renderDash(){
       if(it.sub)html+='<div style="font-size:10px;color:rgba(247,243,233,.35);margin-top:2px">'+it.sub+'</div>';
       html+='</div>';
     });
-    html+='</div></div>';
+    html+='</div>';
+    if(footnote)html+='<div style="padding:6px 14px 9px;border-top:1px solid '+borderCol+';font-size:9px;color:rgba(247,243,233,.35);text-align:center">'+footnote+'</div>';
+    html+='</div>';
     return html;
   }
 
@@ -2371,6 +2373,7 @@ function renderDash(){
   adminHtml+='<div style="font-size:11px;font-style:italic;color:rgba(201,168,76,.6)">'+cita+'</div>';
   adminHtml+='</div>';
 
+  var trfCajaBancoMesDash=-trfsMesImpacto; // positivo = neto que salió de Caja hacia Banco este mes
   adminHtml+='<div style="grid-column:1/-1">'+mkCard(
     'Efectivo · Filiales y Sede Central — '+mesLabel,
     [
@@ -2379,7 +2382,10 @@ function renderDash(){
       {lbl:'Total Egresos',            val:fs(egBruto),           color:'#E74C3C', sub:egBancario>0?'Bancario: '+fs(egBancario):''},
       {lbl:'Balance del Mes',          val:(balanceMes>=0?'+':'-')+fs(Math.abs(balanceMes)), color:balanceMes>=0?'#2ECC71':'#E74C3C'},
       {lbl:'Saldo en Caja Efectivo',   val:fs(saldoCaja), color:'#C9A84C', bg:'rgba(201,168,76,.1)', big:true, sub:ingBancario>0?'Entradas bancarias: '+fs(ingBancario)+' (en banco, no en caja)':''}
-    ],'201,168,76','🏛️')+'</div>';
+    ],'201,168,76','🏛️',
+    '💸 Transferencias Caja → Banco este mes: <strong style="color:rgba(247,243,233,.55)">'+fs(trfCajaBancoMesDash)+'</strong><br>'
+    +'📐 '+fs(saldoAntFilConTrf)+' + '+fs(ing)+' − '+fs(eg)+' − '+fs(trfCajaBancoMesDash)+' = '+fs(saldoCaja)
+  )+'</div>';
 
   adminHtml+='<div style="grid-column:1/-1">'+mkCard(
     'Resumen Bancario — '+mesLabel,
@@ -7223,7 +7229,7 @@ function genEjecutivo(){
   var grandBal=grandTi-grandTe;
   var saldoTotal=grandSaldo+saldoFinalBanco;
 
-  function rptCard(title,items,accentColor,icon){
+  function rptCard(title,items,accentColor,icon,footnote){
     var html='<div style="border-radius:6px;border:2px solid '+accentColor+';overflow:hidden;margin-bottom:8px">';
     html+='<div style="padding:5px 12px;background:'+accentColor+';display:flex;align-items:center;gap:6px">';
     html+='<span style="font-size:12px">'+icon+'</span>';
@@ -7237,7 +7243,9 @@ function genEjecutivo(){
       if(it.sub)html+='<div style="font-size:9px;color:#999;margin-top:1px">'+it.sub+'</div>';
       html+='</div>';
     });
-    html+='</div></div>';
+    html+='</div>';
+    if(footnote)html+='<div style="padding:4px 12px 6px;background:#fafafa;border-top:1px solid #eee;font-size:8px;color:#888;text-align:center">'+footnote+'</div>';
+    html+='</div>';
     return html;
   }
 
@@ -7273,13 +7281,17 @@ function genEjecutivo(){
   html+='<div style="page-break-after:always">';
 
   // BLOQUE 1 — EFECTIVO
+  var trfCajaBancoMesEj=-trfsMesImpactoEj; // positivo = neto que salió de Caja hacia Banco este mes
   html+=rptCard('Efectivo · Filiales y Sede Central — '+mesNom+' '+anio,[
     {lbl:'Saldo Anterior',   val:fs(grandSAconTrf),   col:'#8B6914'},
     {lbl:'Ingresos Totales', val:fs(grandTi),   col:'#1A7A4A', sub:fmtC(varIng,true)+' vs '+mesPrevNom},
     {lbl:'Egresos Totales',  val:fs(grandTe),   col:'#C0392B', sub:fmtC(-varEg,true)+' vs '+mesPrevNom},
     {lbl:'Balance del Mes',  val:(grandBal>=0?'+':'-')+fs(grandBal), col:grandBal>=0?'#1A7A4A':'#C0392B'},
     {lbl:'Saldo en Caja',    val:fs(grandSaldo),col:grandSaldo>=0?'#1A7A4A':'#C0392B',bg:grandSaldo>=0?'#e8f5e9':'#ffebee',big:true,sub:grandSaldo>=0?'✅ Superávit':'⚠️ Déficit'}
-  ],'#8B6914','🏛️');
+  ],'#8B6914','🏛️',
+  '💸 Transferencias Caja → Banco este mes: <strong>'+fs(trfCajaBancoMesEj)+'</strong><br>'
+  +'📐 '+fs(grandSAconTrf)+' + '+fs(grandTiEf)+' − '+fs(grandTeEf)+' − '+fs(trfCajaBancoMesEj)+' = '+fs(grandSaldo)
+  );
 
   // BLOQUE 2 — BANCO
   html+=rptCard('Resumen Bancario — '+mesNom+' '+anio,[
