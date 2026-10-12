@@ -345,6 +345,7 @@ body.contador-mode .modal-ft .btn-d {
       <div class="nav-item nav-no-contador" onclick="sm('miembros')"><span class="ic">👥</span>Miembros</div>
       <div class="nav-item nav-no-contador" onclick="sm('votos')"><span class="ic">🙏</span>Votos</div>
       <div class="nav-item" onclick="sm('banco')"><span class="ic">🏦</span>Banco</div>
+      <div class="nav-item" onclick="sm('recibos')"><span class="ic">🧾</span>Recibos y Numeración</div>
       <div class="nav-item nav-admin" onclick="sm('cierre-filiales')"><span class="ic">🔄</span>Cierre de Filiales</div>
       <div class="nav-sec nav-admin">Configuración</div>
       <div class="nav-item nav-admin" onclick="sm('categorias')"><span class="ic">🏷️</span>Categorías</div>
@@ -509,8 +510,38 @@ body.contador-mode .modal-ft .btn-d {
           </div>
         </div>
         <div class="card" style="margin-top:14px">
+          <div class="card-title">🧾 Categorías de ingreso que emiten recibo automático</div>
+          <div style="font-size:11px;color:rgba(247,243,233,.5);margin-bottom:6px">Al registrar un ingreso de estas categorías, el sistema pide los datos y emite el recibo (RI). En cualquier otro ingreso puede emitirlo con el botón 🧾.</div>
+          <div id="cat-recibo-box"></div>
+        </div>
+        <div class="card" style="margin-top:14px">
           <div class="card-title">Usuarios del Sistema</div>
           <div class="tw"><table><thead><tr><th>Usuario</th><th>Nombre</th><th>Contraseña</th><th>Rol</th><th>Acceso</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="usr-body"></tbody></table></div>
+        </div>
+      </div>
+
+      <!-- RECIBOS Y NUMERACION -->
+      <div class="mod" id="mod-recibos">
+        <div class="card" id="rec-cfg" style="display:none;margin-bottom:14px">
+          <div class="card-title">⚙️ Numeración de recibos <span style="font-size:11px;font-weight:normal;color:rgba(247,243,233,.45)">(solo Administrador — se define una sola vez)</span></div>
+          <div style="font-size:12px;color:rgba(247,243,233,.55);margin-bottom:10px">Escriba el <strong>último número ya usado</strong> en el bloc de recibos (ej.: 12503). El primer recibo del sistema será el siguiente (RE-012504). Hasta que se configure, no se emiten recibos de ese tipo. Los vales (VA) comienzan en VA-000001.</div>
+          <div class="fr">
+            <div class="fld"><label>Último N° recibo de EGRESO (RE)</label><input type="number" id="rn-RE" min="0" max="999999" placeholder="Ej: 12503"><div id="rn-st-RE" style="font-size:11px;margin-top:4px"></div></div>
+            <div class="fld"><label>Último N° recibo de INGRESO (RI)</label><input type="number" id="rn-RI" min="0" max="999999" placeholder="Ej: 4210"><div id="rn-st-RI" style="font-size:11px;margin-top:4px"></div></div>
+          </div>
+          <button class="btn btn-p" onclick="recNumGuardar()">💾 Guardar numeración</button>
+        </div>
+        <div class="card">
+          <div class="card-title">🧾 Recibos emitidos</div>
+          <div class="tb" style="flex-wrap:wrap;gap:8px">
+            <input class="sb" id="rec-s" placeholder="Buscar nombre, concepto, N°..." oninput="renderRecibos()">
+            <select id="rec-ft" onchange="renderRecibos()"><option value="">Todos</option><option value="RE">Egreso (RE)</option><option value="RI">Ingreso (RI)</option></select>
+            <select id="rec-fe" onchange="renderRecibos()"><option value="">Todos los estados</option><option value="emitido">Vigentes</option><option value="anulado">Anulados</option></select>
+            <input type="month" id="rec-fm" onchange="renderRecibos()">
+            <label style="font-size:12px;display:inline-flex;align-items:center;gap:5px"><input type="checkbox" id="rec-tard" onchange="renderRecibos()"> Solo registros tardíos (&gt;3 días)</label>
+          </div>
+          <div style="font-size:11px;color:rgba(247,243,233,.5);margin:6px 0" id="rec-tot"></div>
+          <div class="tw"><table><thead><tr><th>N°</th><th>Fecha gasto/ingreso</th><th>Emitido</th><th>Atraso</th><th>Sede</th><th>Nombre</th><th>Concepto</th><th>Monto</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="rec-lista"></tbody></table></div>
         </div>
       </div>
 
@@ -1194,7 +1225,10 @@ body.contador-mode .modal-ft .btn-d {
     </div>
     <div class="fr">
       <div class="fld"><label>Método de Pago</label><select id="m-met" onchange="onMetChange()"><option value="efectivo">Efectivo</option><option value="transferencia">Transferencia</option><option value="yape">Yape</option><option value="plin">Plin</option><option value="deposito">Depósito bancario</option><option value="cheque">Cheque</option><option value="pos">Máquina POS</option><option value="debito">Débito en Cuenta</option><option value="lukita">Lukita</option><option value="tunki">Tunki</option></select></div>
-      <div class="fld"><label>N° Comprobante</label><input type="text" id="m-comp" placeholder="Opcional"></div>
+      <div class="fld"><label>Sustento (tipo de comprobante)</label><select id="m-comp-tipo" onchange="onCompTipoChange()"><option value="">— Seleccione —</option><option value="factura">Factura</option><option value="boleta">Boleta</option><option value="recibo">Recibo</option><option value="otros">Otros</option><option value="sin">Sin sustento</option></select></div>
+    </div>
+    <div class="fr fr1" id="m-comp-row">
+      <div class="fld"><label id="m-comp-lbl">N° del comprobante</label><input type="text" id="m-comp" placeholder="Ej: F001-00123 (obligatorio en egresos con sustento)"></div>
     </div>
     <div class="fr" id="pos-comision-row" style="display:none">
       <div class="fld">
@@ -1233,7 +1267,7 @@ body.contador-mode .modal-ft .btn-d {
         <div style="font-size:10px;color:rgba(247,243,233,.4);margin-top:3px">Saldo que tenía este departamento antes de usar el sistema</div>
       </div>
     </div>
-    <div class="fr fr1"><div class="fld"><label>Dirección</label><input type="text" id="f-dir" placeholder="Dirección completa"></div></div>
+    <div class="fr"><div class="fld"><label>Dirección</label><input type="text" id="f-dir" placeholder="Dirección completa"></div><div class="fld"><label>Ciudad (para recibos)</label><input type="text" id="f-ciu" placeholder="Lima"></div></div>
     <div class="fr"><div class="fld"><label>Teléfono</label><input type="text" id="f-tel" placeholder="Teléfono"></div><div class="fld"><label>Fecha de Fundación</label><input type="date" id="f-fun"></div></div>
     <!-- Retención de Saldo -->
     <div id="f-retencion-section" style="display:none;margin-top:4px;padding:12px;background:rgba(231,76,60,.06);border:1px solid rgba(231,76,60,.2);border-radius:8px">
@@ -1556,6 +1590,27 @@ body.contador-mode .modal-ft .btn-d {
   </div>
 </div>
 
+<!-- MODAL DATOS RECIBO -->
+<div class="ov" id="ov-rec-datos">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-hd"><div class="modal-tit" id="rd-tit">Recibo</div><button class="modal-x" onclick="cm('ov-rec-datos')">✕</button></div>
+    <div id="rd-resumen" style="font-size:12px;padding:8px;background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.2);border-radius:6px;margin-bottom:10px"></div>
+    <div class="fr fr1"><div class="fld"><label id="rd-lbl-nombre">Nombre</label><input type="text" id="rd-nombre" placeholder="Nombre completo o razón social"></div></div>
+    <div class="fr"><div class="fld"><label>Tipo</label><select id="rd-pt" onchange="reciboPtChange()"><option value="persona">Persona</option><option value="empresa">Empresa</option></select></div><div class="fld"><label id="rd-lbl-doc">DNI</label><input type="text" id="rd-doc" placeholder="Número"></div></div>
+    <div class="modal-ft"><button class="btn btn-s" onclick="cm('ov-rec-datos')">Más tarde</button><button class="btn btn-p" id="rd-btn" onclick="reciboConfirmarDatos()">🧾 Emitir recibo</button></div>
+  </div>
+</div>
+
+<!-- MODAL IMPRIMIR RECIBO -->
+<div class="ov" id="ov-rec-print">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-hd"><div class="modal-tit" id="rp-tit">Imprimir recibo</div><button class="modal-x" onclick="cm('ov-rec-print')">✕</button></div>
+    <div id="rp-aviso" style="display:none;font-size:12px;color:#F39C12;margin-bottom:8px">⚠️ Este recibo ya fue impreso. Se marcará como REIMPRESIÓN.</div>
+    <div style="font-size:12px;color:rgba(247,243,233,.65);margin-bottom:10px;line-height:1.5">Se imprime un recibo de <strong>media hoja A4</strong> con dos partes: <strong>ORIGINAL</strong> (archivo de tesorería) y <strong>COPIA</strong> (para la persona), separadas por el cerrillado. Cargue media hoja en la impresora; si usa una hoja entera, imprime en la parte superior.</div>
+    <div class="modal-ft"><button class="btn btn-s" onclick="cm('ov-rec-print')">Cancelar</button><button class="btn btn-p" onclick="reciboConfirmarImpresion()">🖨️ Imprimir</button></div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
@@ -1731,7 +1786,7 @@ function _finishLogin(usr){
 function doLogout(){CU=null;try{localStorage.removeItem('horeb_session');}catch(e){}document.getElementById('app').style.display='none';document.getElementById('login-screen').style.display='flex';document.getElementById('lu').value='';document.getElementById('lp').value='';}
 
 // ===================== NAV =====================
-const TITLES={dashboard:'Menú Principal',usuarios:'Gestion de Usuarios',backup:'Sistema de Backup',banco:'Control Bancario','rpt-banco':'Informe Bancario',movimientos:'Movimientos',filiales:'Filiales',miembros:'Miembros',votos:'Votos',categorias:'Categorías y Usuarios','rpt-caja':'Informe: Libro Caja Mensual','rpt-consolidado':'Informe: Consolidado General','rpt-comparativo':'Informe: Comparativo Anual','rpt-diezmos':'Informe: Diezmos por Filial','rpt-diezmantes':'Informe: Diezmantes del Mes','rpt-fidelidad':'Informe: Fidelidad Individual','rpt-votos':'Informe: Votos y Cumplimiento','rpt-ejecutivo':'Informe: Resumen Ejecutivo Mensual','rpt-departamentos':'Informe: Estado de Cuenta — Departamentos','rpt-categorias':'Informe: Gastos por Categoría','cierre-filiales':'Cierre de Filiales — Transferencia de Saldos','transferencias':'Transferencias Caja ↔ Banco','rpt-transferencias':'Informe: Transferencias Caja ↔ Banco','auditoria':'Registro de Auditoría del Sistema'};
+const TITLES={dashboard:'Menú Principal',usuarios:'Gestion de Usuarios',backup:'Sistema de Backup',banco:'Control Bancario','rpt-banco':'Informe Bancario',movimientos:'Movimientos',filiales:'Filiales',miembros:'Miembros',votos:'Votos',categorias:'Categorías y Usuarios','rpt-caja':'Informe: Libro Caja Mensual','rpt-consolidado':'Informe: Consolidado General','rpt-comparativo':'Informe: Comparativo Anual','rpt-diezmos':'Informe: Diezmos por Filial','rpt-diezmantes':'Informe: Diezmantes del Mes','rpt-fidelidad':'Informe: Fidelidad Individual','rpt-votos':'Informe: Votos y Cumplimiento','rpt-ejecutivo':'Informe: Resumen Ejecutivo Mensual','rpt-departamentos':'Informe: Estado de Cuenta — Departamentos','rpt-categorias':'Informe: Gastos por Categoría','cierre-filiales':'Cierre de Filiales — Transferencia de Saldos','transferencias':'Transferencias Caja ↔ Banco','rpt-transferencias':'Informe: Transferencias Caja ↔ Banco','auditoria':'Registro de Auditoría del Sistema',recibos:'Recibos y Numeración'};
 
 function sm(n){
   // Save current module to restore after F5
@@ -1750,6 +1805,7 @@ function sm(n){
   else if(n==='miembros')renderMiem();
   else if(n==='votos')renderVot();
   else if(n==='categorias')renderCats();
+  else if(n==='recibos')renderRecibos();
   else if(n==='rpt-fidelidad'){updFidMiems();}
   else if(n==='rpt-caja'||n==='rpt-consolidado'||n==='rpt-comparativo'||n==='rpt-diezmos'||n==='rpt-diezmantes'){
     // Auto-sincronizar al abrir cualquier informe
@@ -2028,6 +2084,7 @@ function onTipoChange(){
   // Clear form fields when switching tipo
   var monto=document.getElementById('m-monto');if(monto)monto.value='';
   var comp=document.getElementById('m-comp');if(comp)comp.value='';
+  var compT=document.getElementById('m-comp-tipo');if(compT){compT.value='';onCompTipoChange();}
   var obs=document.getElementById('m-obs');if(obs)obs.value='';
   var desc=document.getElementById('m-desc');if(desc)desc.value='';
   var fecha=document.getElementById('m-fecha');
@@ -2763,6 +2820,7 @@ function openMovModal(id){
     document.getElementById('m-desc').value=m.desc;
     document.getElementById('m-met').value=m.met;
     document.getElementById('m-comp').value=m.comp||'';
+    var compTE=document.getElementById('m-comp-tipo');if(compTE){compTE.value=m.compTipo||'';onCompTipoChange(true);}
     // Restore POS comision if applicable
     var posComEdit=document.getElementById('m-pos-comision');
     if(posComEdit)posComEdit.value=m.posComision||'0';
@@ -2792,6 +2850,7 @@ function openMovModal(id){
     document.getElementById('m-tipo').value='ingreso';updCats();
     // fecha ya fue seteada por popMesSel → onMesSelChange
     ['m-monto','m-desc','m-comp','m-obs'].forEach(id=>document.getElementById(id).value='');
+    var compTN=document.getElementById('m-comp-tipo');if(compTN){compTN.value='';onCompTipoChange();}
     document.getElementById('m-met').value='efectivo';
     // Reset POS fields
     var posComEl=document.getElementById('m-pos-comision');if(posComEl)posComEl.value='0';
@@ -2828,6 +2887,12 @@ function savMov(keepOpen){
   if(!monStr||isNaN(mon)||mon<=0){toast('Ingrese un monto válido mayor a 0','err');return;}
   if(!cat){toast('Seleccione una categoría','err');return;}
   if(!fil){toast('Seleccione la sede o filial','err');return;}
+  var compTipoEl=document.getElementById('m-comp-tipo');
+  var compTipo=compTipoEl?compTipoEl.value:'';
+  var compNum=(document.getElementById('m-comp').value||'').trim();
+  if(tipo==='egreso'&&!EID&&!compTipo){toast('Seleccione el sustento del egreso (factura, boleta, recibo, otros o sin sustento)','err');return;}
+  if((compTipo==='factura'||compTipo==='boleta'||compTipo==='recibo')&&!compNum&&tipo==='egreso'){toast('Ingrese el número de la '+compTipo,'err');return;}
+  if(compTipo==='otros'&&!compNum){toast('Describa el sustento en el campo del comprobante','err');return;}
 
   // Get file data
   var fileInput=document.getElementById('m-comp-file');
@@ -2854,7 +2919,8 @@ function savMov(keepOpen){
     id:movId,tipo:tipo,fec:fec,mon:mon,desc:desc,cat:cat,fil:fil,
     met:metVal,
     moneda:document.getElementById('m-moneda')?document.getElementById('m-moneda').value:'PEN',
-    comp:document.getElementById('m-comp').value||'',
+    comp:compTipo==='sin'?'':compNum,
+    compTipo:compTipo||undefined,
     miem:document.getElementById('m-miem').value||'',
     obs:document.getElementById('m-obs').value||'',
     esBancario:esBancoToggle,
@@ -2867,8 +2933,19 @@ function savMov(keepOpen){
     regBy:EID?((existingMov||{}).regBy||(CU?CU.nom:'')):(CU?CU.nom:''),
     regAt:EID?((existingMov||{}).regAt||ahora):ahora,
     editBy:EID?(CU?CU.nom:''):undefined,
-    editAt:EID?ahora:undefined
+    editAt:EID?ahora:undefined,
+    reciboId:existingMov?existingMov.reciboId:undefined
   };
+  if(!obj.reciboId)delete obj.reciboId;
+  if(!obj.compTipo)delete obj.compTipo;
+  // Recibo impreso: monto, fecha, sede y tipo quedan bloqueados (anular y registrar de nuevo)
+  if(existingMov&&existingMov.reciboId){
+    var rImp=reciboDeMov(existingMov);
+    if(rImp&&rImp.estado==='emitido'&&rImp.impreso&&(Number(existingMov.mon)!==Number(mon)||existingMov.fec!==fec||existingMov.fil!==fil||existingMov.tipo!==tipo)){
+      toast('El recibo '+rImp.id+' ya fue impreso: no se puede cambiar monto, fecha, sede ni tipo. El administrador debe anular el recibo y registrar de nuevo.','err');
+      return;
+    }
+  }
   // Remove undefined keys
   if(!obj.editBy)delete obj.editBy;
   if(!obj.editAt)delete obj.editAt;
@@ -2998,6 +3075,8 @@ function savMov(keepOpen){
       if(fec)fec.focus();
     },100);
   }
+  if(EID){try{reciboSyncDesdeMov(obj);}catch(e){}}
+  else {try{reciboPostGuardar(obj);}catch(e){console.warn(e);}}
   renderMov();
 }
 
@@ -3022,6 +3101,12 @@ function verComprobante(b){
 function edMov(b){openMovModal(b&&b.getAttribute?b.getAttribute('data-id'):b);}
 function delMov(b){
   var id=b&&b.getAttribute?b.getAttribute('data-id'):b;
+  var recAct=reciboActivoDeMov(id);
+  if(recAct){
+    if(CU&&CU.niv===1){anularRecibo(recAct.id);}
+    else toast('Este movimiento tiene el recibo '+recAct.id+'. Solo el administrador puede anularlo (esto elimina el movimiento).','err');
+    return;
+  }
   if(!confirm('¿Eliminar este movimiento?'))return;
   // Check if this movimiento has a linked banco entry
   var linkedBanco=DB.banco?DB.banco.find(function(bn){return bn.movId===id;}):null;
@@ -3097,10 +3182,18 @@ function renderMov(){
     var miemNom='—';
     if(m.miem){var miemObj=DB.miembros.find(function(x){return x.id===m.miem;});if(miemObj)miemNom=miemObj.nom+(miemObj.ape?' '+miemObj.ape:'');}
     var compCell=m.comp||'—';
+    if(m.compTipo&&m.compTipo!=='sin')compCell='<span style="font-size:10px;color:#C9A84C">'+({factura:'Factura',boleta:'Boleta',recibo:'Recibo',otros:'Otros'}[m.compTipo]||'')+'</span> '+(m.comp||'');
+    else if(m.compTipo==='sin')compCell='<span style="font-size:10px;color:#E67E22">Sin sustento</span>';
     var tipoBadge=m.tipo==='ingreso'?'<span class="badge b-act">INGRESO</span>':m.tipo==='transferencia'?'<span class="badge" style="background:rgba(52,152,219,.15);color:#5DADE2;border:1px solid rgba(52,152,219,.3)">TRANSFER.</span>':'<span class="badge b-ven">EGRESO</span>';
     var regByCell='<span style="font-size:10px;color:rgba(247,243,233,.45)">'+(m.regBy||'—')+'</span>'+(m.editBy?'<div style="font-size:9px;color:#F39C12" title="Editado por '+m.editBy+'">✏️ '+m.editBy+'</div>':'');
     var canEdit=m.tipo!=='transferencia';
-    var btns=canEdit?('<button class="btn btn-sm btn-s" onclick="edMov(this)" data-id="'+m.id+'" title="Editar">✏️</button>'
+    var recBtn='';
+    if(movElegibleRecibo(m)){
+      var recM=reciboDeMov(m);
+      if(recM&&recM.estado==='emitido')recBtn=' <button class="btn btn-sm btn-s" onclick="reciboAbrirImpresion(&quot;'+recM.id+'&quot;)" data-id="'+m.id+'" title="Imprimir '+recM.id+'" style="font-size:10px">🖨️ '+recM.id+'</button>';
+      else recBtn=' <button class="btn btn-sm btn-s" onclick="reciboAbrirDatos(&quot;'+m.id+'&quot;)" title="Emitir recibo">🧾</button>';
+    }
+    var btns=canEdit?('<button class="btn btn-sm btn-s" onclick="edMov(this)" data-id="'+m.id+'" title="Editar">✏️</button>'+recBtn
       +' <button class="btn btn-sm btn-d" onclick="delMov(this)" data-id="'+m.id+'" title="Eliminar">🗑️</button>')
       :'<span style="font-size:10px;color:rgba(247,243,233,.3)">—</span>';
     return '<tr'+(m.tipo==='transferencia'?' style="background:rgba(52,152,219,.04)"':'')+'>'
@@ -3164,7 +3257,7 @@ function openFilModal(id=null){
     var fsiEl=document.getElementById('f-saldo-inicial');if(fsiEl)fsiEl.value=f.saldo_inicial||0;
     toggleSaldoInicial();
     document.getElementById('f-pas').value=f.pastor;document.getElementById('f-tes').value=f.tes;
-    document.getElementById('f-dir').value=f.dir;document.getElementById('f-tel').value=f.tel;
+    document.getElementById('f-dir').value=f.dir;document.getElementById('f-tel').value=f.tel;var fciEl=document.getElementById('f-ciu');if(fciEl)fciEl.value=f.ciu||'';
     document.getElementById('f-fun').value=f.fun||'';
     // Load retención — only for filiales and admin/tesorero
     if((f.tipo||'filial')!=='departamento'&&CU&&CU.niv<=2){
@@ -3184,7 +3277,7 @@ function openFilModal(id=null){
     var cnt=DB.filiales.filter(function(f){return f.id!=='sede'&&f.id!=='F001'||(f.tipo||'filial')==='filial';}).length+1;
     document.getElementById('f-cod').value='F'+String(cnt).padStart(3,'0');
     document.getElementById('f-cod').style.opacity='1';
-    ['f-nom','f-pas','f-tes','f-dir','f-tel','f-fun'].forEach(function(id){document.getElementById(id).value='';});
+    ['f-nom','f-pas','f-tes','f-dir','f-tel','f-fun','f-ciu'].forEach(function(id){document.getElementById(id).value='';});
     var retActiva=document.getElementById('f-ret-activa');if(retActiva)retActiva.checked=false;
     var retFecha=document.getElementById('f-ret-fecha');if(retFecha)retFecha.value='';
     var retMotivo=document.getElementById('f-ret-motivo');if(retMotivo)retMotivo.value='';
@@ -3233,7 +3326,8 @@ function savFil(){
     tes:document.getElementById('f-tes').value||'',
     dir:document.getElementById('f-dir').value||'',
     tel:document.getElementById('f-tel').value||'',
-    fun:document.getElementById('f-fun').value||''
+    fun:document.getElementById('f-fun').value||'',
+    ciu:(document.getElementById('f-ciu')?document.getElementById('f-ciu').value.trim():'')
   };
   if(retencion)obj.retencion=retencion;
   if(EID){
@@ -5012,6 +5106,11 @@ function delSelected(mod){
   var colMap={mov:'movimientos',miem:'miembros',fil:'filiales',vot:'votos'};
   var col=colMap[mod];
 
+  if(mod==='mov'){
+    var conRec=ids.filter(function(id){return reciboActivoDeMov(id);});
+    if(conRec.length){toast(conRec.length+' movimiento(s) tienen recibo emitido y no se eliminan. Anúlelos desde Recibos y Numeración.','err');ids=ids.filter(function(id){return !reciboActivoDeMov(id);});}
+    if(!ids.length)return;
+  }
   ids.forEach(function(id){
     if(mod==='mov') DB.movimientos=DB.movimientos.filter(function(m){return m.id!==id;});
     else if(mod==='miem') DB.miembros=DB.miembros.filter(function(m){return m.id!==id;});
@@ -6076,7 +6175,7 @@ function startRealtimeSync(){
   _fbListeners.forEach(function(unsub){try{unsub();}catch(e){}});
   _fbListeners = [];
 
-  var collections = ['movimientos','filiales','miembros','votos','banco','cierres','categorias','usuarios','config','auditoria'];
+  var collections = ['movimientos','filiales','miembros','votos','banco','cierres','categorias','usuarios','config','auditoria','recibos'];
 
   collections.forEach(function(col){
     var unsub = window.FB_DB.collection(col).onSnapshot(function(snap){
@@ -6111,7 +6210,14 @@ function startRealtimeSync(){
             DB.saldos_iniciales=d.data();
             try{sd();}catch(e){}
           }
+          if(d.id==='numeracion'){
+            DB.numeracion=d.data();
+            try{sd();}catch(e){}
+          }
         });
+      } else if(col === 'recibos'){
+        var items=[];snap.forEach(function(d){items.push(d.data());});
+        DB.recibos=items;try{sd();}catch(e){}
       } else if(col === 'votos'){
         var items=[];snap.forEach(function(d){items.push(d.data());});
         if(items.length>0){DB.votos=items;try{sd();}catch(e){}}
@@ -6315,6 +6421,7 @@ function refreshCurrentModule(){
     else if(n==='votos')renderVot();
     else if(n==='categorias')renderCats();
     else if(n==='usuarios')renderUsrs();
+    else if(n==='recibos')renderRecibos();
     else if(n==='cierre-filiales')renderCierreFiliales();
     else if(n==='transferencias')renderTrfRecent();
     else if(n==='banco'){renderBanco();renderPosPendientes();}
@@ -6388,6 +6495,11 @@ function delSelected(mod){
   var colMap={mov:'movimientos',miem:'miembros',fil:'filiales',vot:'votos'};
   var col=colMap[mod];
 
+  if(mod==='mov'){
+    var conRec=ids.filter(function(id){return reciboActivoDeMov(id);});
+    if(conRec.length){toast(conRec.length+' movimiento(s) tienen recibo emitido y no se eliminan. Anúlelos desde Recibos y Numeración.','err');ids=ids.filter(function(id){return !reciboActivoDeMov(id);});}
+    if(!ids.length)return;
+  }
   ids.forEach(function(id){
     if(mod==='mov') DB.movimientos=DB.movimientos.filter(function(m){return m.id!==id;});
     else if(mod==='miem') DB.miembros=DB.miembros.filter(function(m){return m.id!==id;});
@@ -8405,6 +8517,421 @@ function genRptTransferencias(){
   document.getElementById('rtrf-prev').innerHTML=html;
   toast('Informe de Transferencias generado ✅');
 }
+
+// ===================== RECIBOS (RE / RI) — Etapa 1 =====================
+// Numeración global y secuencial por tipo, contador transaccional en Firebase (config/numeracion).
+// Colección 'recibos': un documento por recibo. Los recibos nunca se borran: se anulan.
+function onCompTipoChange(keepVal){
+  var t=document.getElementById('m-comp-tipo');var inp=document.getElementById('m-comp');var lbl=document.getElementById('m-comp-lbl');
+  if(!t||!inp)return;
+  var v=t.value;
+  if(v==='sin'){inp.value='';inp.disabled=true;inp.placeholder='Sin comprobante';}
+  else{inp.disabled=false;inp.placeholder=v==='otros'?'Describa el sustento (ej: planilla de movilidad, voucher, acta)':'Ej: F001-00123';}
+  if(lbl)lbl.textContent=v==='otros'?'Detalle del sustento':'N° del comprobante';
+}
+function recPad(n){return String(n).padStart(6,'0');}
+function numALetras(num,moneda){
+  var u=['','UNO','DOS','TRES','CUATRO','CINCO','SEIS','SIETE','OCHO','NUEVE','DIEZ','ONCE','DOCE','TRECE','CATORCE','QUINCE','DIECISÉIS','DIECISIETE','DIECIOCHO','DIECINUEVE','VEINTE','VEINTIUNO','VEINTIDÓS','VEINTITRÉS','VEINTICUATRO','VEINTICINCO','VEINTISÉIS','VEINTISIETE','VEINTIOCHO','VEINTINUEVE'];
+  var d=['','','','TREINTA','CUARENTA','CINCUENTA','SESENTA','SETENTA','OCHENTA','NOVENTA'];
+  var c=['','CIENTO','DOSCIENTOS','TRESCIENTOS','CUATROCIENTOS','QUINIENTOS','SEISCIENTOS','SETECIENTOS','OCHOCIENTOS','NOVECIENTOS'];
+  function m100(n){if(n<30)return u[n];var t=Math.floor(n/10),r=n%10;return d[t]+(r?' Y '+u[r]:'');}
+  function m1000(n){if(n===100)return 'CIEN';var h=Math.floor(n/100),r=n%100;return (h?c[h]+(r?' ':''):'')+(r?m100(r):'');}
+  function apoc(s){return s.replace(/VEINTIUNO$/,'VEINTIÚN').replace(/UNO$/,'UN');}
+  function enteros(n){
+    if(n===0)return 'CERO';
+    var out=[];
+    var mill=Math.floor(n/1000000),mil=Math.floor((n%1000000)/1000),r=n%1000;
+    if(mill)out.push(mill===1?'UN MILLÓN':apoc(enteros(mill))+' MILLONES');
+    if(mil)out.push(mil===1?'MIL':apoc(m1000(mil))+' MIL');
+    if(r)out.push(m1000(r));
+    return out.join(' ');
+  }
+  var v=Math.round(Math.abs(Number(num)||0)*100);
+  var ent=Math.floor(v/100),cen=v%100;
+  var mon=moneda==='USD'?'DÓLARES AMERICANOS':'SOLES';
+  return enteros(ent)+' CON '+String(cen).padStart(2,'0')+'/100 '+mon;
+}
+function reciboDeMov(m){
+  if(!m||!m.reciboId)return null;
+  return (DB.recibos||[]).find(function(r){return r.id===m.reciboId;})||null;
+}
+function reciboActivoDeMov(movId){
+  return (DB.recibos||[]).find(function(r){return r.movId===movId&&r.estado==='emitido';})||null;
+}
+function movElegibleRecibo(m){
+  if(!m||m.stanby||m.esPOS)return false;
+  if(m.tipo==='egreso')return m.cat!=='Depósito Bancario'&&m.cat!=='Comisión POS';
+  if(m.tipo==='ingreso')return true;
+  return false;
+}
+function ingresoEmiteReciboAuto(cat){
+  var l=(DB.cats&&DB.cats.recIng)||[];
+  return l.indexOf(cat)>-1;
+}
+function numeracionConfigurada(tipo){
+  var n=DB.numeracion||{};
+  return !!(n[tipo]&&n[tipo].fijado);
+}
+// ---- Emisión (transaccional) ----
+async function emitirRecibo(mov,datos){
+  if(!window.FB_DB||!window.FB_DB.runTransaction){toast('Sin conexión a Firebase: no se puede emitir el recibo','err');return null;}
+  var tipo=mov.tipo==='ingreso'?'RI':'RE';
+  var ref=window.FB_DB.collection('config').doc('numeracion');
+  var filObj=(DB.filiales||[]).find(function(f){return f.id===mov.fil;});
+  try{
+    var rec=await window.FB_DB.runTransaction(async function(tx){
+      var snap=await tx.get(ref);
+      var cfg=snap.exists?snap.data():{};
+      var c=cfg[tipo];
+      if(!c||!c.fijado)throw new Error('NOCONFIG');
+      var n=Number(c.ultimo)+1;
+      var id=tipo+'-'+recPad(n);
+      var r={
+        id:id,num:n,tipo:tipo,movId:mov.id,
+        fecMov:mov.fec,fecEmision:new Date().toISOString(),
+        fil:mov.fil,filNom:filObj?filObj.nom:mov.fil,ciudad:(filObj&&filObj.ciu)?filObj.ciu:'Lima',
+        mon:Number(mov.mon),moneda:mov.moneda||'PEN',
+        concepto:mov.desc||'',cat:mov.cat||'',met:mov.met||'efectivo',comp:mov.comp||'',compTipo:mov.compTipo||'',
+        nombre:datos.nombre,personaTipo:datos.personaTipo,docNum:datos.docNum||'',docTipo:datos.docTipo||'',
+        emitidoPor:CU?CU.nom:'',estado:'emitido',impreso:false,vecesImpreso:0
+      };
+      cfg[tipo]=Object.assign({},c,{ultimo:n});
+      tx.set(ref,cfg);
+      tx.set(window.FB_DB.collection('recibos').doc(id),r);
+      return {r:r,cfg:cfg};
+    });
+    if(!DB.recibos)DB.recibos=[];
+    if(!DB.recibos.find(function(x){return x.id===rec.r.id;}))DB.recibos.push(rec.r);
+    DB.numeracion=rec.cfg;
+    mov.reciboId=rec.r.id;
+    var okm=await fbSave('movimientos',mov.id,mov.compFile&&mov.compFile.length>900000?Object.assign({},mov,{compFile:'',hasFile:true}):mov);
+    try{sd();}catch(e){}
+    auditLog('emitir_recibo',{id:rec.r.id,movId:mov.id,mon:mov.mon,tipo:tipo});
+    if(!okm)toast('Recibo '+rec.r.id+' emitido, pero no se pudo vincular al movimiento. Avise al administrador.','err');
+    return rec.r;
+  }catch(e){
+    if(e&&e.message==='NOCONFIG'){
+      toast('Configure primero la numeración ('+tipo+') en Recibos y Numeración','err');
+    } else {
+      toast('No se pudo emitir el recibo: '+(e&&e.message?e.message:'error'),'err');
+    }
+    return null;
+  }
+}
+// ---- Datos del recibo (modal) ----
+var _recMovId=null;
+function reciboPostGuardar(obj){
+  if(!movElegibleRecibo(obj))return;
+  if(obj.tipo==='ingreso'&&!ingresoEmiteReciboAuto(obj.cat))return;
+  if(reciboActivoDeMov(obj.id))return;
+  var tipo=obj.tipo==='ingreso'?'RI':'RE';
+  if(!numeracionConfigurada(tipo)){
+    toast('Recibo no emitido: falta configurar la numeración '+tipo+' (menú Recibos y Numeración)','err');
+    return;
+  }
+  reciboAbrirDatos(obj.id);
+}
+function reciboAbrirDatos(movId){
+  var m=DB.movimientos.find(function(x){return x.id===movId;});
+  if(!m){toast('Movimiento no encontrado','err');return;}
+  if(!movElegibleRecibo(m)){toast('Este tipo de movimiento no emite recibo','err');return;}
+  if(reciboActivoDeMov(movId)){toast('Este movimiento ya tiene recibo','err');return;}
+  var tipo=m.tipo==='ingreso'?'RI':'RE';
+  if(!numeracionConfigurada(tipo)){toast('Configure primero la numeración '+tipo+' en Recibos y Numeración','err');return;}
+  _recMovId=movId;
+  document.getElementById('rd-tit').textContent=(tipo==='RE'?'Recibo de Egreso':'Recibo de Ingreso');
+  document.getElementById('rd-resumen').innerHTML='<strong>'+fd2(m.fec)+'</strong> · '+fmt(m.mon).replace('S/.',m.moneda==='USD'?'$':'S/.')+' · '+(m.desc||'');
+  document.getElementById('rd-lbl-nombre').textContent=tipo==='RE'?'Nombre de quien recibe el dinero':'Nombre / Razón social de quien entrega el dinero';
+  var pre='';
+  if(m.miem){var mo=DB.miembros.find(function(x){return x.id===m.miem;});if(mo)pre=mo.nom+(mo.ape?' '+mo.ape:'');}
+  document.getElementById('rd-nombre').value=pre;
+  document.getElementById('rd-pt').value='persona';
+  document.getElementById('rd-doc').value='';
+  reciboPtChange();
+  om('ov-rec-datos');
+}
+function reciboPtChange(){
+  var pt=document.getElementById('rd-pt').value;
+  document.getElementById('rd-lbl-doc').textContent=pt==='empresa'?'RUC (11 dígitos) — obligatorio':'DNI / Documento (opcional)';
+}
+async function reciboConfirmarDatos(){
+  var m=DB.movimientos.find(function(x){return x.id===_recMovId;});
+  if(!m){toast('Movimiento no encontrado','err');return;}
+  var nombre=document.getElementById('rd-nombre').value.trim();
+  var pt=document.getElementById('rd-pt').value;
+  var doc=document.getElementById('rd-doc').value.replace(/\s+/g,'');
+  if(!nombre){toast('Ingrese el nombre','err');return;}
+  var docTipo='';
+  if(pt==='empresa'){
+    if(!/^\d{11}$/.test(doc)){toast('El RUC debe tener 11 dígitos','err');return;}
+    docTipo='RUC';
+  } else if(doc){
+    if(/^\d{8}$/.test(doc))docTipo='DNI';
+    else if(/^[A-Za-z0-9]{6,15}$/.test(doc))docTipo='DOC';
+    else {toast('Documento inválido (DNI de 8 dígitos u otro documento de 6 a 15 caracteres)','err');return;}
+  }
+  var btn=document.getElementById('rd-btn');if(btn){btn.disabled=true;btn.textContent='⏳ Emitiendo...';}
+  var rec=await emitirRecibo(m,{nombre:nombre,personaTipo:pt,docNum:doc,docTipo:docTipo});
+  if(btn){btn.disabled=false;btn.textContent='🧾 Emitir recibo';}
+  if(rec){
+    cm('ov-rec-datos');
+    toast('Recibo '+rec.id+' emitido ✅');
+    try{renderMov();}catch(e){}
+    reciboAbrirImpresion(rec.id);
+  }
+}
+// ---- Sincronizar recibo no impreso cuando se edita el movimiento ----
+function reciboSyncDesdeMov(obj){
+  var r=reciboDeMov(obj);
+  if(!r||r.estado!=='emitido'||r.impreso)return;
+  r.fecMov=obj.fec;r.mon=Number(obj.mon);r.moneda=obj.moneda||'PEN';r.concepto=obj.desc||'';
+  r.cat=obj.cat||'';r.met=obj.met||'efectivo';r.comp=obj.comp||'';r.compTipo=obj.compTipo||'';r.fil=obj.fil;
+  var fo=(DB.filiales||[]).find(function(f){return f.id===obj.fil;});r.filNom=fo?fo.nom:obj.fil;
+  fbSave('recibos',r.id,r);
+}
+// ---- Impresión: media hoja A4 ----
+var _recPrintId=null;
+function reciboAbrirImpresion(recId){
+  var r=(DB.recibos||[]).find(function(x){return x.id===recId;});
+  if(!r){toast('Recibo no encontrado','err');return;}
+  if(r.estado!=='emitido'){toast('Recibo anulado: no se puede imprimir','err');return;}
+  _recPrintId=recId;
+  document.getElementById('rp-tit').textContent='Imprimir '+r.id;
+  document.getElementById('rp-aviso').style.display=r.impreso?'block':'none';
+  om('ov-rec-print');
+}
+function reciboLogoSrc(){
+  try{var im=document.querySelector('.sb-logo img');return im&&im.src?im.src:'';}catch(e){return '';}
+}
+function reciboParteHTML(r,etiqueta){
+  var esRE=r.tipo==='RE';
+  var sim=r.moneda==='USD'?'$ ':'S/. ';
+  var f=r.fecMov.split('-');
+  var mesN=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'][parseInt(f[1],10)-1];
+  var em=new Date(r.fecEmision);
+  var emTxt=('0'+em.getDate()).slice(-2)+'/'+('0'+(em.getMonth()+1)).slice(-2)+'/'+em.getFullYear()+' '+('0'+em.getHours()).slice(-2)+':'+('0'+em.getMinutes()).slice(-2);
+  var doc=r.docNum?(r.docTipo+' '+r.docNum):'';
+  function esc(x){return String(x==null?'':x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+  var logo=reciboLogoSrc();
+  var ciudad=r.ciudad||'Lima';
+  var vez=(r.vecesImpreso||0)>0?' · REIMPRESIÓN':'';
+  var sustTxt={factura:'Factura',boleta:'Boleta',recibo:'Recibo',otros:'Otros'}[r.compTipo]||'';
+  if(r.compTipo==='sin')sustTxt='Sin sustento';
+  else if(sustTxt)sustTxt+=r.comp?(r.compTipo==='otros'?': ':' N° ')+r.comp:'';
+  else sustTxt=r.comp?'Comprobante N° '+r.comp:(esRE?'No registrado':'—');
+  var concTxt=String(r.concepto||'');
+  var nivel=concTxt.length>200?3:(concTxt.length>90?2:1);
+  if(concTxt.length>330)concTxt=concTxt.slice(0,327).replace(/\s+\S*$/,'')+'… (ver detalle en el comprobante)';
+  if(sustTxt.length>140)sustTxt=sustTxt.slice(0,137)+'…';
+  var cajas=(esRE?['PASTOR','TESORERO']:['TESORERO'])
+    .map(function(c){return '<div class="cj"><div class="cl">'+c+'</div><div class="cb"></div></div>';}).join('');
+  return '<div class="pt lv'+nivel+'">'
+    +'<div class="top">'
+    +(logo?'<img class="lg" src="'+logo+'">':'<div class="lg"></div>')
+    +'<div class="ig"><div class="n1">Iglesia La Roca de Horeb</div><div class="n2">ASAMBLEA DE DIOS - MINISTERIO DEL PERÚ</div>'
+    +'<div class="n3">Partida Electrónica N° 12557418 - R.U.C. N° 20538747115</div>'
+    +'<div class="n3">Sede Nacional: Av. José Carlos Mariátegui 2514 Ate Vitarte - Lima, Perú</div>'
+    +'<div class="n3">www.larocadehoreb.com - rocadehorebperu@gmail.com</div></div>'
+    +'<div class="num"><div class="et">'+etiqueta+vez+'</div><div class="t">RECIBO DE '+(esRE?'EGRESO':'INGRESO')+'</div><div class="id">N° '+r.id+'</div><div class="mt">'+sim+Number(r.mon).toFixed(2)+'</div></div>'
+    +'</div>'
+    +'<div class="cu">'
+    +'<div class="l1"><span class="k">'+(esRE?'Recibí de:':'Recibimos de:')+'</span> '+(esRE?'Iglesia La Roca de Horeb — '+esc(r.filNom):'<strong>'+esc(r.nombre)+'</strong>'+(doc?' <span class="sm">('+esc(doc)+')</span>':''))+'</div>'
+    +'<div class="l1"><span class="k">La suma de:</span> '+esc(numALetras(r.mon,r.moneda))+'</div>'
+    +'<div class="l1"><span class="k">Por concepto de:</span> <span class="cc">'+esc(concTxt)+'</span> <span class="sm">('+esc(r.cat)+(r.met&&r.met!=='efectivo'?' · '+esc(r.met):'')+')</span></div>'
+    +(sustTxt==='—'?'':'<div class="l1"><span class="k">Sustento:</span> '+esc(sustTxt)+'</div>')
+    +'</div>'
+    +'<div class="bj">'
+    +(esRE?'<div class="au"><div class="al">AUTORIZADO POR:</div><div class="cjs">'+cajas+'</div></div>':'')
+    +'<div class="rc"><div class="fe">'+esc(ciudad)+', '+f[2]+' de '+mesN+' del '+f[0]+'</div><div class="fz"><div class="ln"></div><div class="rl">RECIBÍ CONFORME</div>'
+    +'<div class="nm"><span class="k">NOMBRE:</span> '+(esRE?esc(r.nombre)+(doc?' <span class="sm">('+esc(doc)+')</span>':''):esc(r.emitidoPor))+'</div></div></div>'
+    +'</div>'
+    +'<div class="ft">Hecho por: <strong>'+esc(r.emitidoPor)+'</strong> · '+(esRE?'Gasto':'Ingreso')+': '+f[2]+'/'+f[1]+'/'+f[0]+' · Emitido: '+emTxt+'</div>'
+    +'</div>';
+}
+function reciboConfirmarImpresion(){
+  var r=(DB.recibos||[]).find(function(x){return x.id===_recPrintId;});
+  if(!r||r.estado!=='emitido'){toast('Recibo no disponible','err');return;}
+  var corte='<div class="corte"><span>✂ ········· cerrillado ·········</span></div>';
+  var hoja='<div class="sheet">'
+    +reciboParteHTML(r,'ORIGINAL')
+    +corte
+    +reciboParteHTML(r,'COPIA')
+    +'</div>';
+  var css='@page{margin:0}*{box-sizing:border-box}html,body{margin:0;padding:0}body{font-family:Arial,Helvetica,sans-serif;color:#111}'
+    +'.sheet{width:210mm;height:146mm;position:relative;overflow:hidden;page-break-inside:avoid}'
+    +'.pt{height:72mm;padding:5mm 9mm 2mm;position:relative;overflow:hidden}'
+    +'.top{display:flex;align-items:flex-start;gap:3mm;border-bottom:1.5px solid #1F3A93;padding-bottom:1.5mm}'
+    +'.lg{height:17mm;width:12mm;object-fit:contain}.ig{flex:1;text-align:center}'
+    +'.n1{font-size:17px;font-weight:bold;color:#1F3A93;line-height:1.05}.n2{font-size:9px;font-weight:bold;color:#1F3A93}.n3{font-size:6.8px;color:#333}'
+    +'.num{text-align:right;width:44mm}.num .et{font-size:7.5px;letter-spacing:1px;color:#555;font-weight:bold}.num .t{font-size:9.5px;font-weight:bold;color:#1F3A93}.num .id{font-size:14px;font-weight:bold;color:#C0392B}'
+    +'.mt{border:1.5px solid #1F3A93;border-radius:2mm;font-size:13px;font-weight:bold;padding:1mm 2mm;margin-top:1mm;text-align:left}'
+    +'.cu{margin-top:1mm}.l1{font-size:10px;padding:.8mm 0;border-bottom:1px solid #999}.k{color:#1F3A93;font-weight:bold;font-size:9.5px}.sm{font-size:8px;color:#555}'
+    +'.bj{display:flex;justify-content:space-between;gap:6mm;margin-top:1.5mm;align-items:stretch;min-height:23mm}'
+    +'.al{font-size:8.5px;font-weight:bold;color:#1F3A93}.cjs{display:flex;gap:2.5mm;margin-top:.8mm}.cj{width:44mm}.cl{font-size:7.5px;font-weight:bold;color:#1F3A93;text-align:center}'
+    +'.cb{height:15mm;border:1.2px solid #1F3A93;border-radius:2mm}'
+    +'.rc{flex:1;max-width:80mm;margin-left:auto;display:flex;flex-direction:column;justify-content:space-between}.fe{font-size:9.5px;text-align:right;color:#333}.rc .ln{border-top:1px solid #111}.rl{font-size:8px;font-weight:bold;text-align:center;color:#1F3A93}.nm{font-size:9px;margin-top:1mm}'
+    +'.lv2 .cc{font-size:9px}.lv3 .cc{font-size:8px;line-height:1.15}.pt.lv2 .cb{height:12mm}.pt.lv3 .cb{height:9mm}.pt.lv2 .bj{min-height:19mm}.pt.lv3 .bj{min-height:16mm}'
+    +'.ft{position:absolute;left:9mm;bottom:1.2mm;font-size:7px;color:#555}'
+    +'.corte{height:2mm;border-top:1px dashed #666;position:relative;margin:0 6mm}.corte span{position:absolute;left:50%;top:-6px;transform:translateX(-50%);background:#fff;padding:0 6px;font-size:8px;color:#666}';
+  var w=window.open('','_blank');
+  if(!w){toast('Permita las ventanas emergentes para imprimir','err');return;}
+  w.document.write('<html><head><meta charset="utf-8"><title>'+r.id+'</title><style>'+css+'</style></head><body>'+hoja+'<script>window.onload=function(){setTimeout(function(){window.print();},400);}<\/script></body></html>');
+  w.document.close();
+  r.impreso=true;r.vecesImpreso=(r.vecesImpreso||0)+1;r.impresoAt=new Date().toISOString();r.impresoPor=CU?CU.nom:'';
+  fbSave('recibos',r.id,r);
+  auditLog('imprimir_recibo',{id:r.id,veces:r.vecesImpreso});
+  cm('ov-rec-print');
+  try{renderMov();}catch(e){}
+  try{renderRecibos();}catch(e){}
+}
+// ---- Anulación (solo nivel 1) ----
+async function anularRecibo(recId){
+  if(!CU||CU.niv!==1){toast('Solo el administrador puede anular recibos','err');return;}
+  var r=(DB.recibos||[]).find(function(x){return x.id===recId;});
+  if(!r||r.estado!=='emitido'){toast('El recibo ya está anulado o no existe','err');return;}
+  var motivo=prompt('Motivo de la anulación de '+r.id+' (obligatorio, mínimo 5 caracteres).\nEl movimiento asociado se eliminará de la caja; el número queda como ANULADO.');
+  if(motivo===null)return;
+  motivo=motivo.trim();
+  if(motivo.length<5){toast('Debe escribir el motivo de la anulación','err');return;}
+  if(!confirm('¿Anular el recibo '+r.id+' por '+fmt(r.mon)+'?\nEsta acción elimina el movimiento asociado.'))return;
+  var mov=DB.movimientos.find(function(m){return m.id===r.movId;});
+  var snap=mov?{desc:mov.desc,mon:mov.mon,fec:mov.fec,cat:mov.cat,fil:mov.fil,tipo:mov.tipo}:null;
+  var prev=Object.assign({},r);
+  r.estado='anulado';r.anulBy=CU.nom;r.anulAt=new Date().toISOString();r.anulMotivo=motivo;r.movSnapshot=snap;
+  var ok1=await fbSave('recibos',r.id,r);
+  if(!ok1){Object.assign(r,prev);toast('No se pudo anular (sin conexión). Intente de nuevo.','err');return;}
+  if(mov){
+    var linked=(DB.banco||[]).filter(function(b){return b.movId===mov.id;});
+    for(var i=0;i<linked.length;i++){
+      var okb=await fbDelete('banco',linked[i].id);
+      if(!okb){toast('Recibo anulado pero no se pudo quitar el depósito bancario vinculado. Revise Banco.','err');}
+      else DB.banco=DB.banco.filter(function(b){return b.id!==linked[i].id;});
+    }
+    var okm=await fbDelete('movimientos',mov.id);
+    if(!okm){
+      Object.assign(r,prev);delete r.anulBy;delete r.anulAt;delete r.anulMotivo;delete r.movSnapshot;
+      await fbSave('recibos',r.id,r);
+      toast('No se pudo eliminar el movimiento; la anulación se revirtió.','err');return;
+    }
+    DB.movimientos=DB.movimientos.filter(function(m){return m.id!==mov.id;});
+  }
+  try{sd();}catch(e){}
+  auditLog('anular_recibo',{id:r.id,mon:r.mon,motivo:motivo,movId:r.movId});
+  toast('Recibo '+r.id+' ANULADO');
+  try{renderMov();}catch(e){}
+  try{renderRecibos();}catch(e){}
+}
+// ---- Pantalla Recibos y Numeración ----
+function recNumGuardar(){
+  if(!CU||CU.niv!==1){toast('Solo el administrador configura la numeración','err');return;}
+  var tipos=['RE','RI'];
+  var cfg=Object.assign({},DB.numeracion||{});
+  var cambios=0;
+  for(var i=0;i<tipos.length;i++){
+    var t=tipos[i];
+    var el=document.getElementById('rn-'+t);
+    if(!el||el.disabled)continue;
+    var v=el.value.trim();
+    if(v==='')continue;
+    if(!/^\d{1,6}$/.test(v)){toast('El último número de '+t+' debe tener hasta 6 dígitos','err');return;}
+    cfg[t]={ultimo:parseInt(v,10),inicial:parseInt(v,10),fijado:true,fijadoPor:CU.nom,fijadoAt:new Date().toISOString()};
+    cambios++;
+  }
+  if(!cfg.VA)cfg.VA={ultimo:0,inicial:0,fijado:true,fijadoPor:'sistema',fijadoAt:new Date().toISOString()};
+  if(!cambios){toast('No hay números nuevos para guardar','err');return;}
+  if(!confirm('Una vez emitido el primer recibo de cada tipo, este número ya no se podrá cambiar.\n¿Guardar la numeración?'))return;
+  fbSave('config','numeracion',cfg).then(function(ok){
+    if(ok){DB.numeracion=cfg;try{sd();}catch(e){}auditLog('config_numeracion',{cfg:cfg});toast('Numeración guardada ✅');renderRecibos();}
+    else toast('No se pudo guardar (sin conexión)','err');
+  });
+}
+function renderRecibos(){
+  var el=document.getElementById('rec-lista');if(!el)return;
+  var esAdm=CU&&CU.niv===1;
+  var cfgCard=document.getElementById('rec-cfg');
+  if(cfgCard){
+    cfgCard.style.display=esAdm?'block':'none';
+    ['RE','RI'].forEach(function(t){
+      var inp=document.getElementById('rn-'+t),st=document.getElementById('rn-st-'+t);if(!inp)return;
+      var emitidos=(DB.recibos||[]).some(function(r){return r.tipo===t;});
+      var c=(DB.numeracion||{})[t];
+      if(c&&c.fijado){
+        inp.value=c.inicial!=null?c.inicial:c.ultimo;
+        inp.disabled=true;
+        st.innerHTML='Configurado. Último emitido: <strong>'+t+'-'+recPad(c.ultimo)+'</strong>'+(emitidos?' (bloqueado)':'')+(emitidos?'':' <a href="#" onclick="recNumDesbloquear(\''+t+'\');return false" style="color:#F39C12">cambiar</a>');
+      } else {
+        inp.disabled=false;st.innerHTML='<span style="color:#E74C3C">Sin configurar — no se emiten recibos '+t+'</span>';
+      }
+    });
+  }
+  var ft=(document.getElementById('rec-ft')||{value:''}).value;
+  var fe=(document.getElementById('rec-fe')||{value:''}).value;
+  var fm=(document.getElementById('rec-fm')||{value:''}).value;
+  var ft2=(document.getElementById('rec-tard')||{checked:false}).checked;
+  var s=((document.getElementById('rec-s')||{value:''}).value||'').toLowerCase();
+  var list=(DB.recibos||[]).slice();
+  if(CU&&CU.niv>2&&CU.fil!=='all')list=list.filter(function(r){return r.fil===CU.fil;});
+  if(ft)list=list.filter(function(r){return r.tipo===ft;});
+  if(fe)list=list.filter(function(r){return r.estado===fe;});
+  if(fm)list=list.filter(function(r){return r.fecMov.slice(0,7)===fm;});
+  if(s)list=list.filter(function(r){return (r.nombre+' '+r.concepto+' '+r.id+' '+r.docNum).toLowerCase().indexOf(s)>-1;});
+  function dias(r){var a=new Date(r.fecMov+'T00:00:00'),b=new Date(r.fecEmision);return Math.floor((new Date(b.getFullYear(),b.getMonth(),b.getDate())-a)/86400000);}
+  if(ft2)list=list.filter(function(r){return dias(r)>3;});
+  list.sort(function(a,b){return b.fecEmision.localeCompare(a.fecEmision);});
+  var tot=list.filter(function(r){return r.estado==='emitido';}).reduce(function(a,r){return a+(r.moneda==='USD'?0:Number(r.mon));},0);
+  document.getElementById('rec-tot').textContent=list.length+' recibos · total emitidos vigentes: '+fmt(tot);
+  if(!list.length){el.innerHTML='<tr><td colspan="10"><div class="empty"><span class="ic">🧾</span><p>No hay recibos</p></div></td></tr>';return;}
+  el.innerHTML=list.map(function(r){
+    var d=dias(r);
+    var tard=d>3?'<span style="color:#F39C12;font-weight:700" title="Registrado '+d+' días después de la fecha">⏱ '+d+'d</span>':(d+'d');
+    var anul=r.estado==='anulado';
+    var movOk=(DB.movimientos||[]).some(function(m){return m.id===r.movId;});
+    var est=anul?'<span class="badge b-ven" title="'+((r.anulMotivo||'').replace(/"/g,'&quot;'))+' — '+(r.anulBy||'')+'">ANULADO</span>':(movOk?'<span class="badge b-act">VIGENTE</span>':'<span class="badge b-ven" title="El movimiento asociado ya no existe">SIN MOVIMIENTO</span>');
+    var btns='';
+    if(!anul)btns+='<button class="btn btn-sm btn-s" onclick="reciboAbrirImpresion(\''+r.id+'\')" title="Imprimir">🖨️</button> ';
+    if(!anul&&esAdm)btns+='<button class="btn btn-sm btn-d" onclick="anularRecibo(\''+r.id+'\')" title="Anular">❌</button>';
+    var em=new Date(r.fecEmision);
+    return '<tr'+(anul?' style="opacity:.55"':'')+'>'
+      +'<td><strong>'+r.id+'</strong></td>'
+      +'<td>'+fd2(r.fecMov)+'</td>'
+      +'<td style="font-size:11px">'+fd2(r.fecEmision.slice(0,10))+'</td>'
+      +'<td>'+tard+'</td>'
+      +'<td style="font-size:11px">'+(r.filNom||'')+'</td>'
+      +'<td>'+(r.nombre||'')+(r.docNum?'<div style="font-size:10px;color:rgba(247,243,233,.4)">'+r.docTipo+' '+r.docNum+'</div>':'')+'</td>'
+      +'<td style="font-size:11px">'+(r.concepto||'')+'</td>'
+      +'<td><span class="amt-'+(r.tipo==='RI'?'i':'e')+'">'+(r.moneda==='USD'?'$ ':'S/. ')+Number(r.mon).toFixed(2)+'</span></td>'
+      +'<td>'+est+'</td>'
+      +'<td>'+btns+'</td></tr>';
+  }).join('');
+}
+function recNumDesbloquear(t){
+  if(!CU||CU.niv!==1)return;
+  if((DB.recibos||[]).some(function(r){return r.tipo===t;})){toast('Ya hay recibos emitidos: no se puede cambiar','err');return;}
+  var cfg=Object.assign({},DB.numeracion||{});delete cfg[t];
+  fbSave('config','numeracion',cfg).then(function(ok){if(ok){DB.numeracion=cfg;renderRecibos();}else toast('Sin conexión','err');});
+}
+// ---- Categorías de ingreso que emiten recibo automático ----
+function renderCatsRecibo(){
+  var box=document.getElementById('cat-recibo-box');if(!box||!DB.cats)return;
+  var sel=DB.cats.recIng||[];
+  box.innerHTML=(DB.cats.ing||[]).slice().sort(function(a,b){return a.localeCompare(b,'es');}).map(function(c){
+    var chk=sel.indexOf(c)>-1?' checked':'';
+    var safe=c.replace(/"/g,'&quot;');
+    return '<label style="display:inline-flex;align-items:center;gap:5px;margin:3px 10px 3px 0;font-size:12px;cursor:pointer"><input type="checkbox" data-cat="'+safe+'"'+chk+' onchange="toggleCatRecibo(this)"> '+c+'</label>';
+  }).join('');
+}
+function toggleCatRecibo(chk){
+  if(!CU||CU.niv>2){toast('Sin permiso','err');renderCatsRecibo();return;}
+  var cat=chk.getAttribute('data-cat');
+  if(!DB.cats.recIng)DB.cats.recIng=[];
+  var i=DB.cats.recIng.indexOf(cat);
+  if(chk.checked&&i<0)DB.cats.recIng.push(cat);
+  if(!chk.checked&&i>-1)DB.cats.recIng.splice(i,1);
+  try{sd();}catch(e){}
+  fbSave('categorias','cats',DB.cats);
+}
+var _renderCatsOrigRec=renderCats;
+renderCats=function(){_renderCatsOrigRec.apply(this,arguments);try{renderCatsRecibo();}catch(e){}};
 
 document.addEventListener('DOMContentLoaded',function(){
   // File reader for comprobante
