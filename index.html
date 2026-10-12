@@ -532,7 +532,7 @@ body.contador-mode .modal-ft .btn-d {
           <button class="btn btn-p" onclick="recNumGuardar()">💾 Guardar numeración</button>
         </div>
         <div class="card">
-          <div class="card-title">🧾 Recibos emitidos</div>
+          <div class="card-title">🧾 Recibos emitidos <span style="font-size:11px;font-weight:normal"><button class="btn btn-sm btn-s" onclick="reciboVistaPrevia('RE')" title="Imprime un recibo de ejemplo, sin número y sin guardar nada">🖨️ Prueba de impresión: Egreso</button> <button class="btn btn-sm btn-s" onclick="reciboVistaPrevia('RI')" title="Imprime un recibo de ejemplo, sin número y sin guardar nada">🖨️ Prueba de impresión: Ingreso</button></span></div>
           <div class="tb" style="flex-wrap:wrap;gap:8px">
             <input class="sb" id="rec-s" placeholder="Buscar nombre, concepto, N°..." oninput="renderRecibos()">
             <select id="rec-ft" onchange="renderRecibos()"><option value="">Todos</option><option value="RE">Egreso (RE)</option><option value="RI">Ingreso (RI)</option></select>
@@ -8748,14 +8748,13 @@ function reciboParteHTML(r,etiqueta){
     +'<div class="ft">Hecho por: <strong>'+esc(r.emitidoPor)+'</strong> · '+(esRE?'Gasto':'Ingreso')+': '+f[2]+'/'+f[1]+'/'+f[0]+' · Emitido: '+emTxt+'</div>'
     +'</div>';
 }
-function reciboConfirmarImpresion(){
-  var r=(DB.recibos||[]).find(function(x){return x.id===_recPrintId;});
-  if(!r||r.estado!=='emitido'){toast('Recibo no disponible','err');return;}
+function reciboHojaCss(r){
   var corte='<div class="corte"><span>✂ ········· cerrillado ·········</span></div>';
   var hoja='<div class="sheet">'
     +reciboParteHTML(r,'ORIGINAL')
     +corte
     +reciboParteHTML(r,'COPIA')
+    +(r.prueba?'<div class="wm">PRUEBA — SIN VALOR</div>':'')
     +'</div>';
   var css='@page{margin:0}*{box-sizing:border-box}html,body{margin:0;padding:0}body{font-family:Arial,Helvetica,sans-serif;color:#111}'
     +'.sheet{width:210mm;height:146mm;position:relative;overflow:hidden;page-break-inside:avoid}'
@@ -8773,6 +8772,13 @@ function reciboConfirmarImpresion(){
     +'.lv2 .cc{font-size:9px}.lv3 .cc{font-size:8px;line-height:1.15}.pt.lv2 .cb{height:12mm}.pt.lv3 .cb{height:9mm}.pt.lv2 .bj{min-height:19mm}.pt.lv3 .bj{min-height:16mm}'
     +'.ft{position:absolute;left:9mm;bottom:1.2mm;font-size:7px;color:#555}'
     +'.corte{height:2mm;border-top:1px dashed #666;position:relative;margin:0 6mm}.corte span{position:absolute;left:50%;top:-6px;transform:translateX(-50%);background:#fff;padding:0 6px;font-size:8px;color:#666}';
+  if(r.prueba)css+='.wm{position:absolute;left:0;right:0;top:0;bottom:0;display:flex;align-items:center;justify-content:center;font-size:46px;font-weight:bold;color:rgba(192,57,43,.18);transform:rotate(-12deg);letter-spacing:6px;pointer-events:none}';
+  return {hoja:hoja,css:css};
+}
+function reciboConfirmarImpresion(){
+  var r=(DB.recibos||[]).find(function(x){return x.id===_recPrintId;});
+  if(!r||r.estado!=='emitido'){toast('Recibo no disponible','err');return;}
+  var hc=reciboHojaCss(r);var hoja=hc.hoja,css=hc.css;
   var w=window.open('','_blank');
   if(!w){toast('Permita las ventanas emergentes para imprimir','err');return;}
   w.document.write('<html><head><meta charset="utf-8"><title>'+r.id+'</title><style>'+css+'</style></head><body>'+hoja+'<script>window.onload=function(){setTimeout(function(){window.print();},400);}<\/script></body></html>');
@@ -8783,6 +8789,24 @@ function reciboConfirmarImpresion(){
   cm('ov-rec-print');
   try{renderMov();}catch(e){}
   try{renderRecibos();}catch(e){}
+}
+// ---- Vista previa de impresión (prueba): sin número, sin guardar nada ----
+function reciboVistaPrevia(tipo){
+  var esRE=tipo==='RE';
+  var r={id:tipo+'-000000',num:0,tipo:tipo,prueba:true,
+    fecMov:today(),fecEmision:new Date().toISOString(),
+    fil:'F001',filNom:'Sede Central',ciudad:'Lima',
+    mon:1234.5,moneda:'PEN',
+    concepto:esRE?'Pago de servicios — recibo de ejemplo para probar la impresión':'Participación en agua y luz — recibo de ejemplo para probar la impresión',
+    cat:esRE?'Servicios Básicos':'Servicios Agua y Luz',met:'efectivo',
+    comp:esRE?'F001-00123':'',compTipo:esRE?'factura':'',
+    nombre:'NOMBRE DE EJEMPLO S.A.C.',personaTipo:'empresa',docNum:'20123456789',docTipo:'RUC',
+    emitidoPor:CU?CU.nom:'Usuario',estado:'emitido',impreso:false,vecesImpreso:0};
+  var hc=reciboHojaCss(r);
+  var w=window.open('','_blank');
+  if(!w){toast('Permita las ventanas emergentes para imprimir','err');return;}
+  w.document.write('<html><head><meta charset="utf-8"><title>Vista previa</title><style>'+hc.css+'</style></head><body>'+hc.hoja+'<script>window.onload=function(){setTimeout(function(){window.print();},400);}<\/script></body></html>');
+  w.document.close();
 }
 // ---- Anulación (solo nivel 1) ----
 async function anularRecibo(recId){
