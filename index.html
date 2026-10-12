@@ -8337,11 +8337,9 @@ function genRptTransferencias(){
 
   var cutoff=anio+'-'+String(mes).padStart(2,'0')+'-01';
 
-  // Saldo caja antes del período
-  var movsCajaAntes=DB.movimientos.filter(function(m){return (m.fil==='sede'||m.fil==='F001')&&m.tipo!=='transferencia'&&!m.esBancario&&(m.moneda||'PEN')==='PEN'&&m.fec<cutoff;});
-  var trfsCajaAntes=DB.movimientos.filter(function(m){return m.tipo==='transferencia'&&(m.fil==='sede'||m.fil==='F001')&&m.fec<cutoff;});
-  var saldoCajaInicio=siCaja+movsCajaAntes.reduce(function(a,m){return a+(m.tipo==='ingreso'?Number(m.mon):-Number(m.mon));},0)
-    +trfsCajaAntes.reduce(function(a,m){return a+(m.subtipo==='entrada_banco_caja'?Number(m.mon):-Number(m.mon));},0);
+  // Saldo caja: MISMA fórmula unificada del Dashboard y Resumen Ejecutivo
+  var saldoCajaInicio=calcSaldoAnteriorConsolidado(anio,mes);
+  var saldoCajaFinalOficial=calcSaldoCajaConsolidado(anio,mes);
 
   // Saldo banco antes del período
   var bancosAntes=(DB.banco||[]).filter(function(b){return b.fec<cutoff;});
@@ -8380,7 +8378,7 @@ function genRptTransferencias(){
     +'<div style="padding:10px;background:#fffde7;border:1px solid #C9A84C;border-radius:5px;text-align:center"><div style="font-size:9px;color:#888;font-weight:bold">Saldo Caja Inicio</div><div style="font-size:17px;font-weight:bold;color:#8B6914">S/. '+saldoCajaInicio.toFixed(2)+'</div></div>'
     +'<div style="padding:10px;background:#f0f7f0;border:1px solid #2ECC71;border-radius:5px;text-align:center"><div style="font-size:9px;color:#888;font-weight:bold">Caja → Banco</div><div style="font-size:17px;font-weight:bold;color:#1A7A4A">S/. '+totalCajaBanco.toFixed(2)+'</div></div>'
     +'<div style="padding:10px;background:#e8f4f8;border:1px solid #2E86AB;border-radius:5px;text-align:center"><div style="font-size:9px;color:#888;font-weight:bold">Banco → Caja</div><div style="font-size:17px;font-weight:bold;color:#2E86AB">S/. '+totalBancoCaja.toFixed(2)+'</div></div>'
-    +'<div style="padding:10px;background:#fffde7;border:1px solid #C9A84C;border-radius:5px;text-align:center"><div style="font-size:9px;color:#888;font-weight:bold">Saldo Caja Final</div><div style="font-size:17px;font-weight:bold;color:'+(runCaja>=0?'#1A7A4A':'#C0392B')+'">S/. '+runCaja.toFixed(2)+'</div></div>'
+    +'<div style="padding:10px;background:#fffde7;border:1px solid #C9A84C;border-radius:5px;text-align:center"><div style="font-size:9px;color:#888;font-weight:bold">Saldo Caja Final</div><div style="font-size:17px;font-weight:bold;color:'+(saldoCajaFinalOficial>=0?'#1A7A4A':'#C0392B')+'">S/. '+saldoCajaFinalOficial.toFixed(2)+'</div></div>'
     +'</div>'
     +'<div style="overflow-x:auto"><table><thead><tr>'
     +'<th style="background:#0D1B2A;color:#C9A84C;padding:6px 8px">Fecha</th>'
@@ -8389,8 +8387,8 @@ function genRptTransferencias(){
     +'<th style="background:#0D1B2A;color:#C9A84C;padding:6px 8px">Referencia</th>'
     +'<th style="background:#0D1B2A;color:#C9A84C;padding:6px 8px">Observación</th>'
     +'<th style="background:#0D1B2A;color:#C9A84C;padding:6px 8px">Registrado Por</th>'
-    +'<th style="background:#0D1B2A;color:#C9A84C;padding:6px 8px">Caja Antes</th>'
-    +'<th style="background:#0D1B2A;color:#C9A84C;padding:6px 8px">Caja Después</th>'
+    +'<th style="background:#0D1B2A;color:#C9A84C;padding:6px 8px">Caja Antes (solo transf.)</th>'
+    +'<th style="background:#0D1B2A;color:#C9A84C;padding:6px 8px">Caja Después (solo transf.)</th>'
     +'<th style="background:#0D1B2A;color:#C9A84C;padding:6px 8px">Banco Antes</th>'
     +'<th style="background:#0D1B2A;color:#C9A84C;padding:6px 8px">Banco Después</th>'
     +'</tr></thead><tbody>'+rows+'</tbody>'
@@ -8400,7 +8398,7 @@ function genRptTransferencias(){
     +'<strong>'+trfs.length+'</strong> transferencias &nbsp;|&nbsp; Caja→Banco: <strong style="color:#1A7A4A">S/. '+totalCajaBanco.toFixed(2)+'</strong> &nbsp;|&nbsp; Banco→Caja: <strong style="color:#2E86AB">S/. '+totalBancoCaja.toFixed(2)+'</strong>'
     +'</td></tr></tfoot>'
     +'</table></div>'
-    +'<div style="font-size:10px;color:#888;margin-top:8px">* Las transferencias no afectan el total de Ingresos o Egresos del Libro Caja — son movimientos internos.</div>'
+    +'<div style="font-size:10px;color:#888;margin-top:8px">* Saldo Caja Inicio y Final usan la misma fórmula que el Dashboard y el Resumen Ejecutivo (caja consolidada: efectivo, sin Culqui/POS ni depósitos directos a banco, sin filiales en retención; ya descuenta las transferencias Caja→Banco). Final = Inicio + ingresos en efectivo − egresos en efectivo − transferencias del mes. Las columnas Caja Antes/Después recorren solo las transferencias. Las transferencias no afectan Ingresos/Egresos del Libro Caja.</div>'
     +rptSign('Tesorero Principal','Pastor Principal')
     +'</div></div>';
 
